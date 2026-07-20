@@ -2,6 +2,7 @@ package com.datascraper.microsoft.model;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 public record ScrapedData(
         String source,
@@ -9,6 +10,13 @@ public record ScrapedData(
         Instant scrapedAt,
         String pageTitle,
         int totalItems,
-        List<ScrapedItem> items
+        List<ScrapedItem> items,
+        Map<String, String> metadata
 ) {
+
+    public ScrapedData {
+        metadata = metadata == null ? Map.of() : metadata;
+        items = items == null ? List.of() : items;
+    }
+
 }

@@ -1,11 +1,14 @@
 package com.datascraper.orchestrator.controller;
 
+import com.datascraper.orchestrator.dto.ScrapeRequest;
 import com.datascraper.orchestrator.dto.ScrapeResponse;
 import com.datascraper.orchestrator.service.OrchestratorService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,8 +31,10 @@ public class OrchestratorController {
     }
 
     @PostMapping("/scrape")
-    public ResponseEntity<ScrapeResponse> scrape() {
-        return ResponseEntity.ok(orchestratorService.initiateScrape());
+    public ResponseEntity<ScrapeResponse> scrape(
+            @Valid @RequestBody(required = false) ScrapeRequest request) {
+        ScrapeRequest effectiveRequest = request != null ? request : ScrapeRequest.defaults();
+        return ResponseEntity.ok(orchestratorService.initiateScrape(effectiveRequest));
     }
 
 }

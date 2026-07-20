@@ -1,15 +1,18 @@
 package com.datascraper.orchestrator.service.impl;
 
-import com.datascraper.orchestrator.client.GoogleScraperClient;
-import com.datascraper.orchestrator.client.MicrosoftScraperClient;
+import com.datascraper.orchestrator.client.ScraperClient;
+import com.datascraper.orchestrator.client.ScraperClientRegistry;
+import com.datascraper.orchestrator.dto.ScrapeRequest;
 import com.datascraper.orchestrator.dto.ScrapeResponse;
 import com.datascraper.orchestrator.model.DataCategory;
 import com.datascraper.orchestrator.model.ScrapedData;
+import com.datascraper.orchestrator.model.ScraperSource;
 import com.datascraper.orchestrator.service.OrchestratorService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -18,47 +21,51 @@ import java.util.concurrent.Executor;
 @Service
 public class OrchestratorServiceImpl implements OrchestratorService {
 
-    private final GoogleScraperClient googleScraperClient;
-    private final MicrosoftScraperClient microsoftScraperClient;
+    private final ScraperClientRegistry scraperClientRegistry;
     private final Executor scraperExecutor;
 
     public OrchestratorServiceImpl(
-            GoogleScraperClient googleScraperClient,
-            MicrosoftScraperClient microsoftScraperClient,
+            ScraperClientRegistry scraperClientRegistry,
             @Qualifier("scraperExecutor") Executor scraperExecutor) {
-        this.googleScraperClient = googleScraperClient;
-        this.microsoftScraperClient = microsoftScraperClient;
+        this.scraperClientRegistry = scraperClientRegistry;
         this.scraperExecutor = scraperExecutor;
     }
 
     @Override
-    public ScrapeResponse initiateScrape() {
-        log.info("Initiating parallel scrape for category {}", DataCategory.JOBS);
+    public ScrapeResponse initiateScrape(ScrapeRequest request) {
+        log.info("Initiating parallel scrape for sources={} categories={}", request.sources(), request.categories());
         long startTime = System.currentTimeMillis();
 
-        CompletableFuture<ScrapedData> googleFuture = CompletableFuture.supplyAsync(
-                () -> googleScraperClient.scrape(DataCategory.JOBS),
-                scraperExecutor
-        );
+        List<CompletableFuture<ScrapedData>> futures = new ArrayList<>();
 
-        CompletableFuture<ScrapedData> microsoftFuture = CompletableFuture.supplyAsync(
-                () -> microsoftScraperClient.scrape(DataCategory.JOBS),
-                scraperExecutor
-        );
+        for (ScraperSource source : request.sources()) {
+            ScraperClient client = scraperClientRegistry.getClient(source);
 
-        CompletableFuture.allOf(googleFuture, microsoftFuture).join();
+            for (DataCategory category : request.categories()) {
+                futures.add(CompletableFuture.supplyAsync(
+                        () -> client.scrape(category),
+                        scraperExecutor
+                ));
+            }
+        }
+
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+
+        List<ScrapedData> results = futures.stream()
+                .map(CompletableFuture::join)
+                .toList();
 
         long elapsedMs = System.currentTimeMillis() - startTime;
-        List<ScrapedData> results = List.of(googleFuture.join(), microsoftFuture.join());
+        long failedCount = results.stream()
+                .filter(result -> "FAILED".equals(result.metadata().getOrDefault("status", "SUCCESS")))
+                .count();
 
-        log.info("Parallel scrape completed in {} ms with {} result sets", elapsedMs, results.size());
+        String status = failedCount == 0 ? "SUCCESS" : failedCount == results.size() ? "FAILED" : "PARTIAL_SUCCESS";
+        String message = "Completed %d scrape tasks in parallel (%d failed).".formatted(results.size(), failedCount);
 
-        return new ScrapeResponse(
-                "SUCCESS",
-                "Scraping completed in parallel using the generic ScrapedData model.",
-                elapsedMs,
-                results
-        );
+        log.info("Parallel scrape finished with status={} elapsedMs={}", status, elapsedMs);
+
+        return new ScrapeResponse(status, message, elapsedMs, results);
     }
 
     @Override

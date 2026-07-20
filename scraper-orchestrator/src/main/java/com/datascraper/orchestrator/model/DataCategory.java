@@ -1,5 +1,7 @@
 package com.datascraper.orchestrator.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 public enum DataCategory {
 
     JOBS,
@@ -9,8 +11,13 @@ public enum DataCategory {
     CONTACTS,
     NEWS;
 
-    public static DataCategory fromPath(String value) {
+    @JsonCreator
+    public static DataCategory fromValue(String value) {
         return DataCategory.valueOf(value.trim().toUpperCase().replace('-', '_'));
+    }
+
+    public static DataCategory fromPath(String value) {
+        return fromValue(value);
     }
 
 }

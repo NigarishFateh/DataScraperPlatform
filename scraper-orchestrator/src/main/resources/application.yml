@@ -1,13 +1,26 @@
 spring:
   application:
     name: scraper-orchestrator
+  profiles:
+    active: dev
 
 server:
   port: 8080
 
 scraper:
+  resilience:
+    timeout-ms: 15000
+    max-retries: 3
+    retry-delay-ms: 1000
   services:
     google:
       base-url: http://localhost:8081
     microsoft:
       base-url: http://localhost:8082
+    ibm:
+      base-url: http://localhost:8083
+
+logging:
+  level:
+    root: INFO
+    com.datascraper: INFO

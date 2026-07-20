@@ -1,0 +1,17 @@
+logging:
+  level:
+    root: WARN
+    com.datascraper: INFO
+
+scraper:
+  resilience:
+    timeout-ms: 10000
+    max-retries: 3
+    retry-delay-ms: 2000
+  services:
+    google:
+      base-url: https://scraper-google.example.com
+    microsoft:
+      base-url: https://scraper-microsoft.example.com
+    ibm:
+      base-url: https://scraper-ibm.example.com

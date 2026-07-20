@@ -1,0 +1,7 @@
+logging:
+  level:
+    com.datascraper: DEBUG
+
+scraper:
+  ibm:
+    timeout-ms: 20000

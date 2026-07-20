@@ -1,0 +1,7 @@
+logging:
+  level:
+    com.datascraper: DEBUG
+
+scraper:
+  google:
+    timeout-ms: 20000

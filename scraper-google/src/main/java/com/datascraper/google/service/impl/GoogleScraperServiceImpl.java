@@ -61,7 +61,8 @@ public class GoogleScraperServiceImpl implements GoogleScraperService {
                     Instant.now(),
                     document.title(),
                     items.size(),
-                    items
+                    items,
+                    Map.of("status", "SUCCESS")
             );
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to scrape Google careers page", exception);
@@ -75,7 +76,8 @@ public class GoogleScraperServiceImpl implements GoogleScraperService {
                 Instant.now(),
                 message,
                 0,
-                List.of()
+                List.of(),
+                Map.of("status", "NOT_IMPLEMENTED")
         );
     }
 

@@ -1,0 +1,8 @@
+logging:
+  level:
+    root: WARN
+    com.datascraper: INFO
+
+scraper:
+  google:
+    timeout-ms: 10000

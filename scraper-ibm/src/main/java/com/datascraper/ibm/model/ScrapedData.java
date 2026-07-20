@@ -1,4 +1,4 @@
-package com.datascraper.google.model;
+package com.datascraper.ibm.model;
 
 import java.time.Instant;
 import java.util.List;

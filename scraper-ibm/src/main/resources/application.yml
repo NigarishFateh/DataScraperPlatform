@@ -1,6 +1,18 @@
 spring:
   application:
     name: scraper-ibm
+  profiles:
+    active: dev
 
 server:
   port: 8083
+
+scraper:
+  ibm:
+    careers-url: https://www.ibm.com/careers/search?q=software%20engineer
+    timeout-ms: 15000
+
+logging:
+  level:
+    root: INFO
+    com.datascraper: INFO

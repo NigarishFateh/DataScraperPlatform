@@ -1,6 +1,8 @@
 spring:
   application:
     name: scraper-google
+  profiles:
+    active: dev
 
 server:
   port: 8081
@@ -9,3 +11,8 @@ scraper:
   google:
     careers-url: https://www.google.com/about/careers/applications/jobs/results?q=software+engineer
     timeout-ms: 15000
+
+logging:
+  level:
+    root: INFO
+    com.datascraper: INFO

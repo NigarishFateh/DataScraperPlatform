@@ -1,9 +1,9 @@
-package com.datascraper.microsoft.service.impl;
+package com.datascraper.ibm.service.impl;
 
-import com.datascraper.microsoft.model.DataCategory;
-import com.datascraper.microsoft.model.ScrapedData;
-import com.datascraper.microsoft.model.ScrapedItem;
-import com.datascraper.microsoft.service.MicrosoftScraperService;
+import com.datascraper.ibm.model.DataCategory;
+import com.datascraper.ibm.model.ScrapedData;
+import com.datascraper.ibm.model.ScrapedItem;
+import com.datascraper.ibm.service.IbmScraperService;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -22,7 +22,7 @@ import java.util.Set;
 
 @Slf4j
 @Service
-public class MicrosoftScraperServiceImpl implements MicrosoftScraperService {
+public class IbmScraperServiceImpl implements IbmScraperService {
 
     private static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -30,9 +30,9 @@ public class MicrosoftScraperServiceImpl implements MicrosoftScraperService {
     private final String careersUrl;
     private final int timeoutMs;
 
-    public MicrosoftScraperServiceImpl(
-            @Value("${scraper.microsoft.careers-url}") String careersUrl,
-            @Value("${scraper.microsoft.timeout-ms}") int timeoutMs) {
+    public IbmScraperServiceImpl(
+            @Value("${scraper.ibm.careers-url}") String careersUrl,
+            @Value("${scraper.ibm.timeout-ms}") int timeoutMs) {
         this.careersUrl = careersUrl;
         this.timeoutMs = timeoutMs;
     }
@@ -42,21 +42,21 @@ public class MicrosoftScraperServiceImpl implements MicrosoftScraperService {
         return switch (category) {
             case JOBS -> scrapeJobs();
             case PRODUCTS, SERVICES, COMPANY_INFO, CONTACTS, NEWS ->
-                    emptyResult(category, "Category not yet implemented for Microsoft scraper.");
+                    emptyResult(category, "Category not yet implemented for IBM scraper.");
         };
     }
 
     private ScrapedData scrapeJobs() {
-        log.info("Starting Microsoft careers scrape from {}", careersUrl);
+        log.info("Starting IBM careers scrape from {}", careersUrl);
 
         try {
             Document document = downloadPage(careersUrl);
             List<ScrapedItem> items = parseJobItems(document);
 
-            log.info("Microsoft scrape completed. Found {} job listings.", items.size());
+            log.info("IBM scrape completed. Found {} job listings.", items.size());
 
             return new ScrapedData(
-                    "microsoft",
+                    "ibm",
                     DataCategory.JOBS,
                     Instant.now(),
                     document.title(),
@@ -65,13 +65,13 @@ public class MicrosoftScraperServiceImpl implements MicrosoftScraperService {
                     Map.of("status", "SUCCESS")
             );
         } catch (IOException exception) {
-            throw new IllegalStateException("Failed to scrape Microsoft careers page", exception);
+            throw new IllegalStateException("Failed to scrape IBM careers page", exception);
         }
     }
 
     private ScrapedData emptyResult(DataCategory category, String message) {
         return new ScrapedData(
-                "microsoft",
+                "ibm",
                 category,
                 Instant.now(),
                 message,
@@ -100,7 +100,7 @@ public class MicrosoftScraperServiceImpl implements MicrosoftScraperService {
     }
 
     private void extractItemsFromLinks(Document document, Set<String> seenTitles, List<ScrapedItem> items) {
-        Elements jobLinks = document.select("a[href*='job'], a[href*='search'], a[href*='careers']");
+        Elements jobLinks = document.select("a[href*='job'], a[href*='career'], a[href*='search']");
 
         for (Element link : jobLinks) {
             String title = link.text().trim();
