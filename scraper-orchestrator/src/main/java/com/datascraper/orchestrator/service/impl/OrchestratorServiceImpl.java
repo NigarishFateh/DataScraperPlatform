@@ -6,30 +6,55 @@ import com.datascraper.orchestrator.dto.GoogleScrapeResult;
 import com.datascraper.orchestrator.dto.MicrosoftScrapeResult;
 import com.datascraper.orchestrator.dto.ScrapeResponse;
 import com.datascraper.orchestrator.service.OrchestratorService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OrchestratorServiceImpl implements OrchestratorService {
 
     private final GoogleScraperClient googleScraperClient;
     private final MicrosoftScraperClient microsoftScraperClient;
+    private final Executor scraperExecutor;
+
+    public OrchestratorServiceImpl(
+            GoogleScraperClient googleScraperClient,
+            MicrosoftScraperClient microsoftScraperClient,
+            @Qualifier("scraperExecutor") Executor scraperExecutor) {
+        this.googleScraperClient = googleScraperClient;
+        this.microsoftScraperClient = microsoftScraperClient;
+        this.scraperExecutor = scraperExecutor;
+    }
 
     @Override
     public ScrapeResponse initiateScrape() {
-        log.info("Initiating scrape via Google and Microsoft scraper microservices");
+        log.info("Initiating parallel scrape via Google and Microsoft scraper microservices");
+        long startTime = System.currentTimeMillis();
 
-        GoogleScrapeResult googleResult = googleScraperClient.scrapeJobs();
-        MicrosoftScrapeResult microsoftResult = microsoftScraperClient.scrapeJobs();
+        CompletableFuture<GoogleScrapeResult> googleFuture = CompletableFuture.supplyAsync(
+                googleScraperClient::scrapeJobs,
+                scraperExecutor
+        );
+
+        CompletableFuture<MicrosoftScrapeResult> microsoftFuture = CompletableFuture.supplyAsync(
+                microsoftScraperClient::scrapeJobs,
+                scraperExecutor
+        );
+
+        CompletableFuture.allOf(googleFuture, microsoftFuture).join();
+
+        long elapsedMs = System.currentTimeMillis() - startTime;
+        log.info("Parallel scrape completed in {} ms", elapsedMs);
 
         return new ScrapeResponse(
                 "SUCCESS",
-                "Google and Microsoft scrapes completed successfully.",
-                googleResult,
-                microsoftResult
+                "Google and Microsoft scrapes completed in parallel.",
+                googleFuture.join(),
+                microsoftFuture.join()
         );
     }
 
