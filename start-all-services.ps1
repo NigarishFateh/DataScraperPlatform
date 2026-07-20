@@ -22,7 +22,10 @@ foreach ($service in $services) {
 }
 
 Write-Host ""
-Write-Host "All service windows have been launched."
+Write-Host "All backend service windows have been launched."
 Write-Host "Orchestrator URL: http://localhost:8080/api/health"
-Write-Host "Test scrape with:"
-Write-Host 'curl -X POST http://localhost:8080/api/scrape'
+Write-Host ""
+Write-Host "To start the React frontend, run:"
+Write-Host ".\start-frontend.ps1"
+Write-Host ""
+Write-Host "Frontend URL: http://localhost:5173"

@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Node / React frontend ###
+scraper-frontend/node_modules/
+scraper-frontend/dist/
