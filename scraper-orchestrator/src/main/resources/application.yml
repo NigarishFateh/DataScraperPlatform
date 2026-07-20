@@ -9,3 +9,5 @@ scraper:
   services:
     google:
       base-url: http://localhost:8081
+    microsoft:
+      base-url: http://localhost:8082

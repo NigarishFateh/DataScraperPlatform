@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
-@EnableConfigurationProperties(GoogleScraperProperties.class)
+@EnableConfigurationProperties({GoogleScraperProperties.class, MicrosoftScraperProperties.class})
 public class WebClientConfig {
 
     @Bean
