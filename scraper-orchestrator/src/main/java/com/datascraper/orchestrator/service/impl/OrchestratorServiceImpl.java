@@ -1,20 +1,30 @@
 package com.datascraper.orchestrator.service.impl;
 
+import com.datascraper.orchestrator.client.GoogleScraperClient;
+import com.datascraper.orchestrator.dto.GoogleScrapeResult;
 import com.datascraper.orchestrator.dto.ScrapeResponse;
 import com.datascraper.orchestrator.service.OrchestratorService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class OrchestratorServiceImpl implements OrchestratorService {
+
+    private final GoogleScraperClient googleScraperClient;
 
     @Override
     public ScrapeResponse initiateScrape() {
+        log.info("Initiating scrape via Google scraper microservice");
+
+        GoogleScrapeResult googleResult = googleScraperClient.scrapeJobs();
+
         return new ScrapeResponse(
-                "PENDING",
-                "Scraping is not yet implemented. Scraper services will be connected in upcoming phases.",
-                List.of("google", "microsoft", "ibm")
+                "SUCCESS",
+                "Google scrape completed successfully.",
+                googleResult
         );
     }
 
