@@ -9,8 +9,14 @@ server:
 
 scraper:
   microsoft:
-    careers-url: https://careers.microsoft.com/v2/global/en/search.html?q=software+engineer
     timeout-ms: 15000
+    urls:
+      jobs: https://careers.microsoft.com/v2/global/en/search.html?q=software+engineer
+      products: https://www.microsoft.com/en-us/microsoft-365
+      services: https://azure.microsoft.com/en-us/products
+      company-info: https://www.microsoft.com/en-us/about
+      contacts: https://support.microsoft.com/contactus
+      news: https://news.microsoft.com/
 
 logging:
   level:

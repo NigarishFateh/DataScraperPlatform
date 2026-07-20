@@ -177,7 +177,8 @@ function App() {
                     <thead>
                       <tr>
                         <th>Title</th>
-                        <th>Location</th>
+                        <th>Description</th>
+                        <th>Location / Value</th>
                         <th>URL</th>
                       </tr>
                     </thead>
@@ -185,7 +186,8 @@ function App() {
                       {scrapeResult.items.map((item, index) => (
                         <tr key={`${item.title}-${index}`}>
                           <td>{item.title}</td>
-                          <td>{item.location || '—'}</td>
+                          <td>{item.description || '—'}</td>
+                          <td>{item.location || item.value || '—'}</td>
                           <td>
                             {item.url ? (
                               <a href={item.url} target="_blank" rel="noreferrer">

@@ -9,8 +9,14 @@ server:
 
 scraper:
   google:
-    careers-url: https://www.google.com/about/careers/applications/jobs/results?q=software+engineer
     timeout-ms: 15000
+    urls:
+      jobs: https://www.google.com/about/careers/applications/jobs/results?q=software+engineer
+      products: https://cloud.google.com/products
+      services: https://cloud.google.com/solutions
+      company-info: https://about.google/
+      contacts: https://about.google/contact-google/
+      news: https://blog.google/
 
 logging:
   level:

@@ -59,9 +59,13 @@ public class OrchestratorServiceImpl implements OrchestratorService {
         long failedCount = results.stream()
                 .filter(result -> "FAILED".equals(result.metadata().getOrDefault("status", "SUCCESS")))
                 .count();
+        long emptyCount = results.stream()
+                .filter(result -> result.totalItems() == 0 && !"FAILED".equals(result.metadata().getOrDefault("status", "")))
+                .count();
 
         String status = failedCount == 0 ? "SUCCESS" : failedCount == results.size() ? "FAILED" : "PARTIAL_SUCCESS";
-        String message = "Completed %d scrape tasks in parallel (%d failed).".formatted(results.size(), failedCount);
+        String message = "Completed %d scrape tasks in parallel (%d failed, %d empty)."
+                .formatted(results.size(), failedCount, emptyCount);
 
         log.info("Parallel scrape finished with status={} elapsedMs={}", status, elapsedMs);
 

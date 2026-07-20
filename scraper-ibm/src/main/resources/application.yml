@@ -9,8 +9,14 @@ server:
 
 scraper:
   ibm:
-    careers-url: https://www.ibm.com/careers/search?q=software%20engineer
     timeout-ms: 15000
+    urls:
+      jobs: https://www.ibm.com/careers/search?q=software%20engineer
+      products: https://www.ibm.com/products
+      services: https://www.ibm.com/consulting
+      company-info: https://www.ibm.com/about
+      contacts: https://www.ibm.com/contact
+      news: https://newsroom.ibm.com/announcements
 
 logging:
   level:

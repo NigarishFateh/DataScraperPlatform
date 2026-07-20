@@ -1,24 +1,21 @@
 package com.datascraper.microsoft.service.impl;
 
+import com.datascraper.microsoft.config.MicrosoftUrlProperties;
 import com.datascraper.microsoft.model.DataCategory;
 import com.datascraper.microsoft.model.ScrapedData;
 import com.datascraper.microsoft.model.ScrapedItem;
 import com.datascraper.microsoft.service.MicrosoftScraperService;
+import com.datascraper.microsoft.support.HtmlScrapeParser;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Slf4j
 @Service
@@ -27,58 +24,39 @@ public class MicrosoftScraperServiceImpl implements MicrosoftScraperService {
     private static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-    private final String careersUrl;
+    private final MicrosoftUrlProperties urlProperties;
     private final int timeoutMs;
 
     public MicrosoftScraperServiceImpl(
-            @Value("${scraper.microsoft.careers-url}") String careersUrl,
+            MicrosoftUrlProperties urlProperties,
             @Value("${scraper.microsoft.timeout-ms}") int timeoutMs) {
-        this.careersUrl = careersUrl;
+        this.urlProperties = urlProperties;
         this.timeoutMs = timeoutMs;
     }
 
     @Override
     public ScrapedData scrape(DataCategory category) {
-        return switch (category) {
-            case JOBS -> scrapeJobs();
-            case PRODUCTS, SERVICES, COMPANY_INFO, CONTACTS, NEWS ->
-                    emptyResult(category, "Category not yet implemented for Microsoft scraper.");
-        };
-    }
-
-    private ScrapedData scrapeJobs() {
-        log.info("Starting Microsoft careers scrape from {}", careersUrl);
+        String targetUrl = urlProperties.urlFor(category);
+        log.info("Starting Microsoft {} scrape from {}", category, targetUrl);
 
         try {
-            Document document = downloadPage(careersUrl);
-            List<ScrapedItem> items = parseJobItems(document);
+            Document document = downloadPage(targetUrl);
+            List<ScrapedItem> items = HtmlScrapeParser.parse(document, category, targetUrl);
 
-            log.info("Microsoft scrape completed. Found {} job listings.", items.size());
+            log.info("Microsoft {} scrape completed. Found {} items.", category, items.size());
 
             return new ScrapedData(
                     "microsoft",
-                    DataCategory.JOBS,
+                    category,
                     Instant.now(),
                     document.title(),
                     items.size(),
                     items,
-                    Map.of("status", "SUCCESS")
+                    Map.of("status", "SUCCESS", "targetUrl", targetUrl)
             );
         } catch (IOException exception) {
-            throw new IllegalStateException("Failed to scrape Microsoft careers page", exception);
+            throw new IllegalStateException("Failed to scrape Microsoft " + category + " page", exception);
         }
-    }
-
-    private ScrapedData emptyResult(DataCategory category, String message) {
-        return new ScrapedData(
-                "microsoft",
-                category,
-                Instant.now(),
-                message,
-                0,
-                List.of(),
-                Map.of("status", "NOT_IMPLEMENTED")
-        );
     }
 
     private Document downloadPage(String url) throws IOException {
@@ -87,56 +65,6 @@ public class MicrosoftScraperServiceImpl implements MicrosoftScraperService {
                 .timeout(timeoutMs)
                 .followRedirects(true)
                 .get();
-    }
-
-    private List<ScrapedItem> parseJobItems(Document document) {
-        Set<String> seenTitles = new LinkedHashSet<>();
-        List<ScrapedItem> items = new ArrayList<>();
-
-        extractItemsFromLinks(document, seenTitles, items);
-        extractItemsFromHeadings(document, seenTitles, items);
-
-        return items;
-    }
-
-    private void extractItemsFromLinks(Document document, Set<String> seenTitles, List<ScrapedItem> items) {
-        Elements jobLinks = document.select("a[href*='job'], a[href*='search'], a[href*='careers']");
-
-        for (Element link : jobLinks) {
-            String title = link.text().trim();
-            if (title.isBlank() || title.length() < 4 || !seenTitles.add(title)) {
-                continue;
-            }
-
-            items.add(toJobItem(title, "Not specified in page HTML", link.absUrl("href")));
-        }
-    }
-
-    private void extractItemsFromHeadings(Document document, Set<String> seenTitles, List<ScrapedItem> items) {
-        Elements headings = document.select("h2, h3, h4");
-
-        for (Element heading : headings) {
-            String title = heading.text().trim();
-            if (title.isBlank() || title.length() < 4 || !seenTitles.add(title)) {
-                continue;
-            }
-
-            Element parentLink = heading.selectFirst("a[href]");
-            String url = parentLink != null ? parentLink.absUrl("href") : careersUrl;
-
-            items.add(toJobItem(title, "Not specified in page HTML", url));
-        }
-    }
-
-    private ScrapedItem toJobItem(String title, String location, String url) {
-        return new ScrapedItem(
-                title,
-                null,
-                url,
-                location,
-                null,
-                Map.of("employmentType", "unknown")
-        );
     }
 
 }
