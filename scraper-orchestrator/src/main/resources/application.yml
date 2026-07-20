@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: scraper-orchestrator
+
+server:
+  port: 8080

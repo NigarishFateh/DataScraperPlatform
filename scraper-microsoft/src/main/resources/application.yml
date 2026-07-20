@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: scraper-microsoft
+
+server:
+  port: 8082

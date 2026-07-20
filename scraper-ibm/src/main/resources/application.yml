@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: scraper-ibm
+
+server:
+  port: 8083
