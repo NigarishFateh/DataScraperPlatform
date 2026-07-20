@@ -1,10 +1,12 @@
 package com.datascraper.microsoft.controller;
 
-import com.datascraper.microsoft.dto.MicrosoftScrapeResponse;
+import com.datascraper.microsoft.model.DataCategory;
+import com.datascraper.microsoft.model.ScrapedData;
 import com.datascraper.microsoft.service.MicrosoftScraperService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,9 +28,10 @@ public class MicrosoftScraperController {
         ));
     }
 
-    @GetMapping("/scrape/jobs")
-    public ResponseEntity<MicrosoftScrapeResponse> scrapeJobs() {
-        return ResponseEntity.ok(microsoftScraperService.scrapeJobs());
+    @GetMapping("/scrape/{category}")
+    public ResponseEntity<ScrapedData> scrape(@PathVariable String category) {
+        DataCategory dataCategory = DataCategory.fromPath(category);
+        return ResponseEntity.ok(microsoftScraperService.scrape(dataCategory));
     }
 
 }

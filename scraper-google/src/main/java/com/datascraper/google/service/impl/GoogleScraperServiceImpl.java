@@ -1,7 +1,8 @@
 package com.datascraper.google.service.impl;
 
-import com.datascraper.google.dto.GoogleScrapeResponse;
-import com.datascraper.google.model.JobListing;
+import com.datascraper.google.model.DataCategory;
+import com.datascraper.google.model.ScrapedData;
+import com.datascraper.google.model.ScrapedItem;
 import com.datascraper.google.service.GoogleScraperService;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -16,6 +17,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Slf4j
@@ -36,25 +38,45 @@ public class GoogleScraperServiceImpl implements GoogleScraperService {
     }
 
     @Override
-    public GoogleScrapeResponse scrapeJobs() {
+    public ScrapedData scrape(DataCategory category) {
+        return switch (category) {
+            case JOBS -> scrapeJobs();
+            case PRODUCTS, SERVICES, COMPANY_INFO, CONTACTS, NEWS ->
+                    emptyResult(category, "Category not yet implemented for Google scraper.");
+        };
+    }
+
+    private ScrapedData scrapeJobs() {
         log.info("Starting Google careers scrape from {}", careersUrl);
 
         try {
             Document document = downloadPage(careersUrl);
-            List<JobListing> jobs = parseJobListings(document);
+            List<ScrapedItem> items = parseJobItems(document);
 
-            log.info("Google scrape completed. Found {} job listings.", jobs.size());
+            log.info("Google scrape completed. Found {} job listings.", items.size());
 
-            return new GoogleScrapeResponse(
+            return new ScrapedData(
                     "google",
+                    DataCategory.JOBS,
                     Instant.now(),
                     document.title(),
-                    jobs.size(),
-                    jobs
+                    items.size(),
+                    items
             );
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to scrape Google careers page", exception);
         }
+    }
+
+    private ScrapedData emptyResult(DataCategory category, String message) {
+        return new ScrapedData(
+                "google",
+                category,
+                Instant.now(),
+                message,
+                0,
+                List.of()
+        );
     }
 
     private Document downloadPage(String url) throws IOException {
@@ -65,17 +87,17 @@ public class GoogleScraperServiceImpl implements GoogleScraperService {
                 .get();
     }
 
-    private List<JobListing> parseJobListings(Document document) {
+    private List<ScrapedItem> parseJobItems(Document document) {
         Set<String> seenTitles = new LinkedHashSet<>();
-        List<JobListing> jobs = new ArrayList<>();
+        List<ScrapedItem> items = new ArrayList<>();
 
-        extractJobsFromLinks(document, seenTitles, jobs);
-        extractJobsFromHeadings(document, seenTitles, jobs);
+        extractItemsFromLinks(document, seenTitles, items);
+        extractItemsFromHeadings(document, seenTitles, items);
 
-        return jobs;
+        return items;
     }
 
-    private void extractJobsFromLinks(Document document, Set<String> seenTitles, List<JobListing> jobs) {
+    private void extractItemsFromLinks(Document document, Set<String> seenTitles, List<ScrapedItem> items) {
         Elements jobLinks = document.select("a[href*='jobs/results'], a[href*='jobdetails']");
 
         for (Element link : jobLinks) {
@@ -84,15 +106,11 @@ public class GoogleScraperServiceImpl implements GoogleScraperService {
                 continue;
             }
 
-            jobs.add(new JobListing(
-                    title,
-                    "Not specified in page HTML",
-                    link.absUrl("href")
-            ));
+            items.add(toJobItem(title, "Not specified in page HTML", link.absUrl("href")));
         }
     }
 
-    private void extractJobsFromHeadings(Document document, Set<String> seenTitles, List<JobListing> jobs) {
+    private void extractItemsFromHeadings(Document document, Set<String> seenTitles, List<ScrapedItem> items) {
         Elements headings = document.select("h2, h3, h4");
 
         for (Element heading : headings) {
@@ -104,12 +122,19 @@ public class GoogleScraperServiceImpl implements GoogleScraperService {
             Element parentLink = heading.selectFirst("a[href]");
             String url = parentLink != null ? parentLink.absUrl("href") : careersUrl;
 
-            jobs.add(new JobListing(
-                    title,
-                    "Not specified in page HTML",
-                    url
-            ));
+            items.add(toJobItem(title, "Not specified in page HTML", url));
         }
+    }
+
+    private ScrapedItem toJobItem(String title, String location, String url) {
+        return new ScrapedItem(
+                title,
+                null,
+                url,
+                location,
+                null,
+                Map.of("employmentType", "unknown")
+        );
     }
 
 }

@@ -1,9 +1,10 @@
 package com.datascraper.microsoft.service;
 
-import com.datascraper.microsoft.dto.MicrosoftScrapeResponse;
+import com.datascraper.microsoft.model.DataCategory;
+import com.datascraper.microsoft.model.ScrapedData;
 
 public interface MicrosoftScraperService {
 
-    MicrosoftScrapeResponse scrapeJobs();
+    ScrapedData scrape(DataCategory category);
 
 }

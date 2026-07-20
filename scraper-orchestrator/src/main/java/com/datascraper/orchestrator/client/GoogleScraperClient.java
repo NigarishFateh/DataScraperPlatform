@@ -1,7 +1,8 @@
 package com.datascraper.orchestrator.client;
 
 import com.datascraper.orchestrator.config.GoogleScraperProperties;
-import com.datascraper.orchestrator.dto.GoogleScrapeResult;
+import com.datascraper.orchestrator.model.DataCategory;
+import com.datascraper.orchestrator.model.ScrapedData;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -15,14 +16,14 @@ public class GoogleScraperClient {
     private final WebClient webClient;
     private final GoogleScraperProperties googleScraperProperties;
 
-    public GoogleScrapeResult scrapeJobs() {
-        String url = googleScraperProperties.baseUrl() + "/api/scrape/jobs";
+    public ScrapedData scrape(DataCategory category) {
+        String url = googleScraperProperties.baseUrl() + "/api/scrape/" + category.name().toLowerCase();
         log.info("Calling Google scraper at {}", url);
 
         return webClient.get()
                 .uri(url)
                 .retrieve()
-                .bodyToMono(GoogleScrapeResult.class)
+                .bodyToMono(ScrapedData.class)
                 .block();
     }
 

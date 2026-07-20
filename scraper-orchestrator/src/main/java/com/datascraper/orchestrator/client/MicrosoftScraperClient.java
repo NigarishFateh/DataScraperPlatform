@@ -1,7 +1,8 @@
 package com.datascraper.orchestrator.client;
 
 import com.datascraper.orchestrator.config.MicrosoftScraperProperties;
-import com.datascraper.orchestrator.dto.MicrosoftScrapeResult;
+import com.datascraper.orchestrator.model.DataCategory;
+import com.datascraper.orchestrator.model.ScrapedData;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -15,14 +16,14 @@ public class MicrosoftScraperClient {
     private final WebClient webClient;
     private final MicrosoftScraperProperties microsoftScraperProperties;
 
-    public MicrosoftScrapeResult scrapeJobs() {
-        String url = microsoftScraperProperties.baseUrl() + "/api/scrape/jobs";
+    public ScrapedData scrape(DataCategory category) {
+        String url = microsoftScraperProperties.baseUrl() + "/api/scrape/" + category.name().toLowerCase();
         log.info("Calling Microsoft scraper at {}", url);
 
         return webClient.get()
                 .uri(url)
                 .retrieve()
-                .bodyToMono(MicrosoftScrapeResult.class)
+                .bodyToMono(ScrapedData.class)
                 .block();
     }
 

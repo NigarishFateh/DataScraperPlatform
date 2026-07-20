@@ -1,10 +1,12 @@
 package com.datascraper.google.controller;
 
-import com.datascraper.google.dto.GoogleScrapeResponse;
+import com.datascraper.google.model.DataCategory;
+import com.datascraper.google.model.ScrapedData;
 import com.datascraper.google.service.GoogleScraperService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,9 +28,10 @@ public class GoogleScraperController {
         ));
     }
 
-    @GetMapping("/scrape/jobs")
-    public ResponseEntity<GoogleScrapeResponse> scrapeJobs() {
-        return ResponseEntity.ok(googleScraperService.scrapeJobs());
+    @GetMapping("/scrape/{category}")
+    public ResponseEntity<ScrapedData> scrape(@PathVariable String category) {
+        DataCategory dataCategory = DataCategory.fromPath(category);
+        return ResponseEntity.ok(googleScraperService.scrape(dataCategory));
     }
 
 }
