@@ -49,6 +49,10 @@
   color: #c92a2a;
 }
 
+.status-note {
+  font-weight: 500;
+}
+
 .layout {
   display: grid;
   grid-template-columns: 360px 1fr;

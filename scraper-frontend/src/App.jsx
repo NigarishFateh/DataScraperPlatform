@@ -28,7 +28,12 @@ function App() {
   useEffect(() => {
     checkHealth()
       .then(setHealth)
-      .catch(() => setHealth({ status: 'DOWN' }));
+      .catch(() =>
+        setHealth({
+          status: 'DOWN',
+          message: 'Start backend services with .\\start-all-services.ps1',
+        }),
+      );
   }, []);
 
   function toggleValue(list, setList, value) {
@@ -74,6 +79,9 @@ function App() {
         </div>
         <div className={`status-pill ${health?.status === 'UP' ? 'up' : 'down'}`}>
           Orchestrator: {health?.status ?? 'CHECKING'}
+          {health?.status === 'DOWN' && (
+            <span className="status-note"> — run start-all-services.ps1</span>
+          )}
         </div>
       </header>
 
