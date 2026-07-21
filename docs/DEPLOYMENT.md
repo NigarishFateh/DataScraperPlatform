@@ -153,6 +153,16 @@ Copy `scraper-frontend/.env.example` to `.env.local` if you need custom local se
 
 ## Troubleshooting
 
+### Vercel build error: `functions` pattern doesn't match
+
+```
+The pattern "scraper-frontend/api/scrape.cjs" defined in functions doesn't match...
+```
+
+**Cause:** Vercel only discovers serverless functions in an `api/` folder at the **project root** (repo root when Root Directory is empty).
+
+**Fix:** Pull latest code — root `api/*.cjs` files re-export from `scraper-frontend/api/`. Or set **Root Directory** to `scraper-frontend` and use `scraper-frontend/vercel.json` instead (root `vercel.json` is then ignored).
+
 ### Vercel shows `NOT_FOUND` (404) on every page
 
 This usually means Vercel deployed the **wrong folder** or produced **no static output**.
