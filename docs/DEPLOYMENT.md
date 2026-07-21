@@ -144,14 +144,47 @@ Copy `scraper-frontend/.env.example` to `.env.local` if you need custom local se
 
 | File | Purpose |
 |---|---|
-| `scraper-frontend/vercel.json` | Build config, SPA rewrites, scrape timeout |
-| `scraper-frontend/api/health.js` | Serverless proxy → orchestrator health |
-| `scraper-frontend/api/scrape.js` | Serverless proxy → orchestrator scrape |
-| `scraper-frontend/.env.example` | Env var documentation |
+| `vercel.json` (repo root) | Fallback build config if Root Directory is not set |
+| `scraper-frontend/vercel.json` | Build config when Root Directory = `scraper-frontend` |
+| `scraper-frontend/api/health.cjs` | Serverless proxy → orchestrator health |
+| `scraper-frontend/api/scrape.cjs` | Serverless proxy → orchestrator scrape |
 
 ---
 
 ## Troubleshooting
+
+### Vercel shows `NOT_FOUND` (404) on every page
+
+This usually means Vercel deployed the **wrong folder** or produced **no static output**.
+
+**Fix (pick one):**
+
+**Option A — Set Root Directory (recommended)**
+
+1. Vercel → **Project Settings** → **General**
+2. **Root Directory** → `scraper-frontend`
+3. **Save** → **Redeploy**
+
+**Option B — Deploy from repo root**
+
+A root `vercel.json` is included that builds `scraper-frontend/` automatically. Leave Root Directory empty (or `.`) and redeploy.
+
+**Verify the build succeeded:**
+
+1. Vercel → **Deployments** → latest deploy → **Build Logs**
+2. Look for `vite build` completing and `dist/index.html` being created
+3. If build failed (no `package.json` found), Root Directory is wrong
+
+**Verify the URL:**
+
+- Use the deployment URL from Vercel dashboard, e.g. `https://your-project.vercel.app`
+- Do not add extra paths unless testing API routes
+
+### `/api/health` returns NOT_FOUND
+
+- API routes live in `scraper-frontend/api/*.cjs`
+- Root Directory must be `scraper-frontend`, OR use the repo-root `vercel.json`
+- Redeploy after changing `vercel.json` or `api/` files
 
 ### Orchestrator shows DOWN on Vercel
 
