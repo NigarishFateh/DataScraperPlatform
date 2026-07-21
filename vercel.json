@@ -5,7 +5,7 @@
   "buildCommand": "npm run build --prefix scraper-frontend",
   "outputDirectory": "scraper-frontend/dist",
   "functions": {
-    "api/scrape.cjs": {
+    "api/scrape.js": {
       "maxDuration": 60
     }
   },

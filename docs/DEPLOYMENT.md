@@ -146,8 +146,10 @@ Copy `scraper-frontend/.env.example` to `.env.local` if you need custom local se
 |---|---|
 | `vercel.json` (repo root) | Fallback build config if Root Directory is not set |
 | `scraper-frontend/vercel.json` | Build config when Root Directory = `scraper-frontend` |
-| `scraper-frontend/api/health.cjs` | Serverless proxy → orchestrator health |
-| `scraper-frontend/api/scrape.cjs` | Serverless proxy → orchestrator scrape |
+| `scraper-frontend/api/health.js` | Serverless proxy → orchestrator health |
+| `scraper-frontend/api/scrape.js` | Serverless proxy → orchestrator scrape |
+| `api/health.js` (repo root) | Same proxy when deploying from monorepo root |
+| `api/scrape.js` (repo root) | Same proxy when deploying from monorepo root |
 
 ---
 
@@ -156,12 +158,19 @@ Copy `scraper-frontend/.env.example` to `.env.local` if you need custom local se
 ### Vercel build error: `functions` pattern doesn't match
 
 ```
-The pattern "scraper-frontend/api/scrape.cjs" defined in functions doesn't match...
+The pattern "api/scrape.cjs" defined in functions doesn't match...
 ```
 
-**Cause:** Vercel only discovers serverless functions in an `api/` folder at the **project root** (repo root when Root Directory is empty).
+**Cause:** Vercel only auto-detects serverless functions as `api/*.js` or `api/*.ts`. **`.cjs` files are not valid function entry points.**
 
-**Fix:** Pull latest code — root `api/*.cjs` files re-export from `scraper-frontend/api/`. Or set **Root Directory** to `scraper-frontend` and use `scraper-frontend/vercel.json` instead (root `vercel.json` is then ignored).
+**Fix:** Use `api/health.js` and `api/scrape.js` (already updated in repo). Push and redeploy.
+
+**Also check Root Directory:**
+
+| Root Directory | Which config applies |
+|---|---|
+| Empty / `.` | Repo root `vercel.json` + root `api/*.js` |
+| `scraper-frontend` | `scraper-frontend/vercel.json` + `scraper-frontend/api/*.js` |
 
 ### Vercel shows `NOT_FOUND` (404) on every page
 
