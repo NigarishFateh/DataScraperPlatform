@@ -35,3 +35,5 @@ build/
 ### Node / React frontend ###
 scraper-frontend/node_modules/
 scraper-frontend/dist/
+scraper-frontend/.env
+scraper-frontend/.env.local

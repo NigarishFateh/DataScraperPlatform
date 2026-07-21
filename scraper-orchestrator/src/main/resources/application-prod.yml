@@ -3,6 +3,10 @@ logging:
     root: WARN
     com.datascraper: INFO
 
+app:
+  cors:
+    allowed-origins: http://localhost:5173,https://your-app.vercel.app
+
 scraper:
   resilience:
     timeout-ms: 10000

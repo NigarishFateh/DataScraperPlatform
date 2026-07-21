@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { checkHealth, runScrape } from './api/scraperApi';
+import { checkHealth, getApiMode, runScrape } from './api/scraperApi';
 import './App.css';
 
 const SOURCES = [
@@ -31,7 +31,9 @@ function App() {
       .catch(() =>
         setHealth({
           status: 'DOWN',
-          message: 'Start backend services with .\\start-all-services.ps1',
+          message: import.meta.env.PROD
+            ? 'Set ORCHESTRATOR_URL on Vercel or start local backends.'
+            : 'Start backend services with .\\start-all-services.ps1',
         }),
       );
   }, []);
@@ -77,11 +79,19 @@ function App() {
             Choose sources and categories, then let the orchestrator call the scraper microservices in parallel.
           </p>
         </div>
-        <div className={`status-pill ${health?.status === 'UP' ? 'up' : 'down'}`}>
-          Orchestrator: {health?.status ?? 'CHECKING'}
-          {health?.status === 'DOWN' && (
-            <span className="status-note"> — run start-all-services.ps1</span>
-          )}
+        <div className="hero-status">
+          <div className={`status-pill ${health?.status === 'UP' ? 'up' : 'down'}`}>
+            Orchestrator: {health?.status ?? 'CHECKING'}
+            {health?.status === 'DOWN' && (
+              <span className="status-note">
+                {' '}
+                — {health?.message ?? (import.meta.env.PROD
+                  ? 'Configure ORCHESTRATOR_URL on Vercel'
+                  : 'run start-all-services.ps1')}
+              </span>
+            )}
+          </div>
+          <p className="api-mode">API: {getApiMode()}</p>
         </div>
       </header>
 
