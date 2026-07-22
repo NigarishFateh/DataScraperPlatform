@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: scraper-contact
+  profiles:
+    active: dev
+
+server:
+  port: 8095
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -5,7 +5,8 @@ spring:
     active: dev
 
 server:
-  port: 8080
+  # Gateway owns 8080. Orchestrator is an internal intelligence service.
+  port: 8085
 
 scraper:
   resilience:
@@ -13,16 +14,29 @@ scraper:
     max-retries: 3
     retry-delay-ms: 1000
   services:
+    # Target architecture: scrapers by data source (Phase 9+)
+    website:
+      base-url: http://localhost:8091
+    tech:
+      base-url: http://localhost:8092
+    news:
+      base-url: http://localhost:8093
+    github:
+      base-url: http://localhost:8094
+    contact:
+      base-url: http://localhost:8095
+    # Legacy company-specific scrapers (mvn -Plegacy) — do not use in new flows
     google:
-      base-url: http://localhost:8081
+      base-url: http://localhost:8181
     microsoft:
-      base-url: http://localhost:8082
+      base-url: http://localhost:8182
     ibm:
-      base-url: http://localhost:8083
+      base-url: http://localhost:8183
 
 app:
   cors:
-    allowed-origins: http://localhost:5173
+    # Chrome extension + local Vite side-panel tooling
+    allowed-origins: http://localhost:5173,chrome-extension://*
 
 logging:
   level:

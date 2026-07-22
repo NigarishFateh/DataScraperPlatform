@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: scraper-github
+  profiles:
+    active: dev
+
+server:
+  port: 8094
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

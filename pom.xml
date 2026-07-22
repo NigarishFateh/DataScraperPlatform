@@ -16,23 +16,51 @@
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>Data Scraper Platform</name>
-    <description>Multi-module microservices platform for scraping IT company websites</description>
+    <name>Lead Intelligence Platform</name>
+    <description>
+        Chrome Extension + Spring Boot microservices for European IT company lead intelligence.
+        Scrapers are organized by data source capability, not by company.
+    </description>
 
+    <!--
+      Active modules = Lead Intelligence target architecture (Phase 2+).
+      Legacy company-specific scrapers (google/microsoft/ibm) live under profile "legacy".
+    -->
     <modules>
+        <module>platform-common</module>
+        <module>gateway-service</module>
+        <module>auth-service</module>
+        <module>location-service</module>
+        <module>company-service</module>
+        <module>category-service</module>
         <module>scraper-orchestrator</module>
-        <module>scraper-google</module>
-        <module>scraper-microsoft</module>
-        <module>scraper-ibm</module>
+        <module>scraper-website</module>
+        <module>scraper-tech</module>
+        <module>scraper-news</module>
+        <module>scraper-github</module>
+        <module>scraper-contact</module>
     </modules>
 
     <properties>
         <java.version>17</java.version>
         <jsoup.version>1.18.3</jsoup.version>
+        <spring-cloud.version>2024.0.1</spring-cloud.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.datascraper</groupId>
+                <artifactId>platform-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.jsoup</groupId>
                 <artifactId>jsoup</artifactId>
@@ -73,5 +101,16 @@
             </plugins>
         </pluginManagement>
     </build>
+
+    <profiles>
+        <profile>
+            <id>legacy</id>
+            <modules>
+                <module>scraper-google</module>
+                <module>scraper-microsoft</module>
+                <module>scraper-ibm</module>
+            </modules>
+        </profile>
+    </profiles>
 
 </project>

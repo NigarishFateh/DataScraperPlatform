@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: scraper-tech
+  profiles:
+    active: dev
+
+server:
+  port: 8092
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
