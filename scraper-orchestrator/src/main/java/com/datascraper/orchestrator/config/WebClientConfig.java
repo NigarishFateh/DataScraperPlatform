@@ -15,7 +15,8 @@ import java.time.Duration;
         GoogleScraperProperties.class,
         MicrosoftScraperProperties.class,
         IbmScraperProperties.class,
-        ScraperResilienceProperties.class
+        ScraperResilienceProperties.class,
+        IntelligenceScraperProperties.class
 })
 public class WebClientConfig {
 
