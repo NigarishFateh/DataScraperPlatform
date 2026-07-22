@@ -7,6 +7,11 @@ spring:
 server:
   port: 8095
 
+contact:
+  scraper:
+    timeout-ms: 15000
+    max-items: 25
+
 management:
   endpoints:
     web:

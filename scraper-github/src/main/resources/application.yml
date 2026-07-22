@@ -7,6 +7,13 @@ spring:
 server:
   port: 8094
 
+github:
+  scraper:
+    timeout-ms: 10000
+    max-results: 5
+    api-base-url: https://api.github.com
+    token: ${GITHUB_TOKEN:}
+
 management:
   endpoints:
     web:

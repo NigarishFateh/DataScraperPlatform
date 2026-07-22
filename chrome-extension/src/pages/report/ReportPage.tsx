@@ -4,10 +4,7 @@ import { useLocation } from "react-router-dom";
 import { SEARCH_SELECTION_KEY, type SearchPayload } from "../dashboard/DashboardPage";
 import { createIntelligenceJob } from "../../services/intelligence/intelligenceApi";
 import { formatResultItems, groupResultsBySection } from "../../services/intelligence/reportMapper";
-import type { Company, DashboardSelection } from "../../types/catalog";
-
-const USE_BACKEND_INTELLIGENCE =
-  (import.meta.env.VITE_INTELLIGENCE_SOURCE ?? "backend") === "backend";
+import type { Category, City, Company, DashboardSelection } from "../../types/catalog";
 
 const SECTIONS = [
   {
@@ -42,12 +39,21 @@ const SECTIONS = [
   },
 ] as const;
 
-function readSearchContext(state: unknown): { selection: DashboardSelection; companies: Company[] } | null {
+function readSearchContext(state: unknown): {
+  selection: DashboardSelection;
+  companies: Company[];
+  categories: Category[];
+  countryName: string | null;
+  cities: City[];
+} | null {
   const fromState = state as SearchPayload | null;
   if (fromState?.companyIds?.length) {
     return {
       selection: fromState,
       companies: fromState.companies ?? [],
+      categories: fromState.categories ?? [],
+      countryName: fromState.countryName ?? null,
+      cities: fromState.cities ?? [],
     };
   }
   try {
@@ -57,6 +63,9 @@ function readSearchContext(state: unknown): { selection: DashboardSelection; com
     return {
       selection: parsed,
       companies: parsed.companies ?? [],
+      categories: parsed.categories ?? [],
+      countryName: parsed.countryName ?? null,
+      cities: parsed.cities ?? [],
     };
   } catch {
     return null;
@@ -68,6 +77,9 @@ export function ReportPage() {
   const context = useMemo(() => readSearchContext(location.state), [location.state]);
   const selection = context?.selection ?? null;
   const companies = context?.companies ?? [];
+  const categories = context?.categories ?? [];
+  const countryName = context?.countryName ?? null;
+  const cities = context?.cities ?? [];
   const [openId, setOpenId] = useState<string>("identity");
 
   const primary = companies[0];
@@ -81,7 +93,7 @@ export function ReportPage() {
         websiteUrl: primary!.website,
         categoryIds: selection!.categoryIds,
       }),
-    enabled: USE_BACKEND_INTELLIGENCE && Boolean(primary && selection),
+    enabled: Boolean(primary && selection),
     staleTime: 60_000,
   });
 
@@ -90,8 +102,10 @@ export function ReportPage() {
     [intelligenceQuery.data],
   );
 
-  const cityName = primary?.cityId.replace(/^[^-]+-/, "").replace(/-/g, " ") ?? null;
-  const countryCode = primary?.countryCode ?? null;
+  const cityName =
+    cities.find((city) => city.id === primary?.cityId)?.name ??
+    primary?.cityId.replace(/^[^-]+-/, "").replace(/-/g, " ") ??
+    null;
 
   if (!selection || companies.length === 0) {
     return (
@@ -114,25 +128,27 @@ export function ReportPage() {
           <div className="min-w-0 space-y-1">
             <h1 className="font-display text-lg font-semibold text-mist-100">{primary.name}</h1>
             <p className="text-xs text-mist-300">
-              {primary.website.replace(/^https?:\/\//, "")} · {cityName}, {countryCode} ·{" "}
+              {primary.website.replace(/^https?:\/\//, "")} · {cityName}
+              {countryName ? `, ${countryName}` : primary?.countryCode ? `, ${primary.countryCode}` : ""} ·{" "}
               {primary.industry}
             </p>
+            {categories.length > 0 ? (
+              <p className="text-[11px] text-mist-400">
+                {categories.map((category) => category.name).join(" · ")}
+              </p>
+            ) : null}
             <p className="text-[11px] text-mist-400">
               {companies.length} compan{companies.length === 1 ? "y" : "ies"} selected
             </p>
-            {USE_BACKEND_INTELLIGENCE ? (
-              <p className="text-[11px] text-signal/90">
-                {intelligenceQuery.isLoading
-                  ? "Running intelligence job…"
-                  : intelligenceQuery.isError
-                    ? "Intelligence job failed — showing catalog preview."
-                    : intelligenceQuery.data
-                      ? `Job ${intelligenceQuery.data.status} · ${intelligenceQuery.data.elapsedMs}ms`
-                      : "Intelligence job pending"}
-              </p>
-            ) : (
-              <p className="text-[11px] text-signal/90">Catalog preview — intelligence API disabled.</p>
-            )}
+            <p className="text-[11px] text-signal/90">
+              {intelligenceQuery.isLoading
+                ? "Running intelligence job…"
+                : intelligenceQuery.isError
+                  ? "Intelligence job failed — showing catalog preview."
+                  : intelligenceQuery.data
+                    ? `Job ${intelligenceQuery.data.status} · ${intelligenceQuery.data.elapsedMs}ms`
+                    : "Intelligence job pending"}
+            </p>
           </div>
         </div>
       </section>
@@ -202,7 +218,8 @@ export function ReportPage() {
                         <span className="text-mist-400">Website:</span> {primary.website}
                       </li>
                       <li>
-                        <span className="text-mist-400">HQ:</span> {cityName}, {countryCode}
+                        <span className="text-mist-400">HQ:</span> {cityName}
+                        {countryName ? `, ${countryName}` : primary?.countryCode ? `, ${primary.countryCode}` : ""}
                       </li>
                     </ul>
                   ) : (

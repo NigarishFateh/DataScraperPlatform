@@ -2,26 +2,24 @@ package com.datascraper.github.controller;
 
 import com.datascraper.common.dto.ScraperContext;
 import com.datascraper.common.dto.ScraperResult;
-import com.datascraper.common.enums.ScraperType;
+import com.datascraper.github.service.GitHubScraperService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api")
 public class ScraperApiController {
 
+    private final GitHubScraperService gitHubScraperService;
+
+    public ScraperApiController(GitHubScraperService gitHubScraperService) {
+        this.gitHubScraperService = gitHubScraperService;
+    }
+
     @PostMapping("/scrape")
     public ScraperResult scrape(@RequestBody ScraperContext context) {
-        return ScraperResult.success(
-                ScraperType.GITHUB,
-                "GitHub scraper stub ready (Phase 8 framework)",
-                List.of(Map.of("companyName", context.companyName())),
-                Map.of("phase", "8", "service", "scraper-github")
-        );
+        return gitHubScraperService.scrape(context);
     }
 }

@@ -5,13 +5,15 @@ import { CompanySelect } from "../../components/filters/CompanySelect";
 import { CountrySelect } from "../../components/filters/CountrySelect";
 import { FilterSection } from "../../components/filters/FilterSection";
 import { useDashboardFilters } from "../../hooks/useDashboardFilters";
-import type { Company, DashboardSelection } from "../../types/catalog";
-import { COUNTRIES } from "../../data/dummyCatalog";
+import type { Category, City, Company, DashboardSelection } from "../../types/catalog";
 
 export const SEARCH_SELECTION_KEY = "li.lastSearchSelection";
 
 export type SearchPayload = DashboardSelection & {
   companies?: Company[];
+  categories?: Category[];
+  countryName?: string | null;
+  cities?: City[];
 };
 
 /**
@@ -28,13 +30,23 @@ export function DashboardPage() {
       companies: filters.companies.filter((company) =>
         filters.selection.companyIds.includes(company.id),
       ),
+      categories: (filters.categoriesQuery.data ?? []).filter((category) =>
+        filters.selection.categoryIds.includes(category.id),
+      ),
+      countryName:
+        filters.countriesQuery.data?.find((country) => country.code === filters.countryCode)?.name ??
+        null,
+      cities: (filters.citiesQuery.data ?? []).filter((city) =>
+        filters.selection.cityIds.includes(city.id),
+      ),
     };
     sessionStorage.setItem(SEARCH_SELECTION_KEY, JSON.stringify(payload));
     navigate("/report", { state: payload });
   }
 
   const countryName =
-    COUNTRIES.find((country) => country.code === filters.countryCode)?.name ?? null;
+    filters.countriesQuery.data?.find((country) => country.code === filters.countryCode)?.name ??
+    null;
 
   return (
     <div className="flex flex-1 flex-col gap-4">

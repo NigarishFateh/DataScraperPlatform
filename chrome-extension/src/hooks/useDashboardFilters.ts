@@ -12,7 +12,7 @@ import type { DashboardSelection } from "../types/catalog";
  * Cascading filter state for the Dashboard.
  *
  * Ownership of truth:
- * - React Query cache = server (dummy) data
+ * - React Query cache = backend catalog data
  * - useState = user selection
  * Changing an upstream filter clears downstream selections (cascade).
  */

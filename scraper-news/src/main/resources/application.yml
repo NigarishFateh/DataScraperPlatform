@@ -7,6 +7,12 @@ spring:
 server:
   port: 8093
 
+news:
+  scraper:
+    timeout-ms: 15000
+    max-items: 10
+    rss-base-url: https://news.google.com/rss/search
+
 management:
   endpoints:
     web:
