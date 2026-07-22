@@ -3,30 +3,27 @@ package com.datascraper.orchestrator.scraper;
 import com.datascraper.common.dto.ScraperContext;
 import com.datascraper.common.dto.ScraperResult;
 import com.datascraper.common.enums.ScraperType;
+import com.datascraper.orchestrator.client.ScraperCommunicationException;
+import com.datascraper.orchestrator.client.ScraperServiceClient;
 import com.datascraper.orchestrator.config.IntelligenceScraperProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-
-import java.time.Duration;
 
 /**
- * Template for remote scraper strategies — handles HTTP, timeout, retries.
- * Concrete subclasses only declare {@link #type()} and service config key.
+ * Template for remote scraper strategies — retries delegate to {@link ScraperServiceClient}.
  */
 @Slf4j
 public abstract class AbstractRemoteScraper implements Scraper {
 
-    private final WebClient webClient;
+    private final ScraperServiceClient scraperServiceClient;
     private final IntelligenceScraperProperties properties;
     private final String serviceKey;
 
     protected AbstractRemoteScraper(
-            WebClient webClient,
+            ScraperServiceClient scraperServiceClient,
             IntelligenceScraperProperties properties,
             String serviceKey
     ) {
-        this.webClient = webClient;
+        this.scraperServiceClient = scraperServiceClient;
         this.properties = properties;
         this.serviceKey = serviceKey;
     }
@@ -48,17 +45,10 @@ public abstract class AbstractRemoteScraper implements Scraper {
         while (attempts < properties.getResilience().getMaxRetries()) {
             attempts++;
             try {
-                log.info("Calling {} scraper at {}/api/scrape (attempt {}/{})",
+                log.info("Calling {} scraper at {} (attempt {}/{})",
                         type(), baseUrl, attempts, properties.getResilience().getMaxRetries());
-                ScraperResult result = webClient.post()
-                        .uri(baseUrl + "/api/scrape")
-                        .bodyValue(context)
-                        .retrieve()
-                        .bodyToMono(ScraperResult.class)
-                        .timeout(Duration.ofMillis(properties.getResilience().getTimeoutMs()))
-                        .block();
-                return result != null ? result : ScraperResult.failed(type(), "Empty response from scraper service");
-            } catch (Exception ex) {
+                return scraperServiceClient.scrape(baseUrl, type(), context);
+            } catch (ScraperCommunicationException ex) {
                 lastError = ex;
                 log.warn("{} scraper attempt {} failed: {}", type(), attempts, ex.getMessage());
                 if (attempts < properties.getResilience().getMaxRetries()) {
@@ -66,7 +56,7 @@ public abstract class AbstractRemoteScraper implements Scraper {
                 }
             }
         }
-        return ScraperResult.failed(type(), formatError(lastError));
+        return ScraperResult.failed(type(), lastError != null ? lastError.getMessage() : "Unknown scraper error");
     }
 
     private String resolveBaseUrl() {
@@ -81,12 +71,5 @@ public abstract class AbstractRemoteScraper implements Scraper {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Retry interrupted for scraper " + type(), ex);
         }
-    }
-
-    private String formatError(Exception exception) {
-        if (exception instanceof WebClientResponseException webEx) {
-            return "HTTP " + webEx.getStatusCode().value() + " from " + type() + " scraper";
-        }
-        return exception != null ? exception.getMessage() : "Unknown scraper error";
     }
 }
