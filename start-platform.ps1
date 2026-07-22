@@ -1,6 +1,6 @@
 # Start the current Lead Intelligence backend (extension-focused architecture).
 # Does NOT start legacy scraper-google / scraper-microsoft / scraper-ibm.
-# Usage: .\start-platform.ps1
+# Usage: .\start-platform.ps1   (run from project root, not chrome-extension)
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
@@ -11,30 +11,20 @@ function Test-PortListening([int]$Port) {
 
 function Start-ServiceJar([string]$Name, [string]$JarRelativePath, [int]$Port) {
     if (Test-PortListening $Port) {
-        Write-Host "Skipping $Name — port $Port already in use." -ForegroundColor DarkYellow
+        Write-Host "Already running: $Name (port $Port)" -ForegroundColor DarkYellow
         return
     }
 
     $jarPath = Join-Path $root $JarRelativePath
     if (-not (Test-Path $jarPath)) {
         Write-Host "Missing jar for $Name : $jarPath" -ForegroundColor Red
+        Write-Host "Run: .\mvnw.cmd -pl $Name -am package -DskipTests" -ForegroundColor Yellow
         exit 1
     }
 
     Write-Host "Starting $Name on port $Port..." -ForegroundColor Green
     Start-Process -FilePath "java" -ArgumentList "-jar", $jarPath -WorkingDirectory $root -WindowStyle Minimized
     Start-Sleep -Seconds 2
-}
-
-Write-Host "Ensuring PostgreSQL is available..." -ForegroundColor Cyan
-& "$root\start-postgres.ps1"
-if ($LASTEXITCODE -ne 0) { exit 1 }
-
-Write-Host "Building platform modules..." -ForegroundColor Cyan
-& .\mvnw.cmd -q install -DskipTests
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Build failed." -ForegroundColor Red
-    exit 1
 }
 
 $services = @(
@@ -51,6 +41,30 @@ $services = @(
     @{ Name = "scraper-contact";      Jar = "scraper-contact\target\scraper-contact-0.0.1-SNAPSHOT.jar";  Port = 8095 }
 )
 
+Write-Host "Ensuring PostgreSQL is available..." -ForegroundColor Cyan
+& "$root\start-postgres.ps1"
+if ($LASTEXITCODE -ne 0) { exit 1 }
+
+$toBuild = @()
+foreach ($svc in $services) {
+    if (-not (Test-PortListening $svc.Port)) {
+        $toBuild += $svc.Name
+    }
+}
+
+if ($toBuild.Count -eq 0) {
+    Write-Host "All platform services are already running. Skipping build." -ForegroundColor Green
+}
+else {
+    $moduleList = ($toBuild + @("platform-common") | Select-Object -Unique) -join ","
+    Write-Host "Building modules not currently running: $moduleList" -ForegroundColor Cyan
+    & .\mvnw.cmd -q -pl $moduleList -am package -DskipTests
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Build failed. If jars are locked, run .\stop-platform.ps1 first, then retry." -ForegroundColor Red
+        exit 1
+    }
+}
+
 foreach ($svc in $services) {
     Start-ServiceJar -Name $svc.Name -JarRelativePath $svc.Jar -Port $svc.Port
 }
@@ -65,9 +79,7 @@ Write-Host "  Category     http://localhost:8084"
 Write-Host "  Orchestrator http://localhost:8085"
 Write-Host "  Scrapers     8091-8095"
 Write-Host ""
-Write-Host "Chrome extension:" -ForegroundColor Cyan
-Write-Host "  1) cd chrome-extension"
-Write-Host "  2) npm install && npm run build"
-Write-Host "  3) Load unpacked extension from chrome-extension\dist"
+Write-Host "Chrome extension (already built):" -ForegroundColor Cyan
+Write-Host '  Load unpacked from chrome-extension\dist in chrome://extensions'
 Write-Host ""
-Write-Host "To stop services: .\stop-platform.ps1"
+Write-Host 'To stop services: .\stop-platform.ps1'

@@ -44,7 +44,11 @@ export function AuthPage() {
           disabled={authenticating}
         >
           <GoogleGlyph />
-          {authenticating ? "Signing in…" : "Continue with Google"}
+          {authenticating
+            ? "Signing in…"
+            : authModeLabel() === "Dev login"
+              ? "Continue (dev login)"
+              : "Continue with Google"}
         </button>
         {error ? (
           <p className="text-center text-[11px] leading-relaxed text-red-300">{error}</p>

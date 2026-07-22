@@ -4,14 +4,14 @@ CREATE TABLE users (
     display_name VARCHAR(255) NOT NULL,
     picture_url VARCHAR(512),
     google_subject VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL,
-    last_login_at TIMESTAMPTZ NOT NULL
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    last_login_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE TABLE refresh_sessions (
     token VARCHAR(128) PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    expires_at TIMESTAMPTZ NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     revoked BOOLEAN NOT NULL DEFAULT FALSE
 );
 

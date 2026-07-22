@@ -7,6 +7,26 @@ import {
 } from "../storage/tokenStorage";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+const REQUEST_TIMEOUT_MS = 15_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError(
+        0,
+        "Request timed out. Is the backend running? Start it with .\\start-platform.ps1 from the project root.",
+      );
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 export class ApiError extends Error {
   status: number;
@@ -37,13 +57,13 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  let response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  let response = await fetchWithTimeout(`${API_BASE}${path}`, { ...init, headers });
 
   if (response.status === 401 && !path.includes("/api/auth/")) {
     const refreshed = await tryRefresh();
     if (refreshed) {
       headers.set("Authorization", `Bearer ${refreshed}`);
-      response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+      response = await fetchWithTimeout(`${API_BASE}${path}`, { ...init, headers });
     }
   }
 
@@ -51,7 +71,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 }
 
 export async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetchWithTimeout(`${API_BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
