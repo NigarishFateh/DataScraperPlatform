@@ -144,8 +144,8 @@ export function DashboardPage() {
 
       <p className="text-[11px] leading-relaxed text-mist-400">
         {countryName
-          ? `Dummy catalog · ${countryName} · select cities → companies → categories`
-          : "Dummy data only — Location/Company APIs arrive in later phases."}
+          ? `Location API · ${countryName} · companies/categories still dummy until Phase 7`
+          : "Countries/cities from Location Service when backend is running."}
       </p>
     </div>
   );

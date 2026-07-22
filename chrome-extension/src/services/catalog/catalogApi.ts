@@ -1,7 +1,11 @@
 import { CATEGORIES, CITIES, COMPANIES, COUNTRIES } from "../../data/dummyCatalog";
 import type { Category, City, CompanyPage, Country } from "../../types/catalog";
+import { fetchCitiesFromApi, fetchCountriesFromApi } from "./locationApi";
 
-/** Artificial latency so the UI demonstrates loading / lazy-fetch behavior. */
+const USE_BACKEND_LOCATIONS =
+  (import.meta.env.VITE_LOCATION_SOURCE ?? "backend") === "backend";
+
+/** Artificial latency for dummy company/category paths only. */
 function delay(ms = 280): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -9,11 +13,17 @@ function delay(ms = 280): Promise<void> {
 }
 
 export async function fetchCountries(): Promise<Country[]> {
+  if (USE_BACKEND_LOCATIONS) {
+    return fetchCountriesFromApi();
+  }
   await delay(150);
   return COUNTRIES;
 }
 
 export async function fetchCities(countryCode: string, search = ""): Promise<City[]> {
+  if (USE_BACKEND_LOCATIONS) {
+    return fetchCitiesFromApi(countryCode, search);
+  }
   await delay();
   const q = search.trim().toLowerCase();
   return CITIES.filter((city) => {
