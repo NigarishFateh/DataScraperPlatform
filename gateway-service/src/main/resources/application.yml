@@ -3,6 +3,44 @@ spring:
     name: gateway-service
   profiles:
     active: dev
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - "chrome-extension://*"
+              - "http://localhost:*"
+              - "http://127.0.0.1:*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+      routes:
+        - id: auth-service
+          uri: ${AUTH_SERVICE_URI:http://localhost:8081}
+          predicates:
+            - Path=/api/auth/**
+        - id: location-service
+          uri: ${LOCATION_SERVICE_URI:http://localhost:8082}
+          predicates:
+            - Path=/api/locations/**
+        - id: company-service
+          uri: ${COMPANY_SERVICE_URI:http://localhost:8083}
+          predicates:
+            - Path=/api/companies/**
+        - id: category-service
+          uri: ${CATEGORY_SERVICE_URI:http://localhost:8084}
+          predicates:
+            - Path=/api/categories/**
+        - id: intelligence-orchestrator
+          uri: ${ORCHESTRATOR_URI:http://localhost:8085}
+          predicates:
+            - Path=/api/intelligence/**
 
 server:
   port: 8080
@@ -12,3 +50,8 @@ management:
     web:
       exposure:
         include: health,info
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: INFO

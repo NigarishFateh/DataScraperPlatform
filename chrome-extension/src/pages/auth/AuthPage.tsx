@@ -1,17 +1,23 @@
 import { useNavigate } from "react-router-dom";
 import { BrandMark } from "../../components/layout/BrandMark";
+import { useAuth } from "../../hooks/useAuth";
+import { authModeLabel } from "../../services/auth/authService";
 
 /**
- * Screen 1 — Authentication shell (Phase 3: UI only).
- * Phase 4 wires Google OAuth → backend → JWT storage.
+ * Screen 1 — Authentication.
+ * Google OAuth (or dev login) → Auth Service → JWT + refresh → chrome.storage.
  */
 export function AuthPage() {
   const navigate = useNavigate();
+  const { login, authenticating, error } = useAuth();
 
-  function continueAsGuestPreview() {
-    // Temporary Phase 3 navigation only — NOT real authentication.
-    sessionStorage.setItem("li.previewAuthed", "1");
-    navigate("/dashboard");
+  async function onContinue() {
+    try {
+      await login();
+      navigate("/dashboard", { replace: true });
+    } catch {
+      // Error surfaced via AuthContext.
+    }
   }
 
   return (
@@ -31,13 +37,22 @@ export function AuthPage() {
       </div>
 
       <div className="li-surface space-y-3 p-4 animate-[fadeIn_900ms_ease-out]">
-        <button type="button" className="li-btn-primary" onClick={continueAsGuestPreview}>
+        <button
+          type="button"
+          className="li-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() => void onContinue()}
+          disabled={authenticating}
+        >
           <GoogleGlyph />
-          Continue with Google
+          {authenticating ? "Signing in…" : "Continue with Google"}
         </button>
-        <p className="text-center text-[11px] leading-relaxed text-mist-400">
-          Phase 3 preview — button opens the dashboard shell. Real OAuth arrives in Phase 4.
-        </p>
+        {error ? (
+          <p className="text-center text-[11px] leading-relaxed text-red-300">{error}</p>
+        ) : (
+          <p className="text-center text-[11px] leading-relaxed text-mist-400">
+            Mode: {authModeLabel()}. Tokens are issued by the Auth Service, not by this UI.
+          </p>
+        )}
       </div>
 
       <p className="text-center text-[11px] text-mist-400">

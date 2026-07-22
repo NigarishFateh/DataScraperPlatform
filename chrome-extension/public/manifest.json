@@ -3,7 +3,19 @@
   "name": "Lead Intelligence",
   "version": "0.1.0",
   "description": "Discover and analyze European Software / IT companies from Chrome's side panel.",
-  "permissions": ["sidePanel", "storage"],
+  "permissions": ["sidePanel", "storage", "identity"],
+  "host_permissions": [
+    "http://localhost:8080/*",
+    "http://127.0.0.1:8080/*"
+  ],
+  "oauth2": {
+    "client_id": "REPLACE_WITH_GOOGLE_CHROME_EXTENSION_CLIENT_ID.apps.googleusercontent.com",
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ]
+  },
   "action": {
     "default_title": "Open Lead Intelligence",
     "default_icon": {
@@ -25,6 +37,5 @@
   "background": {
     "service_worker": "background.js",
     "type": "module"
-  },
-  "host_permissions": []
+  }
 }

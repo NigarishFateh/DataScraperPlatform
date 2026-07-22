@@ -1,5 +1,6 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { BrandMark } from "./BrandMark";
+import { useAuth } from "../../hooks/useAuth";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   [
@@ -10,18 +11,36 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   ].join(" ");
 
 export function TopBar() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  async function onLogout() {
+    await logout();
+    navigate("/auth", { replace: true });
+  }
+
   return (
     <header className="sticky top-0 z-10 border-b border-white/10 bg-ink-900/85 px-4 py-3 backdrop-blur-md">
       <div className="flex items-center justify-between gap-3">
         <BrandMark compact />
-        <nav className="flex items-center gap-1" aria-label="Primary">
-          <NavLink to="/dashboard" className={linkClass}>
-            Dashboard
-          </NavLink>
-          <NavLink to="/report" className={linkClass}>
-            Report
-          </NavLink>
-        </nav>
+        <div className="flex items-center gap-2">
+          <nav className="flex items-center gap-1" aria-label="Primary">
+            <NavLink to="/dashboard" className={linkClass}>
+              Dashboard
+            </NavLink>
+            <NavLink to="/report" className={linkClass}>
+              Report
+            </NavLink>
+          </nav>
+          <button
+            type="button"
+            className="li-btn-ghost !px-2 !py-1 text-[11px]"
+            title={user?.email}
+            onClick={() => void onLogout()}
+          >
+            Log out
+          </button>
+        </div>
       </div>
     </header>
   );

@@ -12,3 +12,24 @@ management:
     web:
       exposure:
         include: health,info
+
+app:
+  jwt:
+    # Override in real environments via AUTH_JWT_SECRET (min 32 chars).
+    secret: ${AUTH_JWT_SECRET:lead-intelligence-dev-secret-change-me-32b}
+    issuer: lead-intelligence-auth
+    access-token-ttl-minutes: 15
+    refresh-token-ttl-days: 14
+  google:
+    # Comma-separated via GOOGLE_CLIENT_IDS when using id_token audience checks.
+    client-ids: []
+    userinfo-url: https://www.googleapis.com/oauth2/v3/userinfo
+    tokeninfo-url: https://oauth2.googleapis.com/tokeninfo
+  auth:
+    # Dev-only shortcut so you can learn the JWT flow before Google Cloud setup.
+    dev-login-enabled: ${AUTH_DEV_LOGIN:true}
+
+logging:
+  level:
+    root: INFO
+    com.datascraper.auth: INFO

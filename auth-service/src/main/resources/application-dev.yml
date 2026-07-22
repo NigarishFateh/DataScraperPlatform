@@ -1,1 +1,4 @@
-# Local development profile — no secrets committed here.
+# Local profile — never commit real Google client secrets here.
+app:
+  auth:
+    dev-login-enabled: true

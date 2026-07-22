@@ -1,4 +1,5 @@
 import { HashRouter } from "react-router-dom";
+import { AuthProvider } from "../hooks/useAuth";
 import { AppRoutes } from "../routes/AppRoutes";
 import { AppShell } from "../components/layout/AppShell";
 
@@ -9,9 +10,11 @@ import { AppShell } from "../components/layout/AppShell";
 export function App() {
   return (
     <HashRouter>
-      <AppShell>
-        <AppRoutes />
-      </AppShell>
+      <AuthProvider>
+        <AppShell>
+          <AppRoutes />
+        </AppShell>
+      </AuthProvider>
     </HashRouter>
   );
 }
