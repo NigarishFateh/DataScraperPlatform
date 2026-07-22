@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_AUTH_MODE: "dev" | "google";
   readonly VITE_LOCATION_SOURCE: "backend" | "dummy";
   readonly VITE_COMPANY_SOURCE: "backend" | "dummy";
+  readonly VITE_CATEGORY_SOURCE: "backend" | "dummy";
+  readonly VITE_INTELLIGENCE_SOURCE: "backend" | "dummy";
 }
 
 interface ImportMeta {

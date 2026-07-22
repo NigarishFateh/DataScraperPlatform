@@ -7,6 +7,7 @@ import com.datascraper.company.dto.CreateCompanyRequest;
 import com.datascraper.company.dto.UpdateCompanyRequest;
 import com.datascraper.company.exception.CompanyNotFoundException;
 import com.datascraper.company.repository.CompanyRepository;
+import com.datascraper.company.repository.CompanySearchPage;
 import com.datascraper.company.service.CompanyService;
 import org.springframework.stereotype.Service;
 
@@ -24,25 +25,28 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     @Override
-    public CompanyPageResponse search(List<String> cityIds, String search, int page, int pageSize) {
+    public CompanyPageResponse search(
+            List<String> cityIds,
+            String search,
+            List<String> categoryIds,
+            int page,
+            int pageSize
+    ) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(pageSize, 1), 50);
 
-        List<Company> filtered = companyRepository.search(cityIds, search);
-        int start = safePage * safeSize;
-        int end = Math.min(start + safeSize, filtered.size());
+        CompanySearchPage result = companyRepository.search(cityIds, search, categoryIds, safePage, safeSize);
+        long total = result.total();
+        int end = safePage * safeSize + result.items().size();
 
-        List<CompanyResponse> items = filtered.subList(
-                Math.min(start, filtered.size()),
-                end
-        ).stream().map(this::toResponse).toList();
+        List<CompanyResponse> items = result.items().stream().map(this::toResponse).toList();
 
         return new CompanyPageResponse(
                 items,
                 safePage,
                 safeSize,
-                filtered.size(),
-                end < filtered.size()
+                total,
+                end < total
         );
     }
 

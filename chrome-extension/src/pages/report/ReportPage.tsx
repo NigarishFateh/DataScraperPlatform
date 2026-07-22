@@ -1,8 +1,13 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
-import { CATEGORIES, COUNTRIES, CITIES } from "../../data/dummyCatalog";
 import { SEARCH_SELECTION_KEY, type SearchPayload } from "../dashboard/DashboardPage";
+import { createIntelligenceJob } from "../../services/intelligence/intelligenceApi";
+import { formatResultItems, groupResultsBySection } from "../../services/intelligence/reportMapper";
 import type { Company, DashboardSelection } from "../../types/catalog";
+
+const USE_BACKEND_INTELLIGENCE =
+  (import.meta.env.VITE_INTELLIGENCE_SOURCE ?? "backend") === "backend";
 
 const SECTIONS = [
   {
@@ -58,10 +63,6 @@ function readSearchContext(state: unknown): { selection: DashboardSelection; com
   }
 }
 
-/**
- * Result page — shows Phase 5 selection summary + expandable report shell.
- * Real scraped intelligence arrives in later phases.
- */
 export function ReportPage() {
   const location = useLocation();
   const context = useMemo(() => readSearchContext(location.state), [location.state]);
@@ -70,17 +71,27 @@ export function ReportPage() {
   const [openId, setOpenId] = useState<string>("identity");
 
   const primary = companies[0];
-  const countryName = primary
-    ? COUNTRIES.find((country) => country.code === primary.countryCode)?.name
-    : null;
-  const cityName = primary
-    ? CITIES.find((city) => city.id === primary.cityId)?.name
-    : null;
-  const categoryNames = selection
-    ? CATEGORIES.filter((category) => selection.categoryIds.includes(category.id)).map(
-        (category) => category.name,
-      )
-    : [];
+
+  const intelligenceQuery = useQuery({
+    queryKey: ["intelligence", primary?.id, selection?.categoryIds],
+    queryFn: () =>
+      createIntelligenceJob({
+        companyId: primary!.id,
+        companyName: primary!.name,
+        websiteUrl: primary!.website,
+        categoryIds: selection!.categoryIds,
+      }),
+    enabled: USE_BACKEND_INTELLIGENCE && Boolean(primary && selection),
+    staleTime: 60_000,
+  });
+
+  const groupedResults = useMemo(
+    () => groupResultsBySection(intelligenceQuery.data?.results ?? []),
+    [intelligenceQuery.data],
+  );
+
+  const cityName = primary?.cityId.replace(/^[^-]+-/, "").replace(/-/g, " ") ?? null;
+  const countryCode = primary?.countryCode ?? null;
 
   if (!selection || companies.length === 0) {
     return (
@@ -103,16 +114,25 @@ export function ReportPage() {
           <div className="min-w-0 space-y-1">
             <h1 className="font-display text-lg font-semibold text-mist-100">{primary.name}</h1>
             <p className="text-xs text-mist-300">
-              {primary.website.replace(/^https?:\/\//, "")} · {cityName}, {countryName} ·{" "}
+              {primary.website.replace(/^https?:\/\//, "")} · {cityName}, {countryCode} ·{" "}
               {primary.industry}
             </p>
             <p className="text-[11px] text-mist-400">
-              {companies.length} compan{companies.length === 1 ? "y" : "ies"} ·{" "}
-              {categoryNames.join(", ") || "No categories"}
+              {companies.length} compan{companies.length === 1 ? "y" : "ies"} selected
             </p>
-            <p className="text-[11px] text-signal/90">
-              Phase 5 preview — sections below are UX placeholders until scrapers run.
-            </p>
+            {USE_BACKEND_INTELLIGENCE ? (
+              <p className="text-[11px] text-signal/90">
+                {intelligenceQuery.isLoading
+                  ? "Running intelligence job…"
+                  : intelligenceQuery.isError
+                    ? "Intelligence job failed — showing catalog preview."
+                    : intelligenceQuery.data
+                      ? `Job ${intelligenceQuery.data.status} · ${intelligenceQuery.data.elapsedMs}ms`
+                      : "Intelligence job pending"}
+              </p>
+            ) : (
+              <p className="text-[11px] text-signal/90">Catalog preview — intelligence API disabled.</p>
+            )}
           </div>
         </div>
       </section>
@@ -133,6 +153,7 @@ export function ReportPage() {
       <section className="space-y-2">
         {SECTIONS.map((section, index) => {
           const open = openId === section.id;
+          const sectionResults = groupedResults[section.id] ?? [];
           return (
             <article key={section.id} className="li-surface overflow-hidden">
               <button
@@ -156,7 +177,23 @@ export function ReportPage() {
               </button>
               {open ? (
                 <div className="border-t border-white/10 px-3.5 py-3 text-sm leading-relaxed text-mist-300">
-                  {section.id === "identity" ? (
+                  {sectionResults.length > 0 ? (
+                    <ul className="space-y-2 text-xs">
+                      {sectionResults.map((result) => (
+                        <li key={`${section.id}-${result.scraperType}`}>
+                          <p className="font-semibold text-mist-100">
+                            {result.scraperType} · {result.status}
+                            {result.metadata?.fromCache ? " (cached)" : ""}
+                          </p>
+                          {formatResultItems(result).map((line) => (
+                            <p key={line} className="text-mist-300">
+                              {line}
+                            </p>
+                          ))}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : section.id === "identity" ? (
                     <ul className="space-y-1 text-xs">
                       <li>
                         <span className="text-mist-400">Name:</span> {primary.name}
@@ -165,17 +202,14 @@ export function ReportPage() {
                         <span className="text-mist-400">Website:</span> {primary.website}
                       </li>
                       <li>
-                        <span className="text-mist-400">HQ:</span> {cityName}, {countryName}
+                        <span className="text-mist-400">HQ:</span> {cityName}, {countryCode}
                       </li>
                     </ul>
-                  ) : section.id === "positioning" ? (
-                    <p className="text-xs">
-                      Industry <strong className="text-mist-100">{primary.industry}</strong>.
-                      Categories: {categoryNames.join(", ")}.
-                    </p>
                   ) : (
                     <p className="text-xs text-mist-400">
-                      Filled by scrapers + aggregation in later phases.
+                      {intelligenceQuery.isLoading
+                        ? "Waiting for scraper results…"
+                        : "No scraper data for this section yet."}
                     </p>
                   )}
                 </div>

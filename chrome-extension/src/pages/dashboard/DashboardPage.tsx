@@ -15,8 +15,7 @@ export type SearchPayload = DashboardSelection & {
 };
 
 /**
- * Screen 2 — Dashboard with cascading filters (dummy catalog).
- * Backend Location/Company/Category services replace catalogApi in later phases.
+ * Screen 2 — Dashboard with cascading filters backed by catalog microservices.
  */
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -153,8 +152,8 @@ export function DashboardPage() {
 
       <p className="text-[11px] leading-relaxed text-mist-400">
         {countryName
-          ? `Location + Company APIs · ${countryName} · categories from selected companies`
-          : "Countries/cities/companies from backend when services are running."}
+          ? `Backend APIs · ${countryName} · Search runs intelligence job on Report page`
+          : "Countries/cities/companies/categories from backend when services are running."}
       </p>
     </div>
   );

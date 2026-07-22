@@ -13,5 +13,3 @@ CREATE TABLE company_categories (
     PRIMARY KEY (company_id, category_id)
 );
 
-CREATE INDEX idx_companies_city_id ON companies (city_id);
-CREATE INDEX idx_companies_name_lower ON companies (LOWER(name));

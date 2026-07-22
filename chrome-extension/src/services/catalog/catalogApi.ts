@@ -1,4 +1,5 @@
 import type { Category, City, CompanyPage, Country } from "../../types/catalog";
+import { fetchCategoriesFromApi } from "./categoryApi";
 import { fetchCompaniesFromApi } from "./companyApi";
 import { fetchCitiesFromApi, fetchCountriesFromApi } from "./locationApi";
 import { CATEGORIES, CITIES, COMPANIES, COUNTRIES } from "../../data/dummyCatalog";
@@ -7,6 +8,8 @@ const USE_BACKEND_LOCATIONS =
   (import.meta.env.VITE_LOCATION_SOURCE ?? "backend") === "backend";
 const USE_BACKEND_COMPANIES =
   (import.meta.env.VITE_COMPANY_SOURCE ?? "backend") === "backend";
+const USE_BACKEND_CATEGORIES =
+  (import.meta.env.VITE_CATEGORY_SOURCE ?? "backend") === "backend";
 
 /** Artificial latency for dummy company/category paths only. */
 function delay(ms = 280): Promise<void> {
@@ -77,7 +80,6 @@ export async function fetchCategoriesForCompanies(
   companyIds: string[],
   sourceCompanies: typeof COMPANIES = COMPANIES,
 ): Promise<Category[]> {
-  await delay(200);
   if (companyIds.length === 0) return [];
 
   const idSet = new Set(companyIds);
@@ -89,5 +91,10 @@ export async function fetchCategoriesForCompanies(
     }
   }
 
+  if (USE_BACKEND_CATEGORIES) {
+    return fetchCategoriesFromApi([...categoryIds]);
+  }
+
+  await delay(200);
   return CATEGORIES.filter((category) => categoryIds.has(category.id));
 }

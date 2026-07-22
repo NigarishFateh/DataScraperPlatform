@@ -2,6 +2,8 @@ package com.datascraper.company.repository;
 
 import com.datascraper.company.domain.Company;
 import com.datascraper.company.entity.CompanyEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
@@ -46,16 +48,34 @@ public class CompanyRepository {
         return companyJpaRepository.count();
     }
 
-    public List<Company> search(List<String> cityIds, String search) {
+    public CompanySearchPage search(
+            List<String> cityIds,
+            String search,
+            List<String> categoryIds,
+            int page,
+            int pageSize
+    ) {
         if (cityIds == null || cityIds.isEmpty()) {
-            return List.of();
+            return new CompanySearchPage(List.of(), 0);
         }
+
         List<String> normalizedCityIds = cityIds.stream().map(String::trim).toList();
         String q = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        List<String> normalizedCategoryIds = categoryIds == null
+                ? List.of()
+                : categoryIds.stream().map(String::trim).filter(id -> !id.isBlank()).distinct().toList();
+        boolean categoryFilter = !normalizedCategoryIds.isEmpty();
 
-        return companyJpaRepository.search(normalizedCityIds, q).stream()
-                .map(this::toDomain)
-                .toList();
+        Page<CompanyEntity> result = companyJpaRepository.search(
+                normalizedCityIds,
+                q,
+                categoryFilter,
+                categoryFilter ? normalizedCategoryIds : List.of(""),
+                PageRequest.of(page, pageSize, Sort.by(Sort.Order.asc("name").ignoreCase()))
+        );
+
+        List<Company> items = result.getContent().stream().map(this::toDomain).toList();
+        return new CompanySearchPage(items, result.getTotalElements());
     }
 
     private void applyDomain(CompanyEntity entity, Company company) {

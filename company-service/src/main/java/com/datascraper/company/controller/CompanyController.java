@@ -34,10 +34,11 @@ public class CompanyController {
     public CompanyPageResponse search(
             @RequestParam List<String> cityIds,
             @RequestParam(required = false, defaultValue = "") String search,
+            @RequestParam(required = false) List<String> categoryIds,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "8") int pageSize
     ) {
-        return companyService.search(cityIds, search, page, pageSize);
+        return companyService.search(cityIds, search, categoryIds, page, pageSize);
     }
 
     @GetMapping("/{id}")

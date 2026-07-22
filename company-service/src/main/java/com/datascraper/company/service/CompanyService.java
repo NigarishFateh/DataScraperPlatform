@@ -9,7 +9,13 @@ import java.util.List;
 
 public interface CompanyService {
 
-    CompanyPageResponse search(List<String> cityIds, String search, int page, int pageSize);
+    CompanyPageResponse search(
+            List<String> cityIds,
+            String search,
+            List<String> categoryIds,
+            int page,
+            int pageSize
+    );
 
     CompanyResponse getById(String id);
 
