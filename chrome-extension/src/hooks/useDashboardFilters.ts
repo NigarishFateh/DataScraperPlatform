@@ -48,18 +48,18 @@ export function useDashboardFilters() {
     enabled: cityIds.length > 0,
   });
 
-  const categoriesQuery = useQuery({
-    queryKey: ["categories", companyIds],
-    queryFn: () => fetchCategoriesForCompanies(companyIds),
-    enabled: companyIds.length > 0,
-  });
-
   const companies = useMemo(
     () => companiesQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [companiesQuery.data],
   );
 
   const totalCompanies = companiesQuery.data?.pages[0]?.total ?? 0;
+
+  const categoriesQuery = useQuery({
+    queryKey: ["categories", companyIds, companies.length],
+    queryFn: () => fetchCategoriesForCompanies(companyIds, companies),
+    enabled: companyIds.length > 0 && companies.length > 0,
+  });
 
   function setCountryCode(next: string | null) {
     setCountryCodeState(next);

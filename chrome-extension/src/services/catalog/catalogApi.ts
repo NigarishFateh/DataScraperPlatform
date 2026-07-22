@@ -1,9 +1,12 @@
-import { CATEGORIES, CITIES, COMPANIES, COUNTRIES } from "../../data/dummyCatalog";
 import type { Category, City, CompanyPage, Country } from "../../types/catalog";
+import { fetchCompaniesFromApi } from "./companyApi";
 import { fetchCitiesFromApi, fetchCountriesFromApi } from "./locationApi";
+import { CATEGORIES, CITIES, COMPANIES, COUNTRIES } from "../../data/dummyCatalog";
 
 const USE_BACKEND_LOCATIONS =
   (import.meta.env.VITE_LOCATION_SOURCE ?? "backend") === "backend";
+const USE_BACKEND_COMPANIES =
+  (import.meta.env.VITE_COMPANY_SOURCE ?? "backend") === "backend";
 
 /** Artificial latency for dummy company/category paths only. */
 function delay(ms = 280): Promise<void> {
@@ -41,6 +44,10 @@ export type CompanyQuery = {
 };
 
 export async function fetchCompanies(query: CompanyQuery): Promise<CompanyPage> {
+  if (USE_BACKEND_COMPANIES) {
+    return fetchCompaniesFromApi(query);
+  }
+
   await delay(350);
   const pageSize = query.pageSize ?? 8;
   const q = (query.search ?? "").trim().toLowerCase();
@@ -66,13 +73,16 @@ export async function fetchCompanies(query: CompanyQuery): Promise<CompanyPage> 
   };
 }
 
-export async function fetchCategoriesForCompanies(companyIds: string[]): Promise<Category[]> {
+export async function fetchCategoriesForCompanies(
+  companyIds: string[],
+  sourceCompanies: typeof COMPANIES = COMPANIES,
+): Promise<Category[]> {
   await delay(200);
   if (companyIds.length === 0) return [];
 
   const idSet = new Set(companyIds);
   const categoryIds = new Set<string>();
-  for (const company of COMPANIES) {
+  for (const company of sourceCompanies) {
     if (!idSet.has(company.id)) continue;
     for (const categoryId of company.categoryIds) {
       categoryIds.add(categoryId);

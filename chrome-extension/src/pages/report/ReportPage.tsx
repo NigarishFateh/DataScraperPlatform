@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { CATEGORIES, COMPANIES, COUNTRIES, CITIES } from "../../data/dummyCatalog";
-import { SEARCH_SELECTION_KEY } from "../dashboard/DashboardPage";
-import type { DashboardSelection } from "../../types/catalog";
+import { CATEGORIES, COUNTRIES, CITIES } from "../../data/dummyCatalog";
+import { SEARCH_SELECTION_KEY, type SearchPayload } from "../dashboard/DashboardPage";
+import type { Company, DashboardSelection } from "../../types/catalog";
 
 const SECTIONS = [
   {
@@ -37,13 +37,22 @@ const SECTIONS = [
   },
 ] as const;
 
-function readSelection(state: unknown): DashboardSelection | null {
-  if (state && typeof state === "object" && "companyIds" in state) {
-    return state as DashboardSelection;
+function readSearchContext(state: unknown): { selection: DashboardSelection; companies: Company[] } | null {
+  const fromState = state as SearchPayload | null;
+  if (fromState?.companyIds?.length) {
+    return {
+      selection: fromState,
+      companies: fromState.companies ?? [],
+    };
   }
   try {
     const raw = sessionStorage.getItem(SEARCH_SELECTION_KEY);
-    return raw ? (JSON.parse(raw) as DashboardSelection) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SearchPayload;
+    return {
+      selection: parsed,
+      companies: parsed.companies ?? [],
+    };
   } catch {
     return null;
   }
@@ -55,14 +64,10 @@ function readSelection(state: unknown): DashboardSelection | null {
  */
 export function ReportPage() {
   const location = useLocation();
-  const selection = useMemo(() => readSelection(location.state), [location.state]);
+  const context = useMemo(() => readSearchContext(location.state), [location.state]);
+  const selection = context?.selection ?? null;
+  const companies = context?.companies ?? [];
   const [openId, setOpenId] = useState<string>("identity");
-
-  const companies = useMemo(() => {
-    if (!selection) return [];
-    const idSet = new Set(selection.companyIds);
-    return COMPANIES.filter((company) => idSet.has(company.id));
-  }, [selection]);
 
   const primary = companies[0];
   const countryName = primary

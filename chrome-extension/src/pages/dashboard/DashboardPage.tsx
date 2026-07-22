@@ -5,10 +5,14 @@ import { CompanySelect } from "../../components/filters/CompanySelect";
 import { CountrySelect } from "../../components/filters/CountrySelect";
 import { FilterSection } from "../../components/filters/FilterSection";
 import { useDashboardFilters } from "../../hooks/useDashboardFilters";
-import type { DashboardSelection } from "../../types/catalog";
+import type { Company, DashboardSelection } from "../../types/catalog";
 import { COUNTRIES } from "../../data/dummyCatalog";
 
 export const SEARCH_SELECTION_KEY = "li.lastSearchSelection";
+
+export type SearchPayload = DashboardSelection & {
+  companies?: Company[];
+};
 
 /**
  * Screen 2 — Dashboard with cascading filters (dummy catalog).
@@ -20,7 +24,12 @@ export function DashboardPage() {
 
   function onSearch() {
     if (!filters.canSearch) return;
-    const payload: DashboardSelection = filters.selection;
+    const payload: SearchPayload = {
+      ...filters.selection,
+      companies: filters.companies.filter((company) =>
+        filters.selection.companyIds.includes(company.id),
+      ),
+    };
     sessionStorage.setItem(SEARCH_SELECTION_KEY, JSON.stringify(payload));
     navigate("/report", { state: payload });
   }
@@ -144,8 +153,8 @@ export function DashboardPage() {
 
       <p className="text-[11px] leading-relaxed text-mist-400">
         {countryName
-          ? `Location API · ${countryName} · companies/categories still dummy until Phase 7`
-          : "Countries/cities from Location Service when backend is running."}
+          ? `Location + Company APIs · ${countryName} · categories from selected companies`
+          : "Countries/cities/companies from backend when services are running."}
       </p>
     </div>
   );
