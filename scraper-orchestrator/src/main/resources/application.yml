@@ -13,6 +13,11 @@ scraper:
     timeout-ms: 15000
     max-retries: 3
     retry-delay-ms: 1000
+  execution:
+    core-pool-size: 4
+    max-pool-size: 10
+    queue-capacity: 25
+    job-timeout-ms: 60000
   services:
     # Target architecture: scrapers by data source (Phase 9+)
     website:

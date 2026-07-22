@@ -10,11 +10,12 @@ import java.util.concurrent.Executor;
 public class ScraperExecutorConfig {
 
     @Bean(name = "scraperExecutor")
-    public Executor scraperExecutor() {
+    public Executor scraperExecutor(IntelligenceScraperProperties properties) {
+        IntelligenceScraperProperties.Execution execution = properties.getExecution();
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(4);
-        executor.setMaxPoolSize(10);
-        executor.setQueueCapacity(25);
+        executor.setCorePoolSize(execution.getCorePoolSize());
+        executor.setMaxPoolSize(execution.getMaxPoolSize());
+        executor.setQueueCapacity(execution.getQueueCapacity());
         executor.setThreadNamePrefix("scraper-");
         executor.initialize();
         return executor;

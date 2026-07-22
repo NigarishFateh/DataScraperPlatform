@@ -9,10 +9,15 @@ import java.util.Map;
 public class IntelligenceScraperProperties {
 
     private final Resilience resilience = new Resilience();
+    private final Execution execution = new Execution();
     private final Map<String, ServiceEndpoint> services = new HashMap<>();
 
     public Resilience getResilience() {
         return resilience;
+    }
+
+    public Execution getExecution() {
+        return execution;
     }
 
     public Map<String, ServiceEndpoint> getServices() {
@@ -46,6 +51,45 @@ public class IntelligenceScraperProperties {
 
         public void setRetryDelayMs(long retryDelayMs) {
             this.retryDelayMs = retryDelayMs;
+        }
+    }
+
+    public static class Execution {
+        private int corePoolSize = 4;
+        private int maxPoolSize = 10;
+        private int queueCapacity = 25;
+        private long jobTimeoutMs = 60_000;
+
+        public int getCorePoolSize() {
+            return corePoolSize;
+        }
+
+        public void setCorePoolSize(int corePoolSize) {
+            this.corePoolSize = corePoolSize;
+        }
+
+        public int getMaxPoolSize() {
+            return maxPoolSize;
+        }
+
+        public void setMaxPoolSize(int maxPoolSize) {
+            this.maxPoolSize = maxPoolSize;
+        }
+
+        public int getQueueCapacity() {
+            return queueCapacity;
+        }
+
+        public void setQueueCapacity(int queueCapacity) {
+            this.queueCapacity = queueCapacity;
+        }
+
+        public long getJobTimeoutMs() {
+            return jobTimeoutMs;
+        }
+
+        public void setJobTimeoutMs(long jobTimeoutMs) {
+            this.jobTimeoutMs = jobTimeoutMs;
         }
     }
 
