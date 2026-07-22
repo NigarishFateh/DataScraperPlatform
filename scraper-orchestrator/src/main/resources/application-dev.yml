@@ -3,6 +3,12 @@ logging:
     com.datascraper: DEBUG
     org.springframework.web: INFO
 
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
 scraper:
   resilience:
     timeout-ms: 20000

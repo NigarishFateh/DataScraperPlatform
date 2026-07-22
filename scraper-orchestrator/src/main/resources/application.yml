@@ -3,6 +3,10 @@ spring:
     name: scraper-orchestrator
   profiles:
     active: dev
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
 server:
   # Gateway owns 8080. Orchestrator is an internal intelligence service.
@@ -18,6 +22,10 @@ scraper:
     max-pool-size: 10
     queue-capacity: 25
     job-timeout-ms: 60000
+  cache:
+    enabled: false
+    ttl-seconds: 3600
+    key-prefix: intel:scraper
   services:
     # Target architecture: scrapers by data source (Phase 9+)
     website:

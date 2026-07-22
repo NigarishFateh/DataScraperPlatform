@@ -10,6 +10,7 @@ public class IntelligenceScraperProperties {
 
     private final Resilience resilience = new Resilience();
     private final Execution execution = new Execution();
+    private final Cache cache = new Cache();
     private final Map<String, ServiceEndpoint> services = new HashMap<>();
 
     public Resilience getResilience() {
@@ -18,6 +19,10 @@ public class IntelligenceScraperProperties {
 
     public Execution getExecution() {
         return execution;
+    }
+
+    public Cache getCache() {
+        return cache;
     }
 
     public Map<String, ServiceEndpoint> getServices() {
@@ -90,6 +95,36 @@ public class IntelligenceScraperProperties {
 
         public void setJobTimeoutMs(long jobTimeoutMs) {
             this.jobTimeoutMs = jobTimeoutMs;
+        }
+    }
+
+    public static class Cache {
+        private boolean enabled = false;
+        private long ttlSeconds = 3600;
+        private String keyPrefix = "intel:scraper";
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public long getTtlSeconds() {
+            return ttlSeconds;
+        }
+
+        public void setTtlSeconds(long ttlSeconds) {
+            this.ttlSeconds = ttlSeconds;
+        }
+
+        public String getKeyPrefix() {
+            return keyPrefix;
+        }
+
+        public void setKeyPrefix(String keyPrefix) {
+            this.keyPrefix = keyPrefix;
         }
     }
 

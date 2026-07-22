@@ -7,7 +7,16 @@ app:
   cors:
     allowed-origins: http://localhost:5173,https://your-app.vercel.app
 
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
 scraper:
+  cache:
+    enabled: true
+    ttl-seconds: 3600
   resilience:
     timeout-ms: 10000
     max-retries: 3
