@@ -8,8 +8,8 @@ import com.datascraper.auth.dto.AuthTokensResponse;
 import com.datascraper.auth.dto.DevLoginRequest;
 import com.datascraper.auth.dto.GoogleAuthRequest;
 import com.datascraper.auth.exception.AuthException;
-import com.datascraper.auth.repository.InMemoryRefreshSessionRepository;
-import com.datascraper.auth.repository.InMemoryUserRepository;
+import com.datascraper.auth.repository.RefreshSessionRepository;
+import com.datascraper.auth.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -19,15 +19,15 @@ import java.util.UUID;
 @Service
 public class AuthService {
 
-    private final InMemoryUserRepository users;
-    private final InMemoryRefreshSessionRepository refreshSessions;
+    private final UserRepository users;
+    private final RefreshSessionRepository refreshSessions;
     private final GoogleIdentityClient googleIdentityClient;
     private final JwtService jwtService;
     private final AuthProperties properties;
 
     public AuthService(
-            InMemoryUserRepository users,
-            InMemoryRefreshSessionRepository refreshSessions,
+            UserRepository users,
+            RefreshSessionRepository refreshSessions,
             GoogleIdentityClient googleIdentityClient,
             JwtService jwtService,
             AuthProperties properties
@@ -72,6 +72,7 @@ public class AuthService {
             ));
         });
         user.markLogin(Instant.now());
+        users.save(user);
         return issueTokens(user);
     }
 
@@ -85,8 +86,8 @@ public class AuthService {
             throw new AuthException("Refresh token expired or revoked");
         }
 
-        // Rotation: old refresh token dies, new one is born (stolen-token blast radius shrinks).
         session.revoke();
+        refreshSessions.save(session);
         refreshSessions.delete(refreshToken);
 
         User user = users.findById(session.getUserId())
@@ -100,6 +101,7 @@ public class AuthService {
         }
         refreshSessions.findByToken(refreshToken).ifPresent(session -> {
             session.revoke();
+            refreshSessions.save(session);
             refreshSessions.delete(refreshToken);
         });
     }
@@ -126,7 +128,7 @@ public class AuthService {
                 )
         );
         user.markLogin(now);
-        return user;
+        return users.save(user);
     }
 
     private AuthTokensResponse issueTokens(User user) {

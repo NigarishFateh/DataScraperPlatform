@@ -3,6 +3,20 @@ spring:
     name: company-service
   profiles:
     active: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5432/company_db
+    username: datascraper
+    password: datascraper
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
 
 server:
   port: 8083

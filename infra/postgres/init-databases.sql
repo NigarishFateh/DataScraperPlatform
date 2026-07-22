@@ -1,0 +1,4 @@
+CREATE DATABASE location_db;
+CREATE DATABASE company_db;
+CREATE DATABASE auth_db;
+CREATE DATABASE category_db;
