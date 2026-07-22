@@ -37,7 +37,11 @@ foreach ($svc in $jobs) {
 }
 
 Write-Host ""
-Write-Host "Catalog services started:" -ForegroundColor Cyan
+Write-Host "Catalog services started (or already running)." -ForegroundColor Cyan
+Write-Host "For the full extension stack (orchestrator + scrapers), run:" -ForegroundColor Yellow
+Write-Host "  .\start-platform.ps1"
+Write-Host ""
+Write-Host "Catalog services:" -ForegroundColor Cyan
 Write-Host "  PostgreSQL localhost:5432 (datascraper/datascraper)"
 Write-Host "  Gateway    http://localhost:8080"
 Write-Host "  Auth       http://localhost:8081"

@@ -1,31 +1,10 @@
-$projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+# DEPRECATED: legacy Phase-1 scrapers conflict with current service ports.
+# Use .\start-platform.ps1 instead.
 
-$services = @(
-    @{ Name = "scraper-google"; Port = 8081 },
-    @{ Name = "scraper-microsoft"; Port = 8082 },
-    @{ Name = "scraper-ibm"; Port = 8083 },
-    @{ Name = "scraper-orchestrator"; Port = 8080 }
-)
-
-foreach ($service in $services) {
-    $servicePath = Join-Path $projectRoot $service.Name
-    $command = "Set-Location '$servicePath'; ..\mvnw.cmd spring-boot:run"
-
-    Start-Process powershell -ArgumentList @(
-        "-NoExit",
-        "-Command",
-        $command
-    )
-
-    Write-Host "Started $($service.Name) on port $($service.Port)"
-    Start-Sleep -Seconds 2
-}
-
+Write-Host "start-all-services.ps1 is deprecated." -ForegroundColor Yellow
+Write-Host "It launched legacy scraper-google/microsoft/ibm on ports 8081-8083," -ForegroundColor Yellow
+Write-Host "which conflict with auth/location/company services." -ForegroundColor Yellow
 Write-Host ""
-Write-Host "All backend service windows have been launched."
-Write-Host "Orchestrator URL: http://localhost:8080/api/health"
-Write-Host ""
-Write-Host "To start the React frontend, run:"
-Write-Host ".\start-frontend.ps1"
-Write-Host ""
-Write-Host "Frontend URL: http://localhost:5173"
+Write-Host "Run this instead:" -ForegroundColor Green
+Write-Host "  .\start-platform.ps1"
+exit 1
