@@ -1,0 +1,56 @@
+@import "@fontsource/sora/500.css";
+@import "@fontsource/sora/600.css";
+@import "@fontsource/sora/700.css";
+@import "@fontsource/dm-sans/400.css";
+@import "@fontsource/dm-sans/500.css";
+@import "@fontsource/dm-sans/600.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: theme("fontFamily.body");
+    background: theme("colors.ink.950");
+    color: theme("colors.mist.100");
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  ::selection {
+    background: theme("colors.signal.glow");
+  }
+}
+
+@layer components {
+  .li-shell {
+    @apply min-h-full bg-atmosphere;
+  }
+
+  .li-btn-primary {
+    @apply inline-flex w-full items-center justify-center gap-2 rounded-lg bg-signal px-4 py-2.5
+      font-display text-sm font-semibold text-ink-950 transition
+      hover:bg-signal-dim focus-visible:outline focus-visible:outline-2
+      focus-visible:outline-offset-2 focus-visible:outline-signal;
+  }
+
+  .li-btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5
+      px-3 py-2 text-sm font-medium text-mist-100 transition
+      hover:border-white/20 hover:bg-white/10;
+  }
+
+  .li-surface {
+    @apply rounded-xl border border-white/10 bg-ink-800/70 shadow-panel backdrop-blur-sm;
+  }
+}

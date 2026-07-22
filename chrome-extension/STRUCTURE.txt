@@ -1,14 +1,12 @@
 # Lead Intelligence — Chrome Extension (Manifest V3)
-#
-# Phase 2: folder structure only.
-# Phase 3: Manifest, Side Panel API, React bootstrap, routing, layout.
-#
-# Mental model:
-#   background/  = long-lived extension service worker (events, open side panel)
-#   sidepanel/   = entry HTML/JS that Chrome loads into the right-hand panel
-#   pages/       = full screens (auth, dashboard, report)
-#   components/  = reusable UI pieces
-#   services/    = API + auth + chrome.storage wrappers (no UI)
-#   hooks/       = React hooks bridging Chrome APIs / React Query
-#   types/       = TypeScript contracts matching backend DTOs
-#   routes/      = client-side navigation inside the side panel
+
+background/     service worker events (open side panel)
+sidepanel/      React mount for chrome.sidePanel page
+pages/          full screens: auth, dashboard, report
+components/     layout + reusable UI
+services/       api / auth / storage (wired in later phases)
+hooks/          React hooks
+types/          shared TS contracts
+styles/         Tailwind + design tokens
+routes/         HashRouter route table
+public/         manifest.json, background.js, icons (copied to dist)

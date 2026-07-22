@@ -1,2 +1,9 @@
-// Phase 3 will register Side Panel behavior and auth session bootstrap.
-export {};
+/**
+ * TypeScript source mirror of public/background.js.
+ * Kept for documentation / future bundling. The packaged worker is public/background.js.
+ */
+chrome.runtime.onInstalled.addListener(() => {
+  void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+});
+
+void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
