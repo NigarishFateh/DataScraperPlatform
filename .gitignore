@@ -32,6 +32,9 @@ build/
 ### VS Code ###
 .vscode/
 
+### Environment variables ###
+.env
+
 ### Node / React frontend ###
 scraper-frontend/node_modules/
 scraper-frontend/dist/

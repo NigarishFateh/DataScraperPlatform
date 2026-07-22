@@ -54,7 +54,9 @@ export function AuthPage() {
           <p className="text-center text-[11px] leading-relaxed text-red-300">{error}</p>
         ) : (
           <p className="text-center text-[11px] leading-relaxed text-mist-400">
-            Mode: {authModeLabel()}. Tokens are issued by the Auth Service, not by this UI.
+            {authModeLabel() === "Google OAuth"
+              ? "Sign in with your Google account. Identity is verified by the Auth Service."
+              : "Mode: Dev login. Tokens are issued by the Auth Service, not by this UI."}
           </p>
         )}
       </div>

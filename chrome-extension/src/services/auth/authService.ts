@@ -7,7 +7,7 @@ import {
   hasSession,
 } from "../storage/tokenStorage";
 
-const AUTH_MODE = (import.meta.env.VITE_AUTH_MODE ?? "dev") as "dev" | "google";
+const AUTH_MODE = (import.meta.env.VITE_AUTH_MODE ?? "google") as "dev" | "google";
 
 /**
  * Authentication use-cases for the Side Panel.
@@ -19,6 +19,13 @@ const AUTH_MODE = (import.meta.env.VITE_AUTH_MODE ?? "dev") as "dev" | "google";
 export async function loginWithGoogle(): Promise<AuthUser> {
   if (AUTH_MODE === "dev") {
     return loginDev();
+  }
+
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
+  if (!clientId) {
+    throw new Error(
+      "Missing VITE_GOOGLE_CLIENT_ID. Add your Chrome extension OAuth client ID to chrome-extension/.env and rebuild.",
+    );
   }
 
   const accessToken = await requestGoogleAccessToken();

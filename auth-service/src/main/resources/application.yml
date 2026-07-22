@@ -35,13 +35,12 @@ app:
     access-token-ttl-minutes: 15
     refresh-token-ttl-days: 14
   google:
-    # Comma-separated via GOOGLE_CLIENT_IDS when using id_token audience checks.
-    client-ids: []
+    # Comma-separated Chrome extension OAuth client IDs (GOOGLE_CLIENT_IDS env var).
+    client-ids: ${GOOGLE_CLIENT_IDS:}
     userinfo-url: https://www.googleapis.com/oauth2/v3/userinfo
     tokeninfo-url: https://oauth2.googleapis.com/tokeninfo
   auth:
-    # Dev-only shortcut so you can learn the JWT flow before Google Cloud setup.
-    dev-login-enabled: ${AUTH_DEV_LOGIN:true}
+    dev-login-enabled: ${AUTH_DEV_LOGIN:false}
 
 logging:
   level:

@@ -83,3 +83,8 @@ Write-Host "Chrome extension (already built):" -ForegroundColor Cyan
 Write-Host '  Load unpacked from chrome-extension\dist in chrome://extensions'
 Write-Host ""
 Write-Host 'To stop services: .\stop-platform.ps1'
+Write-Host ""
+Write-Host "Real Google login requires:" -ForegroundColor Yellow
+Write-Host "  1) .\setup-postgres.ps1"
+Write-Host "  2) Set GOOGLE_CLIENT_IDS to your Chrome extension OAuth client ID"
+Write-Host "  3) Set VITE_GOOGLE_CLIENT_ID in chrome-extension\.env and rebuild the extension"

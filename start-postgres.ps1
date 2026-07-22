@@ -25,8 +25,8 @@ if (Test-PostgresPort) {
     Write-Host "  Expected databases: location_db, company_db, auth_db, category_db"
     Write-Host "  Expected user/pass: datascraper / datascraper"
     Write-Host ""
-    Write-Host "If services fail to connect, create databases once with:"
-    Write-Host "  psql -U postgres -f infra/postgres/init-databases.sql"
+    Write-Host "If services fail to connect, run once:" -ForegroundColor Yellow
+    Write-Host "  .\setup-postgres.ps1"
     exit 0
 }
 

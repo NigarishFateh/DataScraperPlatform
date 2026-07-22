@@ -1,17 +1,13 @@
-# Local profile — use in-memory H2 so dev login works without auth_db on PostgreSQL.
-# Catalog services (location/company/category) still use PostgreSQL.
+# Local profile — real PostgreSQL (same as production config).
+# Set GOOGLE_CLIENT_IDS and AUTH_JWT_SECRET via environment for real Google login.
 spring:
   datasource:
-    url: jdbc:h2:mem:auth_db;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
-  jpa:
-    hibernate:
-      ddl-auto: validate
-  flyway:
-    enabled: true
+    url: ${AUTH_DB_URL:jdbc:postgresql://localhost:5432/auth_db}
+    username: ${AUTH_DB_USER:datascraper}
+    password: ${AUTH_DB_PASSWORD:datascraper}
 
 app:
   auth:
-    dev-login-enabled: true
+    dev-login-enabled: false
+  google:
+    client-ids: ${GOOGLE_CLIENT_IDS:}
