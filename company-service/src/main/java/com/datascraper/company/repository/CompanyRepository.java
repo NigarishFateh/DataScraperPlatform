@@ -64,15 +64,15 @@ public class CompanyRepository {
         List<String> normalizedCategoryIds = categoryIds == null
                 ? List.of()
                 : categoryIds.stream().map(String::trim).filter(id -> !id.isBlank()).distinct().toList();
-        boolean categoryFilter = !normalizedCategoryIds.isEmpty();
 
-        Page<CompanyEntity> result = companyJpaRepository.search(
-                normalizedCityIds,
-                q,
-                categoryFilter,
-                categoryFilter ? normalizedCategoryIds : List.of(""),
-                PageRequest.of(page, pageSize, Sort.by(Sort.Order.asc("name").ignoreCase()))
-        );
+        // Plain Sort.by("name") — ignoreCase() + DISTINCT joins breaks on PostgreSQL
+        // (ORDER BY LOWER(name) must appear in SELECT DISTINCT).
+        PageRequest pageRequest = PageRequest.of(page, pageSize, Sort.by(Sort.Order.asc("name")));
+
+        Page<CompanyEntity> result = normalizedCategoryIds.isEmpty()
+                ? companyJpaRepository.searchByCities(normalizedCityIds, q, pageRequest)
+                : companyJpaRepository.searchByCitiesAndCategories(
+                        normalizedCityIds, q, normalizedCategoryIds, pageRequest);
 
         List<Company> items = result.getContent().stream().map(this::toDomain).toList();
         return new CompanySearchPage(items, result.getTotalElements());

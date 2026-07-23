@@ -48,8 +48,7 @@ scraper:
 
 app:
   cors:
-    # Chrome extension + local Vite side-panel tooling
-    allowed-origins: http://localhost:5173,chrome-extension://*
+    allowed-origins: chrome-extension://*,http://localhost:*,http://127.0.0.1:*
 
 logging:
   level:

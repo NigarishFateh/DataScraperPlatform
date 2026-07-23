@@ -13,8 +13,7 @@ public interface CompanyJpaRepository extends JpaRepository<CompanyEntity, Strin
 
     @Query(
             value = """
-                    SELECT DISTINCT c FROM CompanyEntity c
-                    LEFT JOIN c.categoryIds catFilter
+                    SELECT c FROM CompanyEntity c
                     WHERE c.cityId IN :cityIds
                       AND (
                             :search = ''
@@ -22,11 +21,40 @@ public interface CompanyJpaRepository extends JpaRepository<CompanyEntity, Strin
                          OR LOWER(c.website) LIKE LOWER(CONCAT('%', :search, '%'))
                          OR LOWER(c.industry) LIKE LOWER(CONCAT('%', :search, '%'))
                       )
-                      AND (:categoryFilter = false OR catFilter IN :categoryIds)
+                    """,
+            countQuery = """
+                    SELECT COUNT(c) FROM CompanyEntity c
+                    WHERE c.cityId IN :cityIds
+                      AND (
+                            :search = ''
+                         OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))
+                         OR LOWER(c.website) LIKE LOWER(CONCAT('%', :search, '%'))
+                         OR LOWER(c.industry) LIKE LOWER(CONCAT('%', :search, '%'))
+                      )
+                    """
+    )
+    Page<CompanyEntity> searchByCities(
+            @Param("cityIds") List<String> cityIds,
+            @Param("search") String search,
+            Pageable pageable
+    );
+
+    @Query(
+            value = """
+                    SELECT DISTINCT c FROM CompanyEntity c
+                    JOIN c.categoryIds catFilter
+                    WHERE c.cityId IN :cityIds
+                      AND (
+                            :search = ''
+                         OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))
+                         OR LOWER(c.website) LIKE LOWER(CONCAT('%', :search, '%'))
+                         OR LOWER(c.industry) LIKE LOWER(CONCAT('%', :search, '%'))
+                      )
+                      AND catFilter IN :categoryIds
                     """,
             countQuery = """
                     SELECT COUNT(DISTINCT c) FROM CompanyEntity c
-                    LEFT JOIN c.categoryIds catFilter
+                    JOIN c.categoryIds catFilter
                     WHERE c.cityId IN :cityIds
                       AND (
                             :search = ''
@@ -34,13 +62,12 @@ public interface CompanyJpaRepository extends JpaRepository<CompanyEntity, Strin
                          OR LOWER(c.website) LIKE LOWER(CONCAT('%', :search, '%'))
                          OR LOWER(c.industry) LIKE LOWER(CONCAT('%', :search, '%'))
                       )
-                      AND (:categoryFilter = false OR catFilter IN :categoryIds)
+                      AND catFilter IN :categoryIds
                     """
     )
-    Page<CompanyEntity> search(
+    Page<CompanyEntity> searchByCitiesAndCategories(
             @Param("cityIds") List<String> cityIds,
             @Param("search") String search,
-            @Param("categoryFilter") boolean categoryFilter,
             @Param("categoryIds") List<String> categoryIds,
             Pageable pageable
     );

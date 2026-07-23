@@ -5,6 +5,24 @@
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 
+function Import-DotEnv([string]$Path) {
+    if (-not (Test-Path $Path)) { return }
+    Write-Host "Loading environment from $Path" -ForegroundColor Cyan
+    Get-Content $Path | ForEach-Object {
+        $line = $_.Trim()
+        if (-not $line -or $line.StartsWith("#")) { return }
+        $eq = $line.IndexOf("=")
+        if ($eq -lt 1) { return }
+        $key = $line.Substring(0, $eq).Trim()
+        $value = $line.Substring($eq + 1).Trim()
+        if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        [Environment]::SetEnvironmentVariable($key, $value, "Process")
+        Set-Item -Path "Env:$key" -Value $value
+    }
+}
+
 function Test-PortListening([int]$Port) {
     return [bool](Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
 }
@@ -24,8 +42,17 @@ function Start-ServiceJar([string]$Name, [string]$JarRelativePath, [int]$Port) {
 
     Write-Host "Starting $Name on port $Port..." -ForegroundColor Green
     Start-Process -FilePath "java" -ArgumentList "-jar", $jarPath -WorkingDirectory $root -WindowStyle Minimized
-    Start-Sleep -Seconds 2
+    Start-Sleep -Seconds 3
+    if (-not (Test-PortListening $Port)) {
+        Write-Host "WARNING: $Name did not stay up on port $Port (crashed after start)." -ForegroundColor Red
+        if ($Name -eq "auth-service") {
+            Write-Host "  Fix DB permissions, then retry:" -ForegroundColor Yellow
+            Write-Host "  .\fix-auth-db.ps1"
+        }
+    }
 }
+
+Import-DotEnv (Join-Path $root ".env")
 
 $services = @(
     @{ Name = "gateway-service";      Jar = "gateway-service\target\gateway-service-0.0.1-SNAPSHOT.jar";      Port = 8080 },
@@ -84,7 +111,5 @@ Write-Host '  Load unpacked from chrome-extension\dist in chrome://extensions'
 Write-Host ""
 Write-Host 'To stop services: .\stop-platform.ps1'
 Write-Host ""
-Write-Host "Real Google login requires:" -ForegroundColor Yellow
-Write-Host "  1) .\setup-postgres.ps1"
-Write-Host "  2) Set GOOGLE_CLIENT_IDS to your Chrome extension OAuth client ID"
-Write-Host "  3) Set VITE_GOOGLE_CLIENT_ID in chrome-extension\.env and rebuild the extension"
+Write-Host "If auth fails to start (permission denied for schema public), run:" -ForegroundColor Yellow
+Write-Host "  .\setup-postgres.ps1"

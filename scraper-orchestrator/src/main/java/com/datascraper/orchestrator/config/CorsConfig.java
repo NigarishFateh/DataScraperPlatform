@@ -11,7 +11,7 @@ import java.util.Arrays;
 @Configuration
 public class CorsConfig {
 
-    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    @Value("${app.cors.allowed-origins:chrome-extension://*,http://localhost:*,http://127.0.0.1:*}")
     private String allowedOrigins;
 
     @Bean
@@ -19,17 +19,19 @@ public class CorsConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                String[] origins = Arrays.stream(allowedOrigins.split(","))
+                String[] patterns = Arrays.stream(allowedOrigins.split(","))
                         .map(String::trim)
                         .filter(origin -> !origin.isBlank())
                         .toArray(String[]::new);
 
+                // allowedOriginPatterns — wildcards like chrome-extension://* must use patterns,
+                // not allowedOrigins (which matches literals only and causes 403 Invalid CORS).
                 registry.addMapping("/api/**")
-                        .allowedOrigins(origins)
-                        .allowedMethods("GET", "POST", "OPTIONS")
-                        .allowedHeaders("*");
+                        .allowedOriginPatterns(patterns)
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
             }
         };
     }
-
 }
