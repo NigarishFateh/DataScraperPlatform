@@ -3,41 +3,48 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { SEARCH_SELECTION_KEY, type SearchPayload } from "../dashboard/DashboardPage";
 import { createIntelligenceJob } from "../../services/intelligence/intelligenceApi";
-import { formatResultItems, groupResultsBySection } from "../../services/intelligence/reportMapper";
+import {
+  buildSectionView,
+  type ReportSectionId,
+} from "../../services/intelligence/reportMapper";
 import type { Category, City, Company, DashboardSelection } from "../../types/catalog";
 
-const SECTIONS = [
+const SECTIONS: {
+  id: ReportSectionId;
+  title: string;
+  summary: string;
+}[] = [
   {
     id: "identity",
     title: "Identity",
-    summary: "Logo, name, website, headquarters",
+    summary: "Name, website signals, and public branding",
   },
   {
     id: "positioning",
     title: "Positioning",
-    summary: "Industry, categories, mission, vision",
+    summary: "Headings and about copy from the company site",
   },
   {
     id: "offerings",
     title: "Offerings",
-    summary: "Services and products",
+    summary: "Services and product links",
   },
   {
     id: "technology",
     title: "Technology",
-    summary: "Languages, frameworks, cloud, databases",
+    summary: "Detected languages, frameworks, and cloud signals",
   },
   {
     id: "presence",
     title: "Digital presence",
-    summary: "LinkedIn, GitHub, X, careers, news",
+    summary: "Social profiles, GitHub, careers, and news",
   },
   {
     id: "contact",
     title: "Contact",
-    summary: "Emails, phones, addresses (public only)",
+    summary: "Public emails, phones, and addresses",
   },
-] as const;
+];
 
 function readSearchContext(state: unknown): {
   selection: DashboardSelection;
@@ -97,10 +104,7 @@ export function ReportPage() {
     staleTime: 60_000,
   });
 
-  const groupedResults = useMemo(
-    () => groupResultsBySection(intelligenceQuery.data?.results ?? []),
-    [intelligenceQuery.data],
-  );
+  const results = intelligenceQuery.data?.results ?? [];
 
   const cityName =
     cities.find((city) => city.id === primary?.cityId)?.name ??
@@ -128,18 +132,31 @@ export function ReportPage() {
           <div className="min-w-0 space-y-1">
             <h1 className="font-display text-lg font-semibold text-mist-100">{primary.name}</h1>
             <p className="text-xs text-mist-300">
-              {primary.website.replace(/^https?:\/\//, "")} · {cityName}
+              <a
+                href={primary.website}
+                target="_blank"
+                rel="noreferrer"
+                className="text-signal underline-offset-2 hover:underline"
+              >
+                {primary.website.replace(/^https?:\/\//, "")}
+              </a>
+              {" · "}
+              {cityName}
               {countryName ? `, ${countryName}` : primary?.countryCode ? `, ${primary.countryCode}` : ""} ·{" "}
               {primary.industry}
             </p>
             {categories.length > 0 ? (
-              <p className="text-[11px] text-mist-400">
-                {categories.map((category) => category.name).join(" · ")}
-              </p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {categories.map((category) => (
+                  <span
+                    key={category.id}
+                    className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-mist-300"
+                  >
+                    {category.name}
+                  </span>
+                ))}
+              </div>
             ) : null}
-            <p className="text-[11px] text-mist-400">
-              {companies.length} compan{companies.length === 1 ? "y" : "ies"} selected
-            </p>
             <p className="text-[11px] text-signal/90">
               {intelligenceQuery.isLoading
                 ? "Running intelligence job…"
@@ -169,7 +186,37 @@ export function ReportPage() {
       <section className="space-y-2">
         {SECTIONS.map((section, index) => {
           const open = openId === section.id;
-          const sectionResults = groupedResults[section.id] ?? [];
+          const view = buildSectionView(section.id, results);
+          const catalogFallback =
+            section.id === "identity" && view.items.length === 0
+              ? [
+                  { label: "Name", value: primary.name },
+                  { label: "Website", value: primary.website, href: primary.website },
+                  {
+                    label: "Headquarters",
+                    value: `${cityName ?? ""}${
+                      countryName
+                        ? `, ${countryName}`
+                        : primary.countryCode
+                          ? `, ${primary.countryCode}`
+                          : ""
+                    }`,
+                  },
+                  { label: "Industry", value: primary.industry },
+                ]
+              : null;
+
+          const rows = view.items.length
+            ? view.items
+            : catalogFallback
+              ? catalogFallback.map((row, i) => ({
+                  id: `fallback-${i}`,
+                  label: row.label,
+                  value: row.value,
+                  href: "href" in row ? row.href : undefined,
+                }))
+              : [];
+
           return (
             <article key={section.id} className="li-surface overflow-hidden">
               <button
@@ -184,6 +231,11 @@ export function ReportPage() {
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <h2 className="text-sm font-semibold text-mist-100">{section.title}</h2>
+                    {rows.length > 0 ? (
+                      <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-mist-400">
+                        {rows.length}
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-0.5 truncate text-[11px] text-mist-400">{section.summary}</p>
                 </div>
@@ -192,41 +244,43 @@ export function ReportPage() {
                 </span>
               </button>
               {open ? (
-                <div className="border-t border-white/10 px-3.5 py-3 text-sm leading-relaxed text-mist-300">
-                  {sectionResults.length > 0 ? (
-                    <ul className="space-y-2 text-xs">
-                      {sectionResults.map((result) => (
-                        <li key={`${section.id}-${result.scraperType}`}>
-                          <p className="font-semibold text-mist-100">
-                            {result.scraperType} · {result.status}
-                            {result.metadata?.fromCache ? " (cached)" : ""}
+                <div className="border-t border-white/10 px-3.5 py-3">
+                  {view.statusLabel ? (
+                    <p className="mb-3 text-[10px] uppercase tracking-wide text-mist-500">
+                      {view.statusLabel}
+                    </p>
+                  ) : null}
+
+                  {rows.length > 0 ? (
+                    <ul className="space-y-3">
+                      {rows.map((row) => (
+                        <li key={row.id} className="border-b border-white/5 pb-3 last:border-0 last:pb-0">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-mist-500">
+                            {row.label}
                           </p>
-                          {formatResultItems(result).map((line) => (
-                            <p key={line} className="text-mist-300">
-                              {line}
+                          {row.href ? (
+                            <a
+                              href={row.href}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-0.5 block break-words text-xs leading-relaxed text-signal underline-offset-2 hover:underline"
+                            >
+                              {row.value}
+                            </a>
+                          ) : (
+                            <p className="mt-0.5 break-words text-xs leading-relaxed text-mist-100">
+                              {row.value}
                             </p>
-                          ))}
+                          )}
+                          {"note" in row && row.note ? (
+                            <p className="mt-1 text-[10px] text-mist-500">{row.note}</p>
+                          ) : null}
                         </li>
                       ))}
                     </ul>
-                  ) : section.id === "identity" ? (
-                    <ul className="space-y-1 text-xs">
-                      <li>
-                        <span className="text-mist-400">Name:</span> {primary.name}
-                      </li>
-                      <li>
-                        <span className="text-mist-400">Website:</span> {primary.website}
-                      </li>
-                      <li>
-                        <span className="text-mist-400">HQ:</span> {cityName}
-                        {countryName ? `, ${countryName}` : primary?.countryCode ? `, ${primary.countryCode}` : ""}
-                      </li>
-                    </ul>
                   ) : (
                     <p className="text-xs text-mist-400">
-                      {intelligenceQuery.isLoading
-                        ? "Waiting for scraper results…"
-                        : "No scraper data for this section yet."}
+                      {intelligenceQuery.isLoading ? "Waiting for scraper results…" : view.emptyMessage}
                     </p>
                   )}
                 </div>

@@ -44,6 +44,9 @@ public class ContactHtmlParser {
         Matcher phoneMatcher = PHONE_PATTERN.matcher(pageText);
         while (phoneMatcher.find()) {
             String phone = phoneMatcher.group().trim();
+            if (looksLikeYearRange(phone)) {
+                continue;
+            }
             if (phone.replaceAll("\\D", "").length() >= 8) {
                 addContact(items, seen, "phone", phone, sourceUrl);
             }
@@ -75,5 +78,10 @@ public class ContactHtmlParser {
         item.put("value", value);
         item.put("sourceUrl", sourceUrl);
         items.add(item);
+    }
+
+    private static boolean looksLikeYearRange(String value) {
+        return value.matches("(?i)^(?:©\\s*)?19\\d{2}\\s*[-–—]\\s*20\\d{2}$")
+                || value.matches("^19\\d{2}\\s*[-–—]\\s*20\\d{2}$");
     }
 }

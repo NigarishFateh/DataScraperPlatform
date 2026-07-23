@@ -13,12 +13,19 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Parses public company website HTML using CSS selectors (JSoup DOM API).
  */
 @Component
 public class CompanyWebsiteHtmlParser {
+
+    private static final Pattern EMAIL_PATTERN =
+            Pattern.compile("[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", Pattern.CASE_INSENSITIVE);
+    private static final Pattern PHONE_PATTERN =
+            Pattern.compile("(?:\\+\\d{1,3}[\\s.-]?)?(?:\\(?\\d{2,4}\\)?[\\s.-]?)?\\d{3,4}[\\s.-]?\\d{3,4}");
 
     public List<Map<String, Object>> parse(Document document, String sourceUrl, int maxItems) {
         List<Map<String, Object>> items = new ArrayList<>();
@@ -99,18 +106,46 @@ public class CompanyWebsiteHtmlParser {
 
     private void addContactChannels(List<Map<String, Object>> items, Set<String> seen, Document document) {
         for (Element link : document.select("a[href^=mailto:]")) {
-            String email = link.attr("href").replace("mailto:", "").trim();
-            if (email.isBlank() || !seen.add("email:" + email)) {
+            String email = link.attr("href").replace("mailto:", "").split("\\?")[0].trim();
+            if (email.isBlank() || !seen.add("email:" + email.toLowerCase(Locale.ROOT))) {
                 continue;
             }
-            items.add(item("contact", "email", email, null, link.absUrl("href"), null));
+            items.add(item("contact", "email", email, null, "mailto:" + email, null));
         }
         for (Element link : document.select("a[href^=tel:]")) {
             String phone = link.attr("href").replace("tel:", "").trim();
             if (phone.isBlank() || !seen.add("phone:" + phone)) {
                 continue;
             }
-            items.add(item("contact", "phone", phone, null, link.absUrl("href"), null));
+            items.add(item("contact", "phone", phone, null, "tel:" + phone, null));
+        }
+
+        String pageText = document.text();
+        Matcher emailMatcher = EMAIL_PATTERN.matcher(pageText);
+        while (emailMatcher.find()) {
+            String email = emailMatcher.group().trim();
+            if (!seen.add("email:" + email.toLowerCase(Locale.ROOT))) {
+                continue;
+            }
+            items.add(item("contact", "email", email, null, "mailto:" + email, null));
+        }
+        Matcher phoneMatcher = PHONE_PATTERN.matcher(pageText);
+        while (phoneMatcher.find()) {
+            String phone = phoneMatcher.group().trim();
+            if (phone.matches("^19\\d{2}\\s*[-–—]\\s*20\\d{2}$")) {
+                continue;
+            }
+            if (phone.replaceAll("\\D", "").length() < 8 || !seen.add("phone:" + phone)) {
+                continue;
+            }
+            items.add(item("contact", "phone", phone, null, "tel:" + phone.replaceAll("[^\\d+]", ""), null));
+        }
+        for (Element address : document.select("address")) {
+            String text = address.text().trim();
+            if (text.length() < 12 || !seen.add("address:" + text.toLowerCase(Locale.ROOT))) {
+                continue;
+            }
+            items.add(item("contact", "address", text, null, null, null));
         }
     }
 
