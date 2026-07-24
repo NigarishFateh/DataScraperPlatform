@@ -1,3 +1,6 @@
+/**
+ * Downloads a web page and returns it as HTML for parsing.
+ */
 package com.datascraper.website.support;
 
 import com.datascraper.website.config.WebsiteScraperProperties;

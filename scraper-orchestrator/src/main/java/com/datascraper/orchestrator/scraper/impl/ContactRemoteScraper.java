@@ -1,3 +1,6 @@
+/**
+ * Remote scraper strategy that collects contact information.
+ */
 package com.datascraper.orchestrator.scraper.impl;
 
 import com.datascraper.common.enums.ScraperType;

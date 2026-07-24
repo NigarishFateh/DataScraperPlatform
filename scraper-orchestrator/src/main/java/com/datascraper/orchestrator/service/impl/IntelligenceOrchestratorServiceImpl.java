@@ -1,3 +1,6 @@
+/**
+ * Runs intelligence jobs by calling selected scrapers in parallel.
+ */
 package com.datascraper.orchestrator.service.impl;
 
 import com.datascraper.common.dto.ScraperContext;

@@ -1,3 +1,6 @@
+/**
+ * Runs a website scrape by calling the website scraper factory.
+ */
 package com.datascraper.website.service.impl;
 
 import com.datascraper.common.dto.ScraperContext;

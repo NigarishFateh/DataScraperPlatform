@@ -1,3 +1,6 @@
+/**
+ * Tests that the factory picks the right scrapers for a job.
+ */
 package com.datascraper.orchestrator.factory;
 
 import com.datascraper.common.dto.ScraperContext;

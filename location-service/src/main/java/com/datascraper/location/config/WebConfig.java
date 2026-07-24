@@ -1,3 +1,6 @@
+/**
+ * Configures CORS so browser and extension clients can call the location API.
+ */
 package com.datascraper.location.config;
 
 import org.springframework.context.annotation.Bean;

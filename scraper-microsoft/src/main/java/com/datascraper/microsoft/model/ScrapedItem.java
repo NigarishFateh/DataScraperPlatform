@@ -1,3 +1,6 @@
+/**
+ * Holds one scraped row of Microsoft page data.
+ */
 package com.datascraper.microsoft.model;
 
 import java.util.Map;

@@ -1,3 +1,6 @@
+/**
+ * Parses Google HTML pages into scraped items by category.
+ */
 package com.datascraper.google.support;
 
 import com.datascraper.google.model.DataCategory;

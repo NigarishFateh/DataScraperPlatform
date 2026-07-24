@@ -1,3 +1,6 @@
+/**
+ * Holds one full Microsoft scrape result with items and metadata.
+ */
 package com.datascraper.microsoft.model;
 
 import java.time.Instant;

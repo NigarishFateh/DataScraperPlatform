@@ -1,3 +1,6 @@
+/**
+ * Carries request data for updating a company.
+ */
 package com.datascraper.company.dto;
 
 import jakarta.validation.constraints.NotBlank;

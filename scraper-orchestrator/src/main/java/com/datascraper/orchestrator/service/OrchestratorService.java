@@ -1,3 +1,6 @@
+/**
+ * Service interface for multi-source scrapes and health status.
+ */
 package com.datascraper.orchestrator.service;
 
 import com.datascraper.orchestrator.dto.ScrapeRequest;

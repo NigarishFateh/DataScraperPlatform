@@ -1,3 +1,6 @@
+/**
+ * Turns on Microsoft URL settings from configuration properties.
+ */
 package com.datascraper.microsoft.config;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

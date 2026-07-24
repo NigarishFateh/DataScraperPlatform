@@ -1,3 +1,6 @@
+/**
+ * Starts the GitHub scraper Spring Boot service.
+ */
 package com.datascraper.github;
 
 import org.springframework.boot.SpringApplication;

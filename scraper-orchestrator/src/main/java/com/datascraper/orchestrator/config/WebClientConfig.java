@@ -1,3 +1,6 @@
+/**
+ * Builds the shared WebClient and enables scraper config properties.
+ */
 package com.datascraper.orchestrator.config;
 
 import io.netty.channel.ChannelOption;

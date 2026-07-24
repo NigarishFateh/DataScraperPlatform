@@ -1,3 +1,6 @@
+/**
+ * Starts the IBM scraper Spring Boot service.
+ */
 package com.datascraper.ibm;
 
 import org.springframework.boot.SpringApplication;

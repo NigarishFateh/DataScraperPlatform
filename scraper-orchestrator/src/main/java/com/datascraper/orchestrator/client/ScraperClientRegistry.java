@@ -1,3 +1,6 @@
+/**
+ * Looks up the right scraper client by source (Google, Microsoft, IBM).
+ */
 package com.datascraper.orchestrator.client;
 
 import com.datascraper.orchestrator.model.ScraperSource;

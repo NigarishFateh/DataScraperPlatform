@@ -1,3 +1,6 @@
+/**
+ * Carries response data for a paged company search result.
+ */
 package com.datascraper.company.dto;
 
 import java.util.List;

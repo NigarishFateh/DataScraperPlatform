@@ -1,3 +1,6 @@
+/**
+ * Service interface for running intelligence scrape jobs.
+ */
 package com.datascraper.orchestrator.service;
 
 import com.datascraper.orchestrator.dto.IntelligenceJobRequest;

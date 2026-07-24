@@ -1,3 +1,6 @@
+/**
+ * Exposes the HTTP API endpoint that starts a company news scrape.
+ */
 package com.datascraper.news.controller;
 
 import com.datascraper.common.dto.ScraperContext;

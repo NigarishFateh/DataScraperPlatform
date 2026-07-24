@@ -1,3 +1,6 @@
+/**
+ * Exposes HTTP endpoints for Google login, refresh, logout, and current user.
+ */
 package com.datascraper.auth.controller;
 
 import com.datascraper.auth.dto.AuthTokensResponse;

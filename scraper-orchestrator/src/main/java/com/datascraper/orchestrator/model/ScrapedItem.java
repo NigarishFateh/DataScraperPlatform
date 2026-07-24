@@ -1,3 +1,6 @@
+/**
+ * One scraped row with title, description, URL, and optional fields.
+ */
 package com.datascraper.orchestrator.model;
 
 import java.util.Map;

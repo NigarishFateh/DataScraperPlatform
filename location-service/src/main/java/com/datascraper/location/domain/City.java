@@ -1,3 +1,6 @@
+/**
+ * Domain model for a city belonging to a country.
+ */
 package com.datascraper.location.domain;
 
 /**

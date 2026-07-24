@@ -1,3 +1,6 @@
+/**
+ * Runs a GitHub scrape by calling the GitHub scraper factory.
+ */
 package com.datascraper.github.service.impl;
 
 import com.datascraper.common.dto.ScraperContext;

@@ -1,3 +1,6 @@
+/**
+ * Parses IBM HTML pages into scraped items by category.
+ */
 package com.datascraper.ibm.support;
 
 import com.datascraper.ibm.model.DataCategory;

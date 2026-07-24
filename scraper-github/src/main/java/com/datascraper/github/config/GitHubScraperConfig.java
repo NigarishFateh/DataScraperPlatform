@@ -1,3 +1,6 @@
+/**
+ * Sets up the GitHub WebClient and enables scraper settings.
+ */
 package com.datascraper.github.config;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

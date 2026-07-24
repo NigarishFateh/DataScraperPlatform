@@ -1,3 +1,6 @@
+/**
+ * Starts and boots the location Spring Boot service.
+ */
 package com.datascraper.location;
 
 import org.springframework.boot.SpringApplication;

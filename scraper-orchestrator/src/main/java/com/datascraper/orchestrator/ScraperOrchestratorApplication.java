@@ -1,3 +1,6 @@
+/**
+ * Starts the scraper-orchestrator Spring Boot service.
+ */
 package com.datascraper.orchestrator;
 
 import org.springframework.boot.SpringApplication;

@@ -1,3 +1,6 @@
+/**
+ * Starts the Microsoft scraper Spring Boot service.
+ */
 package com.datascraper.microsoft;
 
 import org.springframework.boot.SpringApplication;

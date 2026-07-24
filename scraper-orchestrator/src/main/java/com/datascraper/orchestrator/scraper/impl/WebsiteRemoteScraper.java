@@ -1,3 +1,6 @@
+/**
+ * Remote scraper strategy that collects company website data.
+ */
 package com.datascraper.orchestrator.scraper.impl;
 
 import com.datascraper.common.enums.ScraperType;

@@ -1,3 +1,6 @@
+/**
+ * Holds settings like user agent, timeout, and max items for tech scraping.
+ */
 package com.datascraper.tech.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;

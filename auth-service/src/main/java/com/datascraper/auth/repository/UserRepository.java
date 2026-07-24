@@ -1,3 +1,6 @@
+/**
+ * Saves and loads users between domain and database.
+ */
 package com.datascraper.auth.repository;
 
 import com.datascraper.auth.domain.User;

@@ -1,3 +1,6 @@
+/**
+ * Holds settings like API URL, token, timeout, and max results for GitHub scraping.
+ */
 package com.datascraper.github.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;

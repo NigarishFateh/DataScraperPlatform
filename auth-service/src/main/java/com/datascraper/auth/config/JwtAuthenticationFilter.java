@@ -1,3 +1,6 @@
+/**
+ * Reads a Bearer JWT and puts the user into the Spring Security context.
+ */
 package com.datascraper.auth.config;
 
 import com.datascraper.auth.service.JwtService;

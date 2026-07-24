@@ -1,3 +1,6 @@
+/**
+ * Spring Data JPA access for refresh session entities.
+ */
 package com.datascraper.auth.repository;
 
 import com.datascraper.auth.entity.RefreshSessionEntity;

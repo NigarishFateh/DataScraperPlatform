@@ -1,3 +1,6 @@
+/**
+ * Creates the thread pool used to run scrapers in parallel.
+ */
 package com.datascraper.orchestrator.config;
 
 import org.springframework.context.annotation.Bean;

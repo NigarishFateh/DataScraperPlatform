@@ -1,3 +1,6 @@
+/**
+ * Shared HTTP client base that calls a scraper service with retries and timeouts.
+ */
 package com.datascraper.orchestrator.client;
 
 import com.datascraper.orchestrator.config.ScraperResilienceProperties;

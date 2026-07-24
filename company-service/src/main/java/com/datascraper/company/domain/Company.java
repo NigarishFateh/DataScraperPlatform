@@ -1,3 +1,6 @@
+/**
+ * Domain model for a company catalog record.
+ */
 package com.datascraper.company.domain;
 
 import java.util.ArrayList;

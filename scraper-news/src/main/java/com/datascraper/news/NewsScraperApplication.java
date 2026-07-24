@@ -1,3 +1,6 @@
+/**
+ * Starts the news scraper Spring Boot service.
+ */
 package com.datascraper.news;
 
 import org.springframework.boot.SpringApplication;

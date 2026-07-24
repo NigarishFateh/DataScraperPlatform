@@ -1,3 +1,6 @@
+/**
+ * Service contract for scraping Google pages by category.
+ */
 package com.datascraper.google.service;
 
 import com.datascraper.google.model.DataCategory;

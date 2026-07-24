@@ -1,3 +1,6 @@
+/**
+ * Turns location exceptions into standard API error responses.
+ */
 package com.datascraper.location.exception;
 
 import com.datascraper.common.error.ApiError;

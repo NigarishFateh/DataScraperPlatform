@@ -1,3 +1,6 @@
+/**
+ * Downloads a web page and returns it as HTML for contact parsing.
+ */
 package com.datascraper.contact.support;
 
 import com.datascraper.contact.config.ContactScraperProperties;

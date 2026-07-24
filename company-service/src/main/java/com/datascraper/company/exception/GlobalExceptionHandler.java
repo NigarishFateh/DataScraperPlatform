@@ -1,3 +1,6 @@
+/**
+ * Turns company exceptions into standard API error responses.
+ */
 package com.datascraper.company.exception;
 
 import com.datascraper.common.error.ApiError;

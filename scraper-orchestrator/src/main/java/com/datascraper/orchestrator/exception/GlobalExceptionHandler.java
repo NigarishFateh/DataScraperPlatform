@@ -1,3 +1,6 @@
+/**
+ * Turns common exceptions into HTTP problem details for API clients.
+ */
 package com.datascraper.orchestrator.exception;
 
 import org.springframework.http.HttpStatus;

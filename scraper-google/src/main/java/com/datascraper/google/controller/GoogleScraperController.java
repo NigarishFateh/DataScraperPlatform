@@ -1,3 +1,6 @@
+/**
+ * Exposes health and scrape HTTP endpoints for Google pages.
+ */
 package com.datascraper.google.controller;
 
 import com.datascraper.google.model.DataCategory;

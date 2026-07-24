@@ -1,3 +1,6 @@
+/**
+ * Tests HTTP scrape calls, correlation headers, and error mapping.
+ */
 package com.datascraper.orchestrator.client;
 
 import com.datascraper.common.dto.ScraperContext;

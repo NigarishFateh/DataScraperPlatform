@@ -1,3 +1,6 @@
+/**
+ * Finds technology names and signals inside page HTML.
+ */
 package com.datascraper.tech.support;
 
 import org.jsoup.nodes.Document;

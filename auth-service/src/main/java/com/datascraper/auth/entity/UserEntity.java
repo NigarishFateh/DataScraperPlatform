@@ -1,3 +1,6 @@
+/**
+ * Database entity that stores user rows.
+ */
 package com.datascraper.auth.entity;
 
 import jakarta.persistence.Column;

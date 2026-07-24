@@ -1,3 +1,6 @@
+/**
+ * Tests that cache keys stay stable and normalize website URLs.
+ */
 package com.datascraper.orchestrator.cache;
 
 import com.datascraper.common.dto.ScraperContext;

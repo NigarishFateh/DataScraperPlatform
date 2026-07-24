@@ -1,3 +1,6 @@
+/**
+ * Carries request data for refreshing tokens or logging out.
+ */
 package com.datascraper.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;

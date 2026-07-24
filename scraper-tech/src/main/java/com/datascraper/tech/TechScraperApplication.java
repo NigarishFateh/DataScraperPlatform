@@ -1,3 +1,6 @@
+/**
+ * Starts the tech stack scraper Spring Boot service.
+ */
 package com.datascraper.tech;
 
 import org.springframework.boot.SpringApplication;

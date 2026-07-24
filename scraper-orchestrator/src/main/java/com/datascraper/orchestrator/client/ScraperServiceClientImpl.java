@@ -1,3 +1,6 @@
+/**
+ * WebClient implementation that posts scrape requests and maps JSON responses.
+ */
 package com.datascraper.orchestrator.client;
 
 import com.datascraper.common.dto.ScraperContext;

@@ -1,3 +1,6 @@
+/**
+ * Spring Data JPA access for category entities.
+ */
 package com.datascraper.category.repository;
 
 import com.datascraper.category.entity.CategoryEntity;

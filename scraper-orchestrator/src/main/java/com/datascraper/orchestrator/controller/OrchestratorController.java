@@ -1,3 +1,6 @@
+/**
+ * REST endpoints for health checks and multi-source scrape requests.
+ */
 package com.datascraper.orchestrator.controller;
 
 import com.datascraper.orchestrator.dto.ScrapeRequest;

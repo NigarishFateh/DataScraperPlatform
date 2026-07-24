@@ -1,3 +1,6 @@
+/**
+ * Holds the base URL for the Google scraper service.
+ */
 package com.datascraper.orchestrator.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;

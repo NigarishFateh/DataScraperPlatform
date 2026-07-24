@@ -1,3 +1,6 @@
+/**
+ * Lists the Microsoft scrape categories such as jobs, products, and news.
+ */
 package com.datascraper.microsoft.model;
 
 public enum DataCategory {

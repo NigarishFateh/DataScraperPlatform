@@ -1,3 +1,6 @@
+/**
+ * Tests that the Google scraper Spring Boot app starts correctly.
+ */
 package com.datascraper.google;
 
 import org.junit.jupiter.api.Test;

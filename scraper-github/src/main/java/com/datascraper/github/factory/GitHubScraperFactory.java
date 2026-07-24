@@ -1,3 +1,6 @@
+/**
+ * Picks and returns the GitHub scraper implementation to use.
+ */
 package com.datascraper.github.factory;
 
 import com.datascraper.github.scraper.GitHubScraper;

@@ -1,3 +1,6 @@
+/**
+ * Request body listing which sources and data categories to scrape.
+ */
 package com.datascraper.orchestrator.dto;
 
 import com.datascraper.orchestrator.model.DataCategory;

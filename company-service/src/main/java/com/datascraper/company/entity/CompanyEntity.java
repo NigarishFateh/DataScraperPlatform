@@ -1,3 +1,6 @@
+/**
+ * Database entity that stores company rows and category links.
+ */
 package com.datascraper.company.entity;
 
 import jakarta.persistence.CollectionTable;

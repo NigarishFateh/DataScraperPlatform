@@ -1,3 +1,6 @@
+/**
+ * Domain model for an application user after Google proves identity.
+ */
 package com.datascraper.auth.domain;
 
 import java.time.Instant;

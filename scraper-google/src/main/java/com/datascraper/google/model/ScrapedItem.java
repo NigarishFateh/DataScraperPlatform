@@ -1,3 +1,6 @@
+/**
+ * Holds one scraped row of Google page data.
+ */
 package com.datascraper.google.model;
 
 import java.util.Map;

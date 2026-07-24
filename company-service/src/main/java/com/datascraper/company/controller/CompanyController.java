@@ -1,3 +1,6 @@
+/**
+ * Exposes HTTP endpoints to search, create, update, and delete companies.
+ */
 package com.datascraper.company.controller;
 
 import com.datascraper.company.dto.CompanyPageResponse;

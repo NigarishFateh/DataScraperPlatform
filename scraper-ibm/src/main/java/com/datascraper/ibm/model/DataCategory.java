@@ -1,3 +1,6 @@
+/**
+ * Lists the IBM scrape categories such as jobs, products, and news.
+ */
 package com.datascraper.ibm.model;
 
 public enum DataCategory {

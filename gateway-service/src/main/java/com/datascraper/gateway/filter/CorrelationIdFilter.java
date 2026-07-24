@@ -1,3 +1,6 @@
+/**
+ * Adds or keeps an X-Correlation-Id header on every gateway request.
+ */
 package com.datascraper.gateway.filter;
 
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;

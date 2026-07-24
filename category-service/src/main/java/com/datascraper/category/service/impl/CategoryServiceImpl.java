@@ -1,3 +1,6 @@
+/**
+ * Implements category listing by fetching from the repository.
+ */
 package com.datascraper.category.service.impl;
 
 import com.datascraper.category.dto.CategoryResponse;

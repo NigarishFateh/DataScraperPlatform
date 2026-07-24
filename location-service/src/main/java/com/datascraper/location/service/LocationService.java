@@ -1,3 +1,6 @@
+/**
+ * Service contract for listing countries and cities.
+ */
 package com.datascraper.location.service;
 
 import com.datascraper.location.dto.CityResponse;

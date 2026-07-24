@@ -1,3 +1,6 @@
+/**
+ * Holds identity details taken from a verified Google token.
+ */
 package com.datascraper.auth.domain;
 
 /**

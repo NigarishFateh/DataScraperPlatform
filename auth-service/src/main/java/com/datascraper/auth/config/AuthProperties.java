@@ -1,3 +1,6 @@
+/**
+ * Holds auth settings for JWT, Google login, and related app config.
+ */
 package com.datascraper.auth.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;

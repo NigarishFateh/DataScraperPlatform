@@ -1,3 +1,6 @@
+/**
+ * Spring Data JPA access and search queries for company entities.
+ */
 package com.datascraper.company.repository;
 
 import com.datascraper.company.entity.CompanyEntity;

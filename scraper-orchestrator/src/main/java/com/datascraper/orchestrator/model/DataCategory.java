@@ -1,3 +1,6 @@
+/**
+ * Enum of data categories that can be scraped (jobs, news, contacts, and more).
+ */
 package com.datascraper.orchestrator.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;

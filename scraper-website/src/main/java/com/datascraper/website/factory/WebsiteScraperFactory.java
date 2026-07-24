@@ -1,3 +1,6 @@
+/**
+ * Picks and returns the website scraper implementation to use.
+ */
 package com.datascraper.website.factory;
 
 import com.datascraper.website.scraper.WebsiteScraper;

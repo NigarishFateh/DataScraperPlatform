@@ -1,3 +1,6 @@
+/**
+ * Holds one full Google scrape result with items and metadata.
+ */
 package com.datascraper.google.model;
 
 import java.time.Instant;

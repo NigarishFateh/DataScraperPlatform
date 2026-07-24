@@ -1,3 +1,6 @@
+/**
+ * Picks and returns the news scraper implementation to use.
+ */
 package com.datascraper.news.factory;
 
 import com.datascraper.news.scraper.NewsScraper;

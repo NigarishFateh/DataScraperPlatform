@@ -1,3 +1,6 @@
+/**
+ * Lists possible statuses for an intelligence job.
+ */
 package com.datascraper.common.enums;
 
 /**

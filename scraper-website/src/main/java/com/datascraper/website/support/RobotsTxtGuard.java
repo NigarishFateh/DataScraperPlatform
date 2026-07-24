@@ -1,3 +1,6 @@
+/**
+ * Checks robots.txt to see if scraping a URL is allowed.
+ */
 package com.datascraper.website.support;
 
 import com.datascraper.website.config.WebsiteScraperProperties;

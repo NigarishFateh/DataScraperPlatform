@@ -1,3 +1,6 @@
+/**
+ * Carries a standard error response shared by services.
+ */
 package com.datascraper.common.error;
 
 import java.time.Instant;

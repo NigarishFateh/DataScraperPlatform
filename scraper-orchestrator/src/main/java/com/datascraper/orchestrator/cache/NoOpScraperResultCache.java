@@ -1,3 +1,6 @@
+/**
+ * Cache that does nothing — always misses and never stores results.
+ */
 package com.datascraper.orchestrator.cache;
 
 import com.datascraper.common.dto.ScraperContext;

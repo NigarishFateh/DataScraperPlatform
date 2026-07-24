@@ -1,3 +1,6 @@
+/**
+ * Domain model for a country reference row.
+ */
 package com.datascraper.location.domain;
 
 /**

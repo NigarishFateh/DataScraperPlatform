@@ -1,3 +1,6 @@
+/**
+ * Carries response data for the result of a scraper run.
+ */
 package com.datascraper.common.dto;
 
 import com.datascraper.common.enums.ScraperExecutionStatus;

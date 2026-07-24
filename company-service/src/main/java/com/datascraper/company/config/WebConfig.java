@@ -1,3 +1,6 @@
+/**
+ * Configures CORS so browser and extension clients can call the company API.
+ */
 package com.datascraper.company.config;
 
 import org.springframework.context.annotation.Bean;

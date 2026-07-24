@@ -1,3 +1,6 @@
+/**
+ * Spring Data JPA access and search queries for city entities.
+ */
 package com.datascraper.location.repository;
 
 import com.datascraper.location.entity.CityEntity;

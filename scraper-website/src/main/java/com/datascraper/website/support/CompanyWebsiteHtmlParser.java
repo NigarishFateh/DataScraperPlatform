@@ -1,3 +1,6 @@
+/**
+ * Pulls useful fields like headings, links, and contacts from website HTML.
+ */
 package com.datascraper.website.support;
 
 import org.jsoup.Jsoup;

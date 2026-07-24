@@ -1,3 +1,6 @@
+/**
+ * Exposes HTTP endpoints to list countries and cities.
+ */
 package com.datascraper.location.controller;
 
 import com.datascraper.location.dto.CityResponse;

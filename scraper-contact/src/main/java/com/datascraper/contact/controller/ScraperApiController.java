@@ -1,3 +1,6 @@
+/**
+ * Exposes the HTTP API endpoint that starts a company contact scrape.
+ */
 package com.datascraper.contact.controller;
 
 import com.datascraper.common.dto.ScraperContext;

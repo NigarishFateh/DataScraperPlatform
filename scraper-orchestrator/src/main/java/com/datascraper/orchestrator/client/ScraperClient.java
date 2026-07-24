@@ -1,3 +1,6 @@
+/**
+ * Interface for calling a single company scraper source.
+ */
 package com.datascraper.orchestrator.client;
 
 import com.datascraper.orchestrator.model.DataCategory;

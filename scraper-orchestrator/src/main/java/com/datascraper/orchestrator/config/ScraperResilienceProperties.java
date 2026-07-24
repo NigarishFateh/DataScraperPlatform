@@ -1,3 +1,6 @@
+/**
+ * Holds timeout, retry count, and retry delay settings for scraper calls.
+ */
 package com.datascraper.orchestrator.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;

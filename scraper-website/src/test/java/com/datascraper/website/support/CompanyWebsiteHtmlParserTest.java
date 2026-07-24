@@ -1,3 +1,6 @@
+/**
+ * Tests that the company website HTML parser extracts the right fields.
+ */
 package com.datascraper.website.support;
 
 import org.jsoup.Jsoup;

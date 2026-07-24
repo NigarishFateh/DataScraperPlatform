@@ -1,3 +1,6 @@
+/**
+ * Carries input data passed into a scraper run.
+ */
 package com.datascraper.common.dto;
 
 import java.util.List;

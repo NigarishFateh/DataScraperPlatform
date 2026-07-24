@@ -1,3 +1,6 @@
+/**
+ * Carries response data for a single company.
+ */
 package com.datascraper.company.dto;
 
 import java.util.List;

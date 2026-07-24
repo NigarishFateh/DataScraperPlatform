@@ -1,3 +1,6 @@
+/**
+ * Exposes health and scrape HTTP endpoints for Microsoft pages.
+ */
 package com.datascraper.microsoft.controller;
 
 import com.datascraper.microsoft.model.DataCategory;

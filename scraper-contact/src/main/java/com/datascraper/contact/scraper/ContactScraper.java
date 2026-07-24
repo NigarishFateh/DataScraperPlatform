@@ -1,3 +1,6 @@
+/**
+ * Contract for scraping company contact details.
+ */
 package com.datascraper.contact.scraper;
 
 import com.datascraper.common.dto.ScraperContext;

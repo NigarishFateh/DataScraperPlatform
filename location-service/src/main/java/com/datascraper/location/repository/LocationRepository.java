@@ -1,3 +1,6 @@
+/**
+ * Loads countries and cities from the database into domain objects.
+ */
 package com.datascraper.location.repository;
 
 import com.datascraper.location.domain.City;

@@ -1,3 +1,6 @@
+/**
+ * Tests that the location repository loads the seeded country and city catalog.
+ */
 package com.datascraper.location.repository;
 
 import com.datascraper.location.domain.City;

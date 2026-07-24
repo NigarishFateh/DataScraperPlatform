@@ -1,3 +1,6 @@
+/**
+ * Shared remote-scraper template with cache lookup, retries, and HTTP calls.
+ */
 package com.datascraper.orchestrator.scraper;
 
 import com.datascraper.common.dto.ScraperContext;

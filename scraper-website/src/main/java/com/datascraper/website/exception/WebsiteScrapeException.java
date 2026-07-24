@@ -1,3 +1,6 @@
+/**
+ * Custom error thrown when a website scrape fails.
+ */
 package com.datascraper.website.exception;
 
 public class WebsiteScrapeException extends RuntimeException {

@@ -1,3 +1,6 @@
+/**
+ * Exposes the HTTP API endpoint that starts a GitHub org scrape.
+ */
 package com.datascraper.github.controller;
 
 import com.datascraper.common.dto.ScraperContext;

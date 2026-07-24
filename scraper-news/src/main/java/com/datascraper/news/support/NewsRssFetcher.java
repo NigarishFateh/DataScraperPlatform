@@ -1,3 +1,6 @@
+/**
+ * Fetches and parses news headlines from an RSS feed.
+ */
 package com.datascraper.news.support;
 
 import com.datascraper.news.config.NewsScraperProperties;

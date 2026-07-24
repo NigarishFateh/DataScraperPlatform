@@ -1,3 +1,6 @@
+/**
+ * Exposes HTTP endpoints to list categories.
+ */
 package com.datascraper.category.controller;
 
 import com.datascraper.category.dto.CategoryResponse;

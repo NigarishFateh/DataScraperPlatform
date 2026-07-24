@@ -1,3 +1,6 @@
+/**
+ * Holds one full IBM scrape result with items and metadata.
+ */
 package com.datascraper.ibm.model;
 
 import java.time.Instant;

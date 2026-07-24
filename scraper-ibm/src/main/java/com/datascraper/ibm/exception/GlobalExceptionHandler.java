@@ -1,3 +1,6 @@
+/**
+ * Turns scrape errors into clear HTTP error responses.
+ */
 package com.datascraper.ibm.exception;
 
 import org.springframework.http.HttpStatus;

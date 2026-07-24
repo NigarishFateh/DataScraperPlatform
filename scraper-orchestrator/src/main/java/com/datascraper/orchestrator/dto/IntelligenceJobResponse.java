@@ -1,3 +1,6 @@
+/**
+ * Response body with job status and scraper results.
+ */
 package com.datascraper.orchestrator.dto;
 
 import com.datascraper.common.dto.ScraperResult;

@@ -1,3 +1,6 @@
+/**
+ * Exposes health and scrape HTTP endpoints for IBM pages.
+ */
 package com.datascraper.ibm.controller;
 
 import com.datascraper.ibm.model.DataCategory;

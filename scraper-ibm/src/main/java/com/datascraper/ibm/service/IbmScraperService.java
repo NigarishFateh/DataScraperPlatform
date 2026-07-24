@@ -1,3 +1,6 @@
+/**
+ * Service contract for scraping IBM pages by category.
+ */
 package com.datascraper.ibm.service;
 
 import com.datascraper.ibm.model.DataCategory;

@@ -1,3 +1,6 @@
+/**
+ * Carries request data for Google credential login.
+ */
 package com.datascraper.auth.dto;
 
 import jakarta.validation.constraints.AssertTrue;

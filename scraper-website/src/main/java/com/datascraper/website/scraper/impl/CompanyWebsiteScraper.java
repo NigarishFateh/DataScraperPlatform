@@ -1,3 +1,6 @@
+/**
+ * Scrapes a company website for public info while checking robots.txt.
+ */
 package com.datascraper.website.scraper.impl;
 
 import com.datascraper.common.dto.ScraperContext;

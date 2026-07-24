@@ -1,3 +1,6 @@
+/**
+ * Runs a contact scrape by calling the contact scraper factory.
+ */
 package com.datascraper.contact.service.impl;
 
 import com.datascraper.common.dto.ScraperContext;

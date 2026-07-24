@@ -1,3 +1,6 @@
+/**
+ * Interface for getting and putting cached scraper results.
+ */
 package com.datascraper.orchestrator.cache;
 
 import com.datascraper.common.dto.ScraperContext;

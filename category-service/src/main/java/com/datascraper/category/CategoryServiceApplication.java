@@ -1,3 +1,6 @@
+/**
+ * Starts and boots the category Spring Boot service.
+ */
 package com.datascraper.category;
 
 import org.springframework.boot.SpringApplication;

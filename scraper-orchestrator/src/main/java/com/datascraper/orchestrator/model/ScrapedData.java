@@ -1,3 +1,6 @@
+/**
+ * Holds one scrape result from a source, including items and metadata.
+ */
 package com.datascraper.orchestrator.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;

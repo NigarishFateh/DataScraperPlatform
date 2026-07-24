@@ -1,3 +1,6 @@
+/**
+ * Pulls emails and phone numbers from contact page HTML.
+ */
 package com.datascraper.contact.support;
 
 import org.jsoup.nodes.Document;

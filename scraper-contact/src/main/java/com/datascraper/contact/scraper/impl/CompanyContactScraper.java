@@ -1,3 +1,6 @@
+/**
+ * Scrapes contact pages for emails, phones, and related details.
+ */
 package com.datascraper.contact.scraper.impl;
 
 import com.datascraper.common.dto.ScraperContext;

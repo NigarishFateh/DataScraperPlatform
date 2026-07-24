@@ -1,3 +1,6 @@
+/**
+ * Wires either a no-op or Redis cache bean based on config.
+ */
 package com.datascraper.orchestrator.config;
 
 import com.datascraper.orchestrator.cache.NoOpScraperResultCache;

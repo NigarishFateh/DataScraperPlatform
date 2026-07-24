@@ -1,3 +1,6 @@
+/**
+ * Database entity that stores refresh session rows.
+ */
 package com.datascraper.auth.entity;
 
 import jakarta.persistence.Column;

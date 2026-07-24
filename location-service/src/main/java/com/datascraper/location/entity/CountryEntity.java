@@ -1,3 +1,6 @@
+/**
+ * Database entity that stores country rows.
+ */
 package com.datascraper.location.entity;
 
 import jakarta.persistence.Column;

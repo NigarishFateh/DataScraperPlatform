@@ -1,3 +1,6 @@
+/**
+ * Downloads a Google page and builds scrape results for a category.
+ */
 package com.datascraper.google.service.impl;
 
 import com.datascraper.google.config.GoogleUrlProperties;

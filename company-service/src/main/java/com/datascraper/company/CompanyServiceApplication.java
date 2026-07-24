@@ -1,3 +1,6 @@
+/**
+ * Starts and boots the company Spring Boot service.
+ */
 package com.datascraper.company;
 
 import org.springframework.boot.SpringApplication;

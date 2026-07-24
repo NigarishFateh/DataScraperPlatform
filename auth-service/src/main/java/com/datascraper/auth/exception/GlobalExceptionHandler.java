@@ -1,3 +1,6 @@
+/**
+ * Turns auth exceptions into standard API error responses.
+ */
 package com.datascraper.auth.exception;
 
 import com.datascraper.common.error.ApiError;

@@ -1,3 +1,6 @@
+/**
+ * Contract for scraping data from a company website.
+ */
 package com.datascraper.website.scraper;
 
 import com.datascraper.common.dto.ScraperContext;

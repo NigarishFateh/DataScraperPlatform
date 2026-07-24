@@ -1,3 +1,6 @@
+/**
+ * Carries request data for development login.
+ */
 package com.datascraper.auth.dto;
 
 import jakarta.validation.constraints.Email;

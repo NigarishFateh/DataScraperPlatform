@@ -1,3 +1,6 @@
+/**
+ * Sets up Spring Security rules, CORS, and the JWT filter for the auth service.
+ */
 package com.datascraper.auth.config;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

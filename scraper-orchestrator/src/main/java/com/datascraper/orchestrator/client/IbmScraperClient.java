@@ -1,3 +1,6 @@
+/**
+ * HTTP client that talks to the IBM scraper service.
+ */
 package com.datascraper.orchestrator.client;
 
 import com.datascraper.orchestrator.config.IbmScraperProperties;

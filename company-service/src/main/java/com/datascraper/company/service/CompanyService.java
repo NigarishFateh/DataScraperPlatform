@@ -1,3 +1,6 @@
+/**
+ * Service contract for company search and CRUD operations.
+ */
 package com.datascraper.company.service;
 
 import com.datascraper.company.dto.CompanyPageResponse;

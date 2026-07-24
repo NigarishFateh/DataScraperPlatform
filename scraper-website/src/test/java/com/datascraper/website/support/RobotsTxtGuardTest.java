@@ -1,3 +1,6 @@
+/**
+ * Tests that the robots.txt guard detects blocked paths.
+ */
 package com.datascraper.website.support;
 
 import org.junit.jupiter.api.Test;

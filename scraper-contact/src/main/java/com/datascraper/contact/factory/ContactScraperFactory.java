@@ -1,3 +1,6 @@
+/**
+ * Picks and returns the contact scraper implementation to use.
+ */
 package com.datascraper.contact.factory;
 
 import com.datascraper.contact.scraper.ContactScraper;

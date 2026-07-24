@@ -1,3 +1,6 @@
+/**
+ * Scrapes recent news headlines for a company from an RSS feed.
+ */
 package com.datascraper.news.scraper.impl;
 
 import com.datascraper.common.dto.ScraperContext;

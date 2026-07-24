@@ -1,3 +1,6 @@
+/**
+ * Turns on tech scraper settings from configuration properties.
+ */
 package com.datascraper.tech.config;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

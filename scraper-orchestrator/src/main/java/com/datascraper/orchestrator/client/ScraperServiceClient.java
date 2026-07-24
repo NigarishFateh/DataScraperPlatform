@@ -1,3 +1,6 @@
+/**
+ * Interface for posting scrape jobs to remote scraper microservices.
+ */
 package com.datascraper.orchestrator.client;
 
 import com.datascraper.common.dto.ScraperContext;

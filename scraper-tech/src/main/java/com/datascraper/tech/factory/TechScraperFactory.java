@@ -1,3 +1,6 @@
+/**
+ * Picks and returns the tech scraper implementation to use.
+ */
 package com.datascraper.tech.factory;
 
 import com.datascraper.tech.scraper.TechScraper;

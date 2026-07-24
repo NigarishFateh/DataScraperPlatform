@@ -1,3 +1,6 @@
+/**
+ * Request body for starting an intelligence scrape job.
+ */
 package com.datascraper.orchestrator.dto;
 
 import com.datascraper.common.enums.ScraperType;

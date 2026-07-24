@@ -1,3 +1,6 @@
+/**
+ * Service contract for listing categories.
+ */
 package com.datascraper.category.service;
 
 import com.datascraper.category.dto.CategoryResponse;

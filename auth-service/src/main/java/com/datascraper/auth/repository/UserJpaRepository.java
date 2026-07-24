@@ -1,3 +1,6 @@
+/**
+ * Spring Data JPA access for user entities.
+ */
 package com.datascraper.auth.repository;
 
 import com.datascraper.auth.entity.UserEntity;

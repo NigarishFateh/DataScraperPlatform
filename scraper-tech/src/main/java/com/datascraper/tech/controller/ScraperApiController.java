@@ -1,3 +1,6 @@
+/**
+ * Exposes the HTTP API endpoint that starts a company tech stack scrape.
+ */
 package com.datascraper.tech.controller;
 
 import com.datascraper.common.dto.ScraperContext;

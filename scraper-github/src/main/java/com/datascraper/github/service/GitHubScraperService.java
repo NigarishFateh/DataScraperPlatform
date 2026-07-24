@@ -1,3 +1,6 @@
+/**
+ * Service contract for running a GitHub scrape.
+ */
 package com.datascraper.github.service;
 
 import com.datascraper.common.dto.ScraperContext;

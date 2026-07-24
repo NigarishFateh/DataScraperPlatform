@@ -1,3 +1,6 @@
+/**
+ * Holds settings like user agent, timeout, and robots.txt for the website scraper.
+ */
 package com.datascraper.website.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;

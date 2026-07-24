@@ -1,3 +1,6 @@
+/**
+ * Holds one scraped row of IBM page data.
+ */
 package com.datascraper.ibm.model;
 
 import java.util.Map;

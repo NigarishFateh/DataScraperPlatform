@@ -1,3 +1,6 @@
+/**
+ * Contract for scraping technology signals from a company website.
+ */
 package com.datascraper.tech.scraper;
 
 import com.datascraper.common.dto.ScraperContext;

@@ -1,3 +1,6 @@
+/**
+ * Downloads a Microsoft page and builds scrape results for a category.
+ */
 package com.datascraper.microsoft.service.impl;
 
 import com.datascraper.microsoft.config.MicrosoftUrlProperties;

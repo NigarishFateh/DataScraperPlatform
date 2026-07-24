@@ -1,3 +1,6 @@
+/**
+ * Runs a news scrape by calling the news scraper factory.
+ */
 package com.datascraper.news.service.impl;
 
 import com.datascraper.common.dto.ScraperContext;

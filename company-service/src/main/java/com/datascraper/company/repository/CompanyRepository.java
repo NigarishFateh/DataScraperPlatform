@@ -1,3 +1,6 @@
+/**
+ * Saves, loads, and searches companies between domain and database.
+ */
 package com.datascraper.company.repository;
 
 import com.datascraper.company.domain.Company;

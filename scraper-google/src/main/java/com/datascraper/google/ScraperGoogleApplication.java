@@ -1,3 +1,6 @@
+/**
+ * Starts the Google scraper Spring Boot service.
+ */
 package com.datascraper.google;
 
 import org.springframework.boot.SpringApplication;

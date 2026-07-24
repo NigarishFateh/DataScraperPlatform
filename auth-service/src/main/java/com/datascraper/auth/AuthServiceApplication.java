@@ -1,3 +1,6 @@
+/**
+ * Starts and boots the auth Spring Boot service.
+ */
 package com.datascraper.auth;
 
 import org.springframework.boot.SpringApplication;

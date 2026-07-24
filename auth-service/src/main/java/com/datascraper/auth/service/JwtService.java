@@ -1,3 +1,6 @@
+/**
+ * Creates and parses JWT access tokens for users.
+ */
 package com.datascraper.auth.service;
 
 import com.datascraper.auth.config.AuthProperties;

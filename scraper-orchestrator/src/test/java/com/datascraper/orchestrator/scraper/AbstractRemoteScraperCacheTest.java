@@ -1,3 +1,6 @@
+/**
+ * Tests cache hit and store behavior in the remote scraper template.
+ */
 package com.datascraper.orchestrator.scraper;
 
 import com.datascraper.common.dto.ScraperContext;

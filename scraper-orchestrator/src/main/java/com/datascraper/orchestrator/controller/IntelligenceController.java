@@ -1,3 +1,6 @@
+/**
+ * REST endpoint that starts an intelligence scrape job.
+ */
 package com.datascraper.orchestrator.controller;
 
 import com.datascraper.orchestrator.dto.IntelligenceJobRequest;

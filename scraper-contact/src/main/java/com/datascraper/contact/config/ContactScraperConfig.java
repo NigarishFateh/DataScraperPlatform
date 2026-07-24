@@ -1,3 +1,6 @@
+/**
+ * Turns on contact scraper settings from configuration properties.
+ */
 package com.datascraper.contact.config;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

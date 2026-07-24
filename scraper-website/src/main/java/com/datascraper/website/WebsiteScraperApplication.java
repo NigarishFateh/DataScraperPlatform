@@ -1,3 +1,6 @@
+/**
+ * Starts the website scraper Spring Boot service.
+ */
 package com.datascraper.website;
 
 import org.springframework.boot.SpringApplication;

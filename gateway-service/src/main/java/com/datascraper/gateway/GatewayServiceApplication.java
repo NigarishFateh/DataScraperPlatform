@@ -1,3 +1,6 @@
+/**
+ * Starts and boots the gateway Spring Boot service.
+ */
 package com.datascraper.gateway;
 
 import org.springframework.boot.SpringApplication;

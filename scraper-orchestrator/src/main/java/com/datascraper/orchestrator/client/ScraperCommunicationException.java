@@ -1,3 +1,6 @@
+/**
+ * Thrown when an HTTP call to a scraper service fails.
+ */
 package com.datascraper.orchestrator.client;
 
 public class ScraperCommunicationException extends RuntimeException {

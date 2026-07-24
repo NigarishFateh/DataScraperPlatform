@@ -1,3 +1,6 @@
+/**
+ * Carries response data for auth tokens and the logged-in user.
+ */
 package com.datascraper.auth.dto;
 
 import java.util.UUID;

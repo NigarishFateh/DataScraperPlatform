@@ -1,3 +1,6 @@
+/**
+ * Parses Microsoft HTML pages into scraped items by category.
+ */
 package com.datascraper.microsoft.support;
 
 import com.datascraper.microsoft.model.DataCategory;

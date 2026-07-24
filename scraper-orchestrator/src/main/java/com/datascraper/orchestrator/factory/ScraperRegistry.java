@@ -1,3 +1,6 @@
+/**
+ * Holds all scraper strategy beans keyed by scraper type.
+ */
 package com.datascraper.orchestrator.factory;
 
 import com.datascraper.common.enums.ScraperType;

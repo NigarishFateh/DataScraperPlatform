@@ -1,3 +1,6 @@
+/**
+ * Adds a correlation id to each request so logs can be traced together.
+ */
 package com.datascraper.website.config;
 
 import jakarta.servlet.FilterChain;

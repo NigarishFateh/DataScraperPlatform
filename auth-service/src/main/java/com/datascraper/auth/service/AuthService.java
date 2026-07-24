@@ -1,3 +1,6 @@
+/**
+ * Handles login, token refresh, logout, and current-user auth flows.
+ */
 package com.datascraper.auth.service;
 
 import com.datascraper.auth.config.AuthProperties;

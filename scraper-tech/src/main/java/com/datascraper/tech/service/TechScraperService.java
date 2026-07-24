@@ -1,3 +1,6 @@
+/**
+ * Service contract for running a tech stack scrape.
+ */
 package com.datascraper.tech.service;
 
 import com.datascraper.common.dto.ScraperContext;

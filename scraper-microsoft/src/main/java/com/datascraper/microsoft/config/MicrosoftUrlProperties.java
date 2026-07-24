@@ -1,3 +1,6 @@
+/**
+ * Holds the Microsoft page URLs used for each scrape category.
+ */
 package com.datascraper.microsoft.config;
 
 import com.datascraper.microsoft.model.DataCategory;

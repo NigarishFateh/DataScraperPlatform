@@ -1,3 +1,6 @@
+/**
+ * Holds the Google page URLs used for each scrape category.
+ */
 package com.datascraper.google.config;
 
 import com.datascraper.google.model.DataCategory;

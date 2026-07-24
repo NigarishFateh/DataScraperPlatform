@@ -1,3 +1,6 @@
+/**
+ * Stores and loads scraper results in Redis with a time-to-live.
+ */
 package com.datascraper.orchestrator.cache;
 
 import com.datascraper.common.dto.ScraperContext;

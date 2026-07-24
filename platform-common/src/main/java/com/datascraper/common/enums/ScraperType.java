@@ -1,3 +1,6 @@
+/**
+ * Lists the kinds of scrapers the platform can run.
+ */
 package com.datascraper.common.enums;
 
 /**

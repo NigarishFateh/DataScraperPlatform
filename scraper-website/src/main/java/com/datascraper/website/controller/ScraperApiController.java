@@ -1,3 +1,6 @@
+/**
+ * Exposes the HTTP API endpoint that starts a company website scrape.
+ */
 package com.datascraper.website.controller;
 
 import com.datascraper.common.dto.ScraperContext;

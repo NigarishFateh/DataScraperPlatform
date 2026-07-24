@@ -1,3 +1,6 @@
+/**
+ * Scrapes a company website for tech stack clues like frameworks and tools.
+ */
 package com.datascraper.tech.scraper.impl;
 
 import com.datascraper.common.dto.ScraperContext;

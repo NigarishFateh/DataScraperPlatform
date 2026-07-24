@@ -1,3 +1,6 @@
+/**
+ * Starts the contact scraper Spring Boot service.
+ */
 package com.datascraper.contact;
 
 import org.springframework.boot.SpringApplication;

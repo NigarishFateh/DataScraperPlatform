@@ -1,3 +1,6 @@
+/**
+ * Calls the GitHub API to search for matching organizations.
+ */
 package com.datascraper.github.client;
 
 import com.datascraper.github.config.GitHubScraperProperties;

@@ -1,3 +1,6 @@
+/**
+ * Holds settings like user agent, timeout, and max items for contact scraping.
+ */
 package com.datascraper.contact.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;

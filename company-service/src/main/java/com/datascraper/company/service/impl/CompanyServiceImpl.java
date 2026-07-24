@@ -1,3 +1,6 @@
+/**
+ * Implements company search and CRUD using the company repository.
+ */
 package com.datascraper.company.service.impl;
 
 import com.datascraper.company.domain.Company;

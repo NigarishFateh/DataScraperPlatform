@@ -1,3 +1,6 @@
+/**
+ * Spring Data JPA access for country entities.
+ */
 package com.datascraper.location.repository;
 
 import com.datascraper.location.entity.CountryEntity;

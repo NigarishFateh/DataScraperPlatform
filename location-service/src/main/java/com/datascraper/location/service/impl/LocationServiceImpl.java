@@ -1,3 +1,6 @@
+/**
+ * Implements country and city listing using the location repository.
+ */
 package com.datascraper.location.service.impl;
 
 import com.datascraper.location.dto.CityResponse;

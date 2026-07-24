@@ -1,3 +1,6 @@
+/**
+ * Tests that intelligence jobs run scrapers in parallel and return status.
+ */
 package com.datascraper.orchestrator.service;
 
 import com.datascraper.common.dto.ScraperContext;

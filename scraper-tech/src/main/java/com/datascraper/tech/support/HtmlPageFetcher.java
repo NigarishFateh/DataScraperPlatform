@@ -1,3 +1,6 @@
+/**
+ * Downloads a web page and returns it as HTML for tech parsing.
+ */
 package com.datascraper.tech.support;
 
 import com.datascraper.tech.config.TechScraperProperties;

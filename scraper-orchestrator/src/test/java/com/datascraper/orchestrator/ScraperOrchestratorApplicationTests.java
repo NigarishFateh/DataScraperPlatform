@@ -1,3 +1,6 @@
+/**
+ * Checks that the scraper-orchestrator Spring Boot context loads.
+ */
 package com.datascraper.orchestrator;
 
 import org.junit.jupiter.api.Test;

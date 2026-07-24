@@ -1,3 +1,6 @@
+/**
+ * Database entity that stores category rows.
+ */
 package com.datascraper.category.entity;
 
 import jakarta.persistence.Column;

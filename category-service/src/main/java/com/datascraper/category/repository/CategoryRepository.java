@@ -1,3 +1,6 @@
+/**
+ * Loads categories from the database into domain objects.
+ */
 package com.datascraper.category.repository;
 
 import com.datascraper.category.domain.Category;

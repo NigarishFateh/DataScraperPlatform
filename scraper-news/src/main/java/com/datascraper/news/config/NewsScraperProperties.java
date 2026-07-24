@@ -1,3 +1,6 @@
+/**
+ * Holds settings like user agent, timeout, and RSS feed URL for news scraping.
+ */
 package com.datascraper.news.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;

@@ -1,3 +1,6 @@
+/**
+ * Service contract for running a news scrape.
+ */
 package com.datascraper.news.service;
 
 import com.datascraper.common.dto.ScraperContext;

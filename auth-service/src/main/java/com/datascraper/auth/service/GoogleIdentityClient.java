@@ -1,3 +1,6 @@
+/**
+ * Checks Google tokens with Google public APIs.
+ */
 package com.datascraper.auth.service;
 
 import com.datascraper.auth.config.AuthProperties;

@@ -1,3 +1,6 @@
+/**
+ * Lists the Google scrape categories such as jobs, products, and news.
+ */
 package com.datascraper.google.model;
 
 public enum DataCategory {

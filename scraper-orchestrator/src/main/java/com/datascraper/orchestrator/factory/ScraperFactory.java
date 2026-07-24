@@ -1,3 +1,6 @@
+/**
+ * Interface that picks which scraper strategies to run for a job.
+ */
 package com.datascraper.orchestrator.factory;
 
 import com.datascraper.common.dto.ScraperContext;

@@ -1,3 +1,6 @@
+/**
+ * Runs multi-source scrapes in parallel and builds the combined response.
+ */
 package com.datascraper.orchestrator.service.impl;
 
 import com.datascraper.orchestrator.client.ScraperClient;

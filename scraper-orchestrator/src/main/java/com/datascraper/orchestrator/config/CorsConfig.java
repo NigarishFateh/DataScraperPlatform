@@ -1,3 +1,6 @@
+/**
+ * Allows browser and extension origins to call the orchestrator API.
+ */
 package com.datascraper.orchestrator.config;
 
 import org.springframework.beans.factory.annotation.Value;

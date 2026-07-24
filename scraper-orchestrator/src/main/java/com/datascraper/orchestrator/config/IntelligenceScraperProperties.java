@@ -1,3 +1,6 @@
+/**
+ * Holds scraper settings for resilience, thread pool, cache, and service URLs.
+ */
 package com.datascraper.orchestrator.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;

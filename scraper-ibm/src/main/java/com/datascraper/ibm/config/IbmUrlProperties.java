@@ -1,3 +1,6 @@
+/**
+ * Holds the IBM page URLs used for each scrape category.
+ */
 package com.datascraper.ibm.config;
 
 import com.datascraper.ibm.model.DataCategory;

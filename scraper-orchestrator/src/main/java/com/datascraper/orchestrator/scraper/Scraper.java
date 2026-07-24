@@ -1,3 +1,6 @@
+/**
+ * Strategy interface for one kind of scrape (website, news, tech stack, and so on).
+ */
 package com.datascraper.orchestrator.scraper;
 
 import com.datascraper.common.dto.ScraperContext;

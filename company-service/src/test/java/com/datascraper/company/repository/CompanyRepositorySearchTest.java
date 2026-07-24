@@ -1,3 +1,6 @@
+/**
+ * Tests that company repository search paginates and filters correctly.
+ */
 package com.datascraper.company.repository;
 
 import org.junit.jupiter.api.Test;

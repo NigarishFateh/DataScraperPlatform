@@ -1,3 +1,6 @@
+/**
+ * Scrapes public GitHub organizations that match a company name.
+ */
 package com.datascraper.github.scraper.impl;
 
 import com.datascraper.common.dto.ScraperContext;

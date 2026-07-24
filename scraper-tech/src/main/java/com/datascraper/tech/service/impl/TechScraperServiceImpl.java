@@ -1,3 +1,6 @@
+/**
+ * Runs a tech scrape by calling the tech scraper factory.
+ */
 package com.datascraper.tech.service.impl;
 
 import com.datascraper.common.dto.ScraperContext;

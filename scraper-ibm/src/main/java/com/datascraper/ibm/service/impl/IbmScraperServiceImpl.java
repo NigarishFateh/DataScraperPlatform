@@ -1,3 +1,6 @@
+/**
+ * Downloads an IBM page and builds scrape results for a category.
+ */
 package com.datascraper.ibm.service.impl;
 
 import com.datascraper.ibm.config.IbmUrlProperties;

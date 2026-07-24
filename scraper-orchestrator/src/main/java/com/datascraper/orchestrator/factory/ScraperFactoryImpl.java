@@ -1,3 +1,6 @@
+/**
+ * Chooses supported scraper strategies from the registry for a job.
+ */
 package com.datascraper.orchestrator.factory;
 
 import com.datascraper.common.dto.ScraperContext;

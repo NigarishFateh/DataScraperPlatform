@@ -1,3 +1,6 @@
+/**
+ * Models a server-side refresh session for a logged-in user.
+ */
 package com.datascraper.auth.domain;
 
 import java.time.Instant;

@@ -1,3 +1,6 @@
+/**
+ * Lists possible outcomes for one scraper run.
+ */
 package com.datascraper.common.enums;
 
 /**

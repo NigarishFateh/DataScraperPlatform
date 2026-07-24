@@ -1,3 +1,6 @@
+/**
+ * Service contract for scraping Microsoft pages by category.
+ */
 package com.datascraper.microsoft.service;
 
 import com.datascraper.microsoft.model.DataCategory;

@@ -1,3 +1,6 @@
+/**
+ * Builds stable Redis cache keys from company, scraper type, and website URL.
+ */
 package com.datascraper.orchestrator.cache;
 
 import com.datascraper.common.dto.ScraperContext;
