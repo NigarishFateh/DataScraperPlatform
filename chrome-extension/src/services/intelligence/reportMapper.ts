@@ -16,9 +16,24 @@ export type ReportDisplayItem = {
   note?: string;
 };
 
+export type ReportDisplayValue = {
+  id: string;
+  value: string;
+  href?: string;
+  note?: string;
+};
+
+/** One label with one or more values (e.g. all phones under "Phone numbers"). */
+export type ReportDisplayGroup = {
+  id: string;
+  label: string;
+  values: ReportDisplayValue[];
+};
+
 export type ReportSectionView = {
   statusLabel: string | null;
   items: ReportDisplayItem[];
+  groups: ReportDisplayGroup[];
   emptyMessage: string;
 };
 
@@ -162,6 +177,26 @@ function belongsToReportSection(
   return SECTION_BY_SCRAPER[result.scraperType] === sectionId;
 }
 
+function looksLikeUrl(value: string): boolean {
+  const v = value.trim();
+  return /^(https?:\/\/|www\.)/i.test(v) || /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(v);
+}
+
+function groupLabel(label: string, count: number): string {
+  if (count <= 1) return label;
+  const plural: Record<string, string> = {
+    Phone: "Phone numbers",
+    Email: "Email addresses",
+    Address: "Addresses",
+    Heading: "Headings",
+    About: "About",
+    News: "News",
+    "Service / product": "Services & products",
+    "Detected technology": "Detected technologies",
+  };
+  return plural[label] ?? `${label}s`;
+}
+
 function toDisplayItem(
   result: ScraperResult,
   item: Record<string, unknown>,
@@ -170,6 +205,9 @@ function toDisplayItem(
   const field = itemField(item);
   const value = itemValue(item);
   if (!value) return null;
+
+  // Headings that are just URLs duplicate the company website — skip them.
+  if (field === "heading" && looksLikeUrl(value)) return null;
 
   const href = itemHref(item);
   const noteParts: string[] = [];
@@ -201,6 +239,53 @@ function dedupeItems(items: ReportDisplayItem[]): ReportDisplayItem[] {
   return out;
 }
 
+function groupItems(items: ReportDisplayItem[]): ReportDisplayGroup[] {
+  const order: string[] = [];
+  const byLabel = new Map<string, ReportDisplayValue[]>();
+
+  for (const item of items) {
+    if (!byLabel.has(item.label)) {
+      byLabel.set(item.label, []);
+      order.push(item.label);
+    }
+    byLabel.get(item.label)!.push({
+      id: item.id,
+      value: item.value,
+      href: item.href,
+      note: item.note,
+    });
+  }
+
+  return order.map((label) => {
+    const values = byLabel.get(label)!;
+    return {
+      id: `group-${label}`,
+      label: groupLabel(label, values.length),
+      values,
+    };
+  });
+}
+
+function buildStatusLabel(
+  statuses: { name: string; ok: boolean; cached: boolean }[],
+): string | null {
+  if (statuses.length === 0) return null;
+
+  const failed = statuses.filter((s) => !s.ok);
+  if (failed.length > 0) {
+    return failed.map((s) => `${s.name} unavailable`).join(" · ");
+  }
+
+  const names = [...new Set(statuses.map((s) => s.name))];
+  const cached = statuses.some((s) => s.cached);
+  if (names.length === 1) {
+    return cached ? `From ${names[0]} (cached)` : `From ${names[0]}`;
+  }
+  const list =
+    names.length === 2 ? `${names[0]} and ${names[1]}` : `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+  return cached ? `From ${list} (cached)` : `From ${list}`;
+}
+
 export function buildSectionView(
   sectionId: ReportSectionId,
   results: ScraperResult[],
@@ -213,21 +298,20 @@ export function buildSectionView(
   });
 
   const items: ReportDisplayItem[] = [];
-  const statuses: string[] = [];
+  const statuses: { name: string; ok: boolean; cached: boolean }[] = [];
   const notes: string[] = [];
 
   for (const result of relevant) {
+    const name = friendlyScraperName(result.scraperType);
+    const cached = Boolean(result.metadata?.fromCache);
+
     if (result.status !== "SUCCESS") {
-      statuses.push(`${friendlyScraperName(result.scraperType)} · ${result.status}`);
+      statuses.push({ name, ok: false, cached });
       if (result.message) notes.push(result.message);
       continue;
     }
 
-    statuses.push(
-      `${friendlyScraperName(result.scraperType)} · ${result.status}${
-        result.metadata?.fromCache ? " · cached" : ""
-      }`,
-    );
+    statuses.push({ name, ok: true, cached });
 
     result.items.forEach((raw, index) => {
       if (!belongsToReportSection(sectionId, result, raw)) return;
@@ -241,6 +325,7 @@ export function buildSectionView(
   }
 
   const unique = dedupeItems(items);
+  const groups = groupItems(unique);
 
   let emptyMessage = "No scraper data for this section yet.";
   if (relevant.length > 0) {
@@ -254,8 +339,9 @@ export function buildSectionView(
   }
 
   return {
-    statusLabel: statuses.length ? [...new Set(statuses)].join(" · ") : null,
+    statusLabel: buildStatusLabel(statuses),
     items: unique,
+    groups,
     emptyMessage,
   };
 }

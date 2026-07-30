@@ -1,5 +1,5 @@
 /**
- * Cache that does nothing — always misses and never stores results.
+ * Cache that does nothing - always misses and never stores results.
  */
 package com.datascraper.orchestrator.cache;
 

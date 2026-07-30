@@ -206,16 +206,25 @@ export function ReportPage() {
                 ]
               : null;
 
-          const rows = view.items.length
-            ? view.items
-            : catalogFallback
-              ? catalogFallback.map((row, i) => ({
-                  id: `fallback-${i}`,
-                  label: row.label,
-                  value: row.value,
-                  href: "href" in row ? row.href : undefined,
-                }))
-              : [];
+          const groups =
+            view.groups.length > 0
+              ? view.groups
+              : catalogFallback
+                ? catalogFallback.map((row, i) => ({
+                    id: `fallback-${i}`,
+                    label: row.label,
+                    values: [
+                      {
+                        id: `fallback-${i}-value`,
+                        value: row.value,
+                        href: "href" in row ? row.href : undefined,
+                        note: undefined as string | undefined,
+                      },
+                    ],
+                  }))
+                : [];
+
+          const valueCount = groups.reduce((sum, g) => sum + g.values.length, 0);
 
           return (
             <article key={section.id} className="li-surface overflow-hidden">
@@ -231,9 +240,9 @@ export function ReportPage() {
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <h2 className="text-sm font-semibold text-mist-100">{section.title}</h2>
-                    {rows.length > 0 ? (
+                    {valueCount > 0 ? (
                       <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-mist-400">
-                        {rows.length}
+                        {valueCount}
                       </span>
                     ) : null}
                   </div>
@@ -246,35 +255,39 @@ export function ReportPage() {
               {open ? (
                 <div className="border-t border-white/10 px-3.5 py-3">
                   {view.statusLabel ? (
-                    <p className="mb-3 text-[10px] uppercase tracking-wide text-mist-500">
-                      {view.statusLabel}
-                    </p>
+                    <p className="mb-3 text-[10px] text-mist-500">{view.statusLabel}</p>
                   ) : null}
 
-                  {rows.length > 0 ? (
-                    <ul className="space-y-3">
-                      {rows.map((row) => (
-                        <li key={row.id} className="border-b border-white/5 pb-3 last:border-0 last:pb-0">
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-mist-500">
-                            {row.label}
+                  {groups.length > 0 ? (
+                    <ul className="space-y-4">
+                      {groups.map((group) => (
+                        <li key={group.id} className="border-b border-white/5 pb-4 last:border-0 last:pb-0">
+                          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-mist-500">
+                            {group.label}
                           </p>
-                          {row.href ? (
-                            <a
-                              href={row.href}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-0.5 block break-words text-xs leading-relaxed text-signal underline-offset-2 hover:underline"
-                            >
-                              {row.value}
-                            </a>
-                          ) : (
-                            <p className="mt-0.5 break-words text-xs leading-relaxed text-mist-100">
-                              {row.value}
-                            </p>
-                          )}
-                          {"note" in row && row.note ? (
-                            <p className="mt-1 text-[10px] text-mist-500">{row.note}</p>
-                          ) : null}
+                          <ul className="space-y-1.5">
+                            {group.values.map((row) => (
+                              <li key={row.id}>
+                                {row.href ? (
+                                  <a
+                                    href={row.href}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="block break-words text-xs leading-relaxed text-signal underline-offset-2 hover:underline"
+                                  >
+                                    {row.value}
+                                  </a>
+                                ) : (
+                                  <p className="break-words text-xs leading-relaxed text-mist-100">
+                                    {row.value}
+                                  </p>
+                                )}
+                                {row.note ? (
+                                  <p className="mt-0.5 text-[10px] text-mist-500">{row.note}</p>
+                                ) : null}
+                              </li>
+                            ))}
+                          </ul>
                         </li>
                       ))}
                     </ul>

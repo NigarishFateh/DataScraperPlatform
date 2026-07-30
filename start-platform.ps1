@@ -42,8 +42,16 @@ function Start-ServiceJar([string]$Name, [string]$JarRelativePath, [int]$Port) {
 
     Write-Host "Starting $Name on port $Port..." -ForegroundColor Green
     Start-Process -FilePath "java" -ArgumentList "-jar", $jarPath -WorkingDirectory $root -WindowStyle Minimized
-    Start-Sleep -Seconds 3
-    if (-not (Test-PortListening $Port)) {
+    # Cold start on newer JDKs often exceeds 3s; poll instead of a fixed sleep.
+    $ready = $false
+    for ($i = 0; $i -lt 20; $i++) {
+        Start-Sleep -Seconds 1
+        if (Test-PortListening $Port) {
+            $ready = $true
+            break
+        }
+    }
+    if (-not $ready) {
         Write-Host "WARNING: $Name did not stay up on port $Port (crashed after start)." -ForegroundColor Red
         if ($Name -eq "auth-service") {
             Write-Host "  Fix DB permissions, then retry:" -ForegroundColor Yellow
@@ -85,7 +93,7 @@ if ($toBuild.Count -eq 0) {
 else {
     $moduleList = ($toBuild + @("platform-common") | Select-Object -Unique) -join ","
     Write-Host "Building modules not currently running: $moduleList" -ForegroundColor Cyan
-    & .\mvnw.cmd -q -pl $moduleList -am package -DskipTests
+    cmd /c ".\mvnw.cmd -q -pl $moduleList -am package -DskipTests"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build failed. If jars are locked, run .\stop-platform.ps1 first, then retry." -ForegroundColor Red
         exit 1
