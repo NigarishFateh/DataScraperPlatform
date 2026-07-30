@@ -38,13 +38,6 @@ scraper:
       base-url: http://localhost:8094
     contact:
       base-url: http://localhost:8095
-    # Legacy company-specific scrapers (mvn -Plegacy) — do not use in new flows
-    google:
-      base-url: http://localhost:8181
-    microsoft:
-      base-url: http://localhost:8182
-    ibm:
-      base-url: http://localhost:8183
 
 app:
   cors:

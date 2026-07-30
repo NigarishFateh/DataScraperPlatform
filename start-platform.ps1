@@ -1,5 +1,4 @@
-# Start the current Lead Intelligence backend (extension-focused architecture).
-# Does NOT start legacy scraper-google / scraper-microsoft / scraper-ibm.
+# Start the Lead Intelligence backend (Chrome extension architecture).
 # Usage: .\start-platform.ps1   (run from project root, not chrome-extension)
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path

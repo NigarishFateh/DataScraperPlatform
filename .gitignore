@@ -35,12 +35,6 @@ build/
 ### Environment variables ###
 .env
 
-### Node / React frontend ###
-scraper-frontend/node_modules/
-scraper-frontend/dist/
-scraper-frontend/.env
-scraper-frontend/.env.local
-
 ### Chrome extension (Lead Intelligence) ###
 chrome-extension/node_modules/
 chrome-extension/dist/

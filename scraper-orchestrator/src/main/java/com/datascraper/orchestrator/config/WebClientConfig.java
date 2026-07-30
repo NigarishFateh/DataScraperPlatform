@@ -15,9 +15,6 @@ import java.time.Duration;
 
 @Configuration
 @EnableConfigurationProperties({
-        GoogleScraperProperties.class,
-        MicrosoftScraperProperties.class,
-        IbmScraperProperties.class,
         ScraperResilienceProperties.class,
         IntelligenceScraperProperties.class
 })

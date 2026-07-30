@@ -1,55 +1,57 @@
-# Data Scraper Platform
+# Lead Intelligence Platform
 
-Microservices platform that scrapes IT company websites (Google, Microsoft, IBM) using Spring Boot, with a React UI.
+Chrome Extension + Spring Boot microservices for European IT company lead intelligence.
+Scrapers are organized by data source capability (website, tech, news, GitHub, contact), not by company.
 
 ## Documentation
 
-- **[PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)** — Full project document (architecture, APIs, setup, deployment)
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** — Vercel frontend + backend hosting guide
+- **[docs/PROJECT_DOCUMENTATION.md](./docs/PROJECT_DOCUMENTATION.md)** — Architecture, APIs, setup
+- **[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)** — Backend hosting guide
 
 ## Quick Start
 
 ```powershell
-# Start all backend services
-.\start-all-services.ps1
+# Start backend services (gateway, auth, scrapers, orchestrator, …)
+.\start-platform.ps1
 
-# Start React frontend
-.\start-frontend.ps1
+# Chrome extension (separate terminal)
+cd chrome-extension
+npm install
+npm run dev
 ```
 
-Open **http://localhost:5173**
+Load the unpacked extension from `chrome-extension/dist` (or follow the extension README).
 
 ## Services
 
 | Service | Port |
 |---|---|
-| Orchestrator | 8080 |
-| Google scraper | 8081 |
-| Microsoft scraper | 8082 |
-| IBM scraper | 8083 |
-| React frontend | 5173 |
+| Gateway | 8080 |
+| Auth | 8081 |
+| Location | 8082 |
+| Company | 8083 |
+| Category | 8084 |
+| Orchestrator | 8085 |
+| Website scraper | 8091 |
+| Tech scraper | 8092 |
+| News scraper | 8093 |
+| GitHub scraper | 8094 |
+| Contact scraper | 8095 |
 
 ## Main API
 
 ```http
-POST http://localhost:8080/api/scrape
+POST http://localhost:8080/api/intelligence/jobs
 Content-Type: application/json
+X-Correlation-Id: local-1
 
 {
-  "sources": ["google", "microsoft", "ibm"],
-  "categories": ["jobs", "products", "news"]
+  "companyName": "Example GmbH",
+  "websiteUrl": "https://example.com",
+  "scraperTypes": ["COMPANY_WEBSITE", "TECHNOLOGY_STACK", "NEWS", "GITHUB", "CONTACT"]
 }
 ```
 
 ## Stack
 
-Java 17 · Spring Boot 3 · Maven · WebClient · JSoup · React · Vite
-
-## Deploy to Vercel
-
-Frontend only — see **[DEPLOYMENT.md](./DEPLOYMENT.md)** for full steps.
-
-1. Deploy orchestrator + scrapers to Render/Railway/etc.
-2. Import repo on Vercel with **Root Directory** = `scraper-frontend`
-3. Set `ORCHESTRATOR_URL` to your public orchestrator URL
-4. Deploy
+Java 17 · Spring Boot 3 · Maven · Spring Cloud Gateway · WebClient · JSoup · Chrome Extension (React + Vite)

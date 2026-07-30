@@ -7,7 +7,7 @@ Simple explanations of every annotation used in the Data Scraper Platform.
 ## 1. Spring Boot Startup
 
 ### `@SpringBootApplication`
-**Where:** Main classes like `ScraperOrchestratorApplication`, `ScraperGoogleApplication`, etc.
+**Where:** Main classes like `ScraperOrchestratorApplication`, `ScraperWebsiteApplication`, etc.
 
 **What it does:** Starts the whole Spring Boot app.
 
@@ -18,7 +18,7 @@ Simple explanations of every annotation used in the Data Scraper Platform.
 ## 2. Web / REST API Annotations
 
 ### `@RestController`
-**Where:** Controllers (`OrchestratorController`, `GoogleScraperController`, …)
+**Where:** Controllers (`IntelligenceController`, `HealthController`, scraper controllers, …)
 
 **What it does:** Marks a class as a REST API controller that returns data (usually JSON).
 
@@ -36,7 +36,7 @@ Simple explanations of every annotation used in the Data Scraper Platform.
 ---
 
 ### `@GetMapping`
-**Where:** Controllers (`/health`, `/scrape/{category}`)
+**Where:** Controllers (`/health`, capability scrape endpoints)
 
 **What it does:** Handles HTTP **GET** requests.
 
@@ -45,7 +45,7 @@ Simple explanations of every annotation used in the Data Scraper Platform.
 ---
 
 ### `@PostMapping`
-**Where:** `OrchestratorController` (`/scrape`)
+**Where:** `IntelligenceController` (`/jobs`)
 
 **What it does:** Handles HTTP **POST** requests.
 
@@ -58,23 +58,23 @@ Simple explanations of every annotation used in the Data Scraper Platform.
 
 **What it does:** Reads a value from the URL path.
 
-**Easy words:** In `/api/scrape/jobs`, it pulls out `jobs`.
+**Easy words:** In `/api/scrape`, the path is the scraper capability endpoint.
 
 ---
 
 ### `@RequestBody`
-**Where:** `OrchestratorController.scrape(...)`
+**Where:** `IntelligenceController.createJob(...)`
 
 **What it does:** Converts JSON from the request body into a Java object.
 
-**Easy words:** Takes the JSON you send and turns it into `ScrapeRequest`.
+**Easy words:** Takes the JSON you send and turns it into `IntelligenceJobRequest`.
 
 ---
 
 ## 3. Component / Bean Annotations (Dependency Injection)
 
 ### `@Service`
-**Where:** Service implementations (`OrchestratorServiceImpl`, scraper service impls)
+**Where:** Service implementations (`IntelligenceOrchestratorServiceImpl`, scraper service impls)
 
 **What it does:** Marks a class as business-logic code and registers it as a Spring bean.
 
@@ -83,7 +83,7 @@ Simple explanations of every annotation used in the Data Scraper Platform.
 ---
 
 ### `@Component`
-**Where:** Clients and registry (`GoogleScraperClient`, `ScraperClientRegistry`, …)
+**Where:** Clients and adapters (`ScraperServiceClientImpl`, remote scrapers, …)
 
 **What it does:** Registers a class as a Spring-managed bean.
 
@@ -110,7 +110,7 @@ Simple explanations of every annotation used in the Data Scraper Platform.
 ---
 
 ### `@Qualifier("scraperExecutor")`
-**Where:** `OrchestratorServiceImpl` constructor
+**Where:** `IntelligenceOrchestratorServiceImpl` constructor
 
 **What it does:** Chooses a specific bean when more than one of the same type exists.
 
@@ -121,7 +121,7 @@ Simple explanations of every annotation used in the Data Scraper Platform.
 ## 4. Configuration from YAML
 
 ### `@ConfigurationProperties`
-**Where:** Properties records (`GoogleScraperProperties`, `ScraperResilienceProperties`, URL properties, …)
+**Where:** Properties records (`IntelligenceScraperProperties`, `ScraperResilienceProperties`, …)
 
 **What it does:** Maps values from `application.yml` into a Java object.
 
@@ -170,20 +170,20 @@ Simple explanations of every annotation used in the Data Scraper Platform.
 ## 6. Validation Annotations
 
 ### `@Valid`
-**Where:** Orchestrator scrape endpoint
+**Where:** Intelligence job endpoint
 
 **What it does:** Tells Spring to validate the incoming request object.
 
-**Easy words:** Check the request before running scrape logic.
+**Easy words:** Check the request before running job logic.
 
 ---
 
 ### `@NotEmpty`
-**Where:** `ScrapeRequest` fields (`sources`, `categories`)
+**Where:** `IntelligenceJobRequest` fields (e.g. `scraperTypes`)
 
 **What it does:** Requires a list to be present and not empty.
 
-**Easy words:** You must select at least one source and one category.
+**Easy words:** You must select at least one scraper type.
 
 ---
 

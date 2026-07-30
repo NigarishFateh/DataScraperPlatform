@@ -22,9 +22,13 @@ scraper:
     max-retries: 3
     retry-delay-ms: 2000
   services:
-    google:
-      base-url: https://scraper-google.example.com
-    microsoft:
-      base-url: https://scraper-microsoft.example.com
-    ibm:
-      base-url: https://scraper-ibm.example.com
+    website:
+      base-url: ${SCRAPER_WEBSITE_URL:https://scraper-website.example.com}
+    tech:
+      base-url: ${SCRAPER_TECH_URL:https://scraper-tech.example.com}
+    news:
+      base-url: ${SCRAPER_NEWS_URL:https://scraper-news.example.com}
+    github:
+      base-url: ${SCRAPER_GITHUB_URL:https://scraper-github.example.com}
+    contact:
+      base-url: ${SCRAPER_CONTACT_URL:https://scraper-contact.example.com}

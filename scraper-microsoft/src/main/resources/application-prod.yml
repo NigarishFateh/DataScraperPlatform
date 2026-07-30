@@ -1,8 +1,0 @@
-logging:
-  level:
-    root: WARN
-    com.datascraper: INFO
-
-scraper:
-  microsoft:
-    timeout-ms: 10000
