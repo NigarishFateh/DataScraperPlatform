@@ -52,11 +52,25 @@ public class ExportController {
         ExportResponse export = exportService.getExport(id);
         Resource resource = exportService.downloadExport(id);
         String fileName = export.fileName() != null ? export.fileName() : "export.xlsx";
+        String safeAscii = fileName.replace("\"", "");
+        long contentLength;
+        try {
+            contentLength = resource.contentLength();
+        } catch (Exception ex) {
+            contentLength = export.fileSizeBytes() > 0 ? export.fileSizeBytes() : -1;
+        }
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+        ResponseEntity.BodyBuilder builder = ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + safeAscii + "\"; filename*=UTF-8''"
+                                + java.net.URLEncoder.encode(safeAscii, java.nio.charset.StandardCharsets.UTF_8)
+                                .replace("+", "%20"))
+                .header(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION)
                 .contentType(MediaType.parseMediaType(
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .body(resource);
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        if (contentLength >= 0) {
+            builder = builder.contentLength(contentLength);
+        }
+        return builder.body(resource);
     }
 }

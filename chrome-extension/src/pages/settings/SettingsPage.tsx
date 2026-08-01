@@ -68,19 +68,23 @@ export function SettingsPage() {
         <h2 className="text-sm font-semibold text-mist-100">Defaults</h2>
         {settings ? (
           <label className="block space-y-1 text-xs">
-            <span className="text-mist-400">Default max companies</span>
+            <span className="text-mist-400">
+              Default max companies (optional — leave blank to set on each scrape)
+            </span>
             <input
               type="number"
               min={1}
               max={5000}
-              value={settings.defaultMaxCompanies}
-              onChange={(event) =>
+              placeholder="Not set"
+              value={settings.defaultMaxCompanies ?? ""}
+              onChange={(event) => {
+                const raw = event.target.value.trim();
                 setSettings({
                   ...settings,
-                  defaultMaxCompanies: Number(event.target.value) || 200,
-                })
-              }
-              className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-mist-100 outline-none focus:border-signal/50"
+                  defaultMaxCompanies: raw === "" ? null : Number(raw) || null,
+                });
+              }}
+              className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-mist-100 outline-none placeholder:text-mist-500 focus:border-signal/50"
             />
           </label>
         ) : null}

@@ -28,25 +28,73 @@ export async function getExport(id: string): Promise<ExportResponse> {
 }
 
 export async function downloadExport(exportId: string, fileName?: string): Promise<void> {
-  const response = await apiFetch(`/api/exports/${exportId}/download`);
+  const response = await apiFetch(`/api/exports/${exportId}/download`, {
+    method: "GET",
+    headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+  });
+
   if (!response.ok) {
-    throw new Error(`Failed to download export (${response.status})`);
+    let detail = `Failed to download export (${response.status})`;
+    try {
+      const body = (await response.json()) as { message?: string };
+      if (body.message) {
+        detail = body.message;
+      }
+    } catch {
+      // keep status message
+    }
+    throw new Error(detail);
   }
 
   const blob = await response.blob();
+  if (blob.size === 0) {
+    throw new Error("Download returned an empty file");
+  }
+
   const disposition = response.headers.get("Content-Disposition") ?? "";
-  const match = disposition.match(/filename="([^"]+)"/);
-  const resolvedName = fileName ?? match?.[1] ?? `export-${exportId}.xlsx`;
+  const match = disposition.match(/filename\*?=(?:UTF-8''|")?([^\";]+)"?/i);
+  const headerName = match?.[1] ? decodeURIComponent(match[1].replace(/"/g, "")) : null;
+  const resolvedName = sanitizeDownloadName(fileName ?? headerName ?? `export-${exportId}.xlsx`);
 
   const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = resolvedName;
-  anchor.rel = "noopener";
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
+
+  try {
+    if (typeof chrome !== "undefined" && chrome.downloads?.download) {
+      await new Promise<void>((resolve, reject) => {
+        chrome.downloads.download(
+          {
+            url,
+            filename: resolvedName,
+            saveAs: true,
+            conflictAction: "uniquify",
+          },
+          (downloadId) => {
+            const err = chrome.runtime.lastError;
+            if (err || downloadId === undefined) {
+              reject(new Error(err?.message ?? "Chrome download failed"));
+              return;
+            }
+            resolve();
+          },
+        );
+      });
+    } else {
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = resolvedName;
+      anchor.rel = "noopener";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    }
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+}
+
+function sanitizeDownloadName(name: string): string {
+  const cleaned = name.trim().replace(/[\\/:*?"<>|]+/g, "-");
+  return cleaned.toLowerCase().endsWith(".xlsx") ? cleaned : `${cleaned}.xlsx`;
 }
 
 export function formatFileSize(bytes: number): string {

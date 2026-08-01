@@ -99,16 +99,26 @@ public class ExportServiceImpl implements ExportService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Resource downloadExport(UUID id) {
         ExportHistoryEntity entity = findEntity(id);
-        if (entity.getStatus() != ExportStatus.READY) {
+        if (entity.getStatus() != ExportStatus.READY && entity.getStatus() != ExportStatus.GENERATING) {
             throw new ExportNotReadyException(id, entity.getStatus());
         }
-        if (entity.getFilePath() == null || !Files.exists(Path.of(entity.getFilePath()))) {
+
+        Path filePath = entity.getFilePath() == null ? null : Path.of(entity.getFilePath());
+        if (filePath == null || !Files.exists(filePath)) {
+            // File may have been cleaned from disk while DB still says READY — rebuild it.
+            exportGenerationService.regenerateExportSync(id);
+            entity = findEntity(id);
+            filePath = entity.getFilePath() == null ? null : Path.of(entity.getFilePath());
+        }
+
+        if (entity.getStatus() != ExportStatus.READY
+                || filePath == null
+                || !Files.exists(filePath)) {
             throw new ExportNotFoundException(id);
         }
-        return new FileSystemResource(entity.getFilePath());
+        return new FileSystemResource(filePath);
     }
 
     @Override

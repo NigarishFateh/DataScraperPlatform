@@ -74,6 +74,7 @@ public class DiscoveryCriteriaResolver {
 
         List<String> cityIds = request.cityIds() == null ? List.of() : request.cityIds();
         List<String> cityNames = new ArrayList<>();
+        // Only resolve explicitly selected cities. Empty city list + country = nationwide scrape.
         if (!cityIds.isEmpty()) {
             for (String cityId : cityIds) {
                 CityDto city = locationCatalogClient.findCityById(cityId);
@@ -82,13 +83,6 @@ public class DiscoveryCriteriaResolver {
                 } else if (cityId != null && cityId.contains("-")) {
                     cityNames.add(humanizeCityId(cityId));
                 }
-            }
-        } else if (!countryCodes.isEmpty()) {
-            for (String code : countryCodes) {
-                locationCatalogClient.listCitiesByCountry(code).stream()
-                        .map(CityDto::name)
-                        .filter(name -> name != null && !name.isBlank())
-                        .forEach(cityNames::add);
             }
         }
 

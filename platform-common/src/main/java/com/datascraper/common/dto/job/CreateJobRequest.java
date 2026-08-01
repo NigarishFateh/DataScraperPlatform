@@ -31,7 +31,7 @@ public record CreateJobRequest(
             enabledProviders = List.of();
         }
         if (maxCompanies == null || maxCompanies <= 0) {
-            maxCompanies = 200;
+            maxCompanies = 500;
         }
         if (options == null) {
             options = Map.of();

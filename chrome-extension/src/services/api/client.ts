@@ -8,10 +8,15 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 const REQUEST_TIMEOUT_MS = 15_000;
+const DOWNLOAD_TIMEOUT_MS = 120_000;
 
-async function fetchWithTimeout(url: string, init: RequestInit = {}): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit = {},
+  timeoutMs = REQUEST_TIMEOUT_MS,
+): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     return await fetch(url, { ...init, signal: controller.signal });
@@ -57,13 +62,14 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  let response = await fetchWithTimeout(`${API_BASE}${path}`, { ...init, headers });
+  const timeoutMs = path.includes("/download") ? DOWNLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+  let response = await fetchWithTimeout(`${API_BASE}${path}`, { ...init, headers }, timeoutMs);
 
   if (response.status === 401 && !path.includes("/api/auth/")) {
     const refreshed = await tryRefresh();
     if (refreshed) {
       headers.set("Authorization", `Bearer ${refreshed}`);
-      response = await fetchWithTimeout(`${API_BASE}${path}`, { ...init, headers });
+      response = await fetchWithTimeout(`${API_BASE}${path}`, { ...init, headers }, timeoutMs);
     }
   }
 

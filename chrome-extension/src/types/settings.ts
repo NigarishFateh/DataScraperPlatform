@@ -15,9 +15,10 @@ export type SearchHistoryEntry = {
 };
 
 export type UserSettings = {
-  defaultMaxCompanies: number;
+  /** Optional dashboard pre-fill; null/0 means user must set volume on New scrape. */
+  defaultMaxCompanies: number | null;
 };
 
 export const DEFAULT_USER_SETTINGS: UserSettings = {
-  defaultMaxCompanies: 200,
+  defaultMaxCompanies: null,
 };

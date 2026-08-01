@@ -3,7 +3,7 @@
   "name": "Global Business Intelligence",
   "version": "0.1.0",
   "description": "Run global business intelligence scraping jobs from Chrome's side panel.",
-  "permissions": ["sidePanel", "storage", "identity"],
+  "permissions": ["sidePanel", "storage", "identity", "downloads"],
   "host_permissions": [
     "http://localhost:8080/*",
     "http://127.0.0.1:8080/*"

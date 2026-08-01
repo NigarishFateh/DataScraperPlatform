@@ -5,20 +5,15 @@ import { CategorySelect } from "../../components/filters/CategorySelect";
 import { CityMultiSelect } from "../../components/filters/CityMultiSelect";
 import { CountryMultiSelect } from "../../components/filters/CountrySelect";
 import { FilterSection } from "../../components/filters/FilterSection";
+import { MaxCompaniesControl } from "../../components/filters/MaxCompaniesControl";
 import { useDashboardFilters } from "../../hooks/useDashboardFilters";
 import { createJob } from "../../services/jobs/jobApi";
-import {
-  appendSearchHistory,
-  createSavedSearch,
-  saveSavedSearch,
-} from "../../services/storage/settingsStorage";
+import { appendSearchHistory } from "../../services/storage/settingsStorage";
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const filters = useDashboardFilters();
   const [error, setError] = useState<string | null>(null);
-  const [saveName, setSaveName] = useState("");
-  const [showSaveForm, setShowSaveForm] = useState(false);
 
   const startMutation = useMutation({
     mutationFn: () =>
@@ -38,14 +33,6 @@ export function DashboardPage() {
     },
   });
 
-  async function onSaveSearch() {
-    const name = saveName.trim();
-    if (!name) return;
-    await saveSavedSearch(createSavedSearch(name, filters.filters));
-    setSaveName("");
-    setShowSaveForm(false);
-  }
-
   return (
     <div className="flex flex-1 flex-col gap-4">
       <section className="space-y-1">
@@ -53,7 +40,7 @@ export function DashboardPage() {
           New scrape
         </h1>
         <p className="text-sm text-mist-300">
-          Choose category and location. Discovery searches the public web, then scrapers enrich each company into an Excel export.
+          Pick a category, set volume, then optionally narrow by country and city.
         </p>
       </section>
 
@@ -77,22 +64,27 @@ export function DashboardPage() {
           />
         </FilterSection>
 
-        <FilterSection step="3" title="Cities" hint="Optional · searchable · no country required">
-          <CityMultiSelect selectedIds={filters.cityIds} onToggle={filters.toggleCity} />
+        <FilterSection
+          step="3"
+          title="Cities"
+          hint="Optional · all cities for selected countries · empty = whole country"
+        >
+          <CityMultiSelect
+            selectedIds={filters.cityIds}
+            countryCodes={filters.countryCodes}
+            onToggle={filters.toggleCity}
+          />
         </FilterSection>
 
-        <FilterSection step="4" title="Volume" hint="Maximum companies to process">
-          <label className="block">
-            <span className="sr-only">Max companies</span>
-            <input
-              type="number"
-              min={1}
-              max={5000}
-              value={filters.maxCompanies}
-              onChange={(event) => filters.setMaxCompanies(Number(event.target.value) || 200)}
-              className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2.5 text-sm text-mist-100 outline-none focus:border-signal/50"
-            />
-          </label>
+        <FilterSection
+          step="4"
+          title="Volume"
+          hint="Required · max companies to process"
+        >
+          <MaxCompaniesControl
+            value={filters.maxCompanies}
+            onChange={filters.setMaxCompanies}
+          />
         </FilterSection>
       </section>
 
@@ -106,38 +98,6 @@ export function DashboardPage() {
       </button>
 
       {error ? <p className="text-[11px] text-red-300">{error}</p> : null}
-
-      <div className="space-y-2">
-        {showSaveForm ? (
-          <div className="li-surface flex gap-2 p-3">
-            <input
-              type="text"
-              value={saveName}
-              onChange={(event) => setSaveName(event.target.value)}
-              placeholder="Saved search name"
-              className="min-w-0 flex-1 rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-mist-100 outline-none focus:border-signal/50"
-            />
-            <button type="button" className="li-btn-ghost !px-3" onClick={() => void onSaveSearch()}>
-              Save
-            </button>
-            <button
-              type="button"
-              className="li-btn-ghost !px-3"
-              onClick={() => setShowSaveForm(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="li-btn-ghost w-full text-xs"
-            onClick={() => setShowSaveForm(true)}
-          >
-            Save current filters
-          </button>
-        )}
-      </div>
 
       <p className="text-[11px] leading-relaxed text-mist-400">
         Jobs run asynchronously — you&apos;ll land on progress immediately after creation.

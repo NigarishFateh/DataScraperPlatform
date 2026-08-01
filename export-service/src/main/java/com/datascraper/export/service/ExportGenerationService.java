@@ -8,6 +8,8 @@ import com.datascraper.export.config.ExportProperties;
 import com.datascraper.export.entity.ExportHistoryEntity;
 import com.datascraper.export.repository.ExportHistoryRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +21,8 @@ import java.util.UUID;
 
 @Service
 public class ExportGenerationService {
+
+    private static final Logger log = LoggerFactory.getLogger(ExportGenerationService.class);
 
     private final ExportHistoryRepository repository;
     private final ExportProperties properties;
@@ -45,8 +49,18 @@ public class ExportGenerationService {
 
     @Async("exportTaskExecutor")
     public void generateExport(UUID exportId) {
-        ExportHistoryEntity entity = repository.findById(exportId)
-                .orElse(null);
+        generateExportInternal(exportId, true);
+    }
+
+    /**
+     * Synchronous generation used when a READY export is missing its file on disk.
+     */
+    public void regenerateExportSync(UUID exportId) {
+        generateExportInternal(exportId, false);
+    }
+
+    private void generateExportInternal(UUID exportId, boolean completeJob) {
+        ExportHistoryEntity entity = repository.findById(exportId).orElse(null);
         if (entity == null) {
             return;
         }
@@ -61,7 +75,7 @@ public class ExportGenerationService {
 
             List<EnrichedCompany> companies = companyServiceClient.fetchCompaniesByJob(entity.getJobId());
             Instant generatedAt = Instant.now();
-            Path storageDir = Path.of(properties.getStoragePath()).toAbsolutePath().normalize();
+            Path storageDir = resolveStorageDir();
             Files.createDirectories(storageDir);
 
             String fileName = ExcelExportWriter.buildDownloadFileName(job);
@@ -81,7 +95,7 @@ public class ExportGenerationService {
             );
 
             entity.setFileName(fileName);
-            entity.setFilePath(outputFile.toString());
+            entity.setFilePath(outputFile.toAbsolutePath().normalize().toString());
             entity.setRowCount(result.rowCount());
             entity.setFileSizeBytes(result.fileSizeBytes());
             entity.setStatus(com.datascraper.common.enums.ExportStatus.READY);
@@ -89,19 +103,31 @@ public class ExportGenerationService {
             entity.setErrorMessage(null);
             repository.save(entity);
 
-            jobServiceClient.completeJob(entity.getJobId(), exportId);
+            if (completeJob) {
+                jobServiceClient.completeJob(entity.getJobId(), exportId);
+            }
         } catch (Exception ex) {
+            log.error("Export generation failed for {}: {}", exportId, ex.getMessage(), ex);
             ExportHistoryEntity failed = repository.findById(exportId).orElse(entity);
             failed.setStatus(com.datascraper.common.enums.ExportStatus.FAILED);
             failed.setErrorMessage(ex.getMessage());
             failed.setCompletedAt(Instant.now());
             repository.save(failed);
-            try {
-                // Still close the job so the UI does not hang in ENRICHMENT forever.
-                jobServiceClient.completeJob(failed.getJobId(), exportId);
-            } catch (Exception ignored) {
-                // best-effort
+            if (completeJob) {
+                try {
+                    jobServiceClient.completeJob(failed.getJobId(), exportId);
+                } catch (Exception ignored) {
+                    // best-effort
+                }
             }
         }
+    }
+
+    Path resolveStorageDir() {
+        String configured = properties.getStoragePath();
+        if (configured == null || configured.isBlank()) {
+            configured = System.getProperty("user.home") + "/.datascraper/exports";
+        }
+        return Path.of(configured).toAbsolutePath().normalize();
     }
 }

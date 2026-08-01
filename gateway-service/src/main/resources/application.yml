@@ -20,6 +20,10 @@ spring:
               - DELETE
               - OPTIONS
             allowedHeaders: "*"
+            exposedHeaders:
+              - Content-Disposition
+              - Content-Length
+              - Content-Type
             allowCredentials: true
       routes:
         - id: auth-service

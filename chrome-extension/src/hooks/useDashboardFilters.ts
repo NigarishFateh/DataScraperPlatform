@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { fetchDefaultCategory } from "../services/catalog/catalogApi";
-import { getUserSettings } from "../services/storage/settingsStorage";
 import type { DashboardFilters } from "../types/catalog";
 
 export const PENDING_FILTERS_KEY = "gbi.pendingFilters";
@@ -20,57 +18,52 @@ export function stashPendingFilters(filters: DashboardFilters): void {
   sessionStorage.setItem(PENDING_FILTERS_KEY, JSON.stringify(filters));
 }
 
+function cityBelongsToCountry(cityId: string, countryCode: string): boolean {
+  return cityId.toLowerCase().startsWith(`${countryCode.toLowerCase()}-`);
+}
+
+function normalizeMaxCompanies(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(5000, Math.floor(n));
+}
+
 export function useDashboardFilters() {
   const [countryCodes, setCountryCodes] = useState<string[]>([]);
   const [cityIds, setCityIds] = useState<string[]>([]);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  const [maxCompanies, setMaxCompanies] = useState(200);
+  const [maxCompanies, setMaxCompaniesState] = useState<number | null>(null);
   const [defaultLoaded, setDefaultLoaded] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const pending = readPendingFilters();
-      if (pending) {
-        if (!cancelled) {
-          setCountryCodes(pending.countryCodes);
-          setCityIds(pending.cityIds);
-          setCategoryIds(pending.categoryIds);
-          setMaxCompanies(pending.maxCompanies);
-          setDefaultLoaded(true);
-        }
-        return;
-      }
-
-      try {
-        const [settings, defaultCategory] = await Promise.all([
-          getUserSettings(),
-          fetchDefaultCategory(),
-        ]);
-        if (cancelled) return;
-        setMaxCompanies(settings.defaultMaxCompanies);
-        setCategoryIds([defaultCategory.id]);
-      } catch {
-        // Default category is best-effort; user can still pick manually.
-      } finally {
-        if (!cancelled) {
-          setDefaultLoaded(true);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    const pending = readPendingFilters();
+    if (pending) {
+      setCountryCodes(pending.countryCodes);
+      setCityIds(pending.cityIds);
+      setCategoryIds(pending.categoryIds);
+      setMaxCompaniesState(normalizeMaxCompanies(pending.maxCompanies));
+    }
+    setDefaultLoaded(true);
   }, []);
 
+  function setMaxCompanies(value: number | null) {
+    setMaxCompaniesState(normalizeMaxCompanies(value));
+  }
+
   function toggleCountry(countryCode: string) {
-    setCountryCodes((prev) =>
-      prev.includes(countryCode)
+    setCountryCodes((prev) => {
+      const next = prev.includes(countryCode)
         ? prev.filter((code) => code !== countryCode)
-        : [...prev, countryCode],
-    );
+        : [...prev, countryCode];
+
+      setCityIds((cities) =>
+        cities.filter((cityId) =>
+          next.some((code) => cityBelongsToCountry(cityId, code)),
+        ),
+      );
+      return next;
+    });
   }
 
   function toggleCity(cityId: string) {
@@ -91,10 +84,11 @@ export function useDashboardFilters() {
     countryCodes,
     cityIds,
     categoryIds,
-    maxCompanies,
+    maxCompanies: maxCompanies ?? 0,
   };
 
-  const canStart = categoryIds.length > 0 && defaultLoaded;
+  const canStart =
+    categoryIds.length > 0 && maxCompanies != null && maxCompanies > 0 && defaultLoaded;
 
   return {
     filters,

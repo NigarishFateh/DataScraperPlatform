@@ -33,17 +33,14 @@ export async function fetchCountriesPage(
   };
 }
 
-export async function fetchCities(search = "", countryCode?: string): Promise<City[]> {
+async function fetchCitiesForCountry(search: string, countryCode: string): Promise<City[]> {
   const params = new URLSearchParams();
   if (search.trim()) {
     params.set("search", search.trim());
   }
-  if (countryCode?.trim()) {
-    params.set("countryCode", countryCode.trim());
-  }
+  params.set("countryCode", countryCode.trim());
 
-  const query = params.toString();
-  const response = await apiFetch(`/api/locations/cities${query ? `?${query}` : ""}`);
+  const response = await apiFetch(`/api/locations/cities?${params.toString()}`);
   if (!response.ok) {
     throw new Error(`Failed to load cities (${response.status})`);
   }
@@ -54,4 +51,23 @@ export async function fetchCities(search = "", countryCode?: string): Promise<Ci
     name: city.name,
     countryCode: city.countryCode,
   }));
+}
+
+/**
+ * Loads cities for one or more countries. Returns [] when no country is selected.
+ */
+export async function fetchCities(search = "", countryCodes: string[] = []): Promise<City[]> {
+  const codes = countryCodes.map((code) => code.trim().toUpperCase()).filter(Boolean);
+  if (codes.length === 0) {
+    return [];
+  }
+
+  const batches = await Promise.all(codes.map((code) => fetchCitiesForCountry(search, code)));
+  const byId = new Map<string, City>();
+  for (const batch of batches) {
+    for (const city of batch) {
+      byId.set(city.id, city);
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
