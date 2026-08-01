@@ -70,7 +70,11 @@ export function DashboardPage() {
           />
         </FilterSection>
 
-        <FilterSection step="2" title="Countries" hint="Optional · searchable multi-select">
+        <FilterSection
+          step="2"
+          title="Countries"
+          hint="Optional · leave empty for global catalog (seed coverage: US, GB, IN, DE)"
+        >
           <CountryMultiSelect
             selectedCodes={filters.countryCodes}
             onToggle={filters.toggleCountry}

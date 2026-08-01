@@ -21,7 +21,7 @@ public class OrchestratorEnrichmentClient {
 
     private final WebClient webClient;
     private final String orchestratorBaseUrl;
-    private final ExecutorService executor = Executors.newCachedThreadPool(r -> {
+    private final ExecutorService executor = Executors.newFixedThreadPool(3, r -> {
         Thread t = new Thread(r, "enrichment-dispatch");
         t.setDaemon(true);
         return t;

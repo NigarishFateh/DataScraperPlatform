@@ -55,7 +55,7 @@ public class CompanyController {
     @PostMapping("/enriched")
     @ResponseStatus(HttpStatus.OK)
     public EnrichedCompanyUpsertResponse upsertEnriched(
-            @RequestHeader("X-Job-Id") UUID jobId,
+            @RequestHeader(value = "X-Job-Id", required = false) UUID jobId,
             @RequestBody EnrichedCompany company
     ) {
         return companyProfileService.upsertEnriched(jobId, company);

@@ -47,4 +47,23 @@ class CompanyRepositorySearchTest {
         assertThat(result.items()).allSatisfy(company ->
                 assertThat(company.getName().toLowerCase(Locale.ROOT)).contains(term));
     }
+
+    @Test
+    void searchesByCategoryWithoutCityFilter() {
+        CompanySearchPage result = companyRepository.search(
+                List.of(), "", List.of("cat-software"), 0, 20);
+
+        assertThat(result.total()).isGreaterThan(0);
+        assertThat(result.items()).isNotEmpty();
+        assertThat(result.items()).allSatisfy(company ->
+                assertThat(company.getCategoryIds()).contains("cat-software"));
+    }
+
+    @Test
+    void searchesAllWhenNoFiltersProvided() {
+        CompanySearchPage result = companyRepository.search(List.of(), "", List.of(), 0, 5);
+
+        assertThat(result.total()).isGreaterThan(5);
+        assertThat(result.items()).hasSize(5);
+    }
 }

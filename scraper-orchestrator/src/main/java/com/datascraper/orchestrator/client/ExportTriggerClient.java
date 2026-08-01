@@ -54,17 +54,13 @@ public class ExportTriggerClient {
     }
 
     private void postExportRequest(UUID jobId) {
-        try {
-            webClient.post()
-                    .uri(normalizeBaseUrl(properties.getExportServiceUri()) + "/api/exports")
-                    .bodyValue(new ExportRequest(jobId, ExportFormat.EXCEL))
-                    .retrieve()
-                    .toBodilessEntity()
-                    .block();
-            log.info("Triggered export HTTP request for job {}", jobId);
-        } catch (Exception ex) {
-            log.warn("Export HTTP trigger failed for job {}: {}", jobId, ex.getMessage());
-        }
+        webClient.post()
+                .uri(normalizeBaseUrl(properties.getExportServiceUri()) + "/api/exports")
+                .bodyValue(new ExportRequest(jobId, ExportFormat.EXCEL))
+                .retrieve()
+                .toBodilessEntity()
+                .block();
+        log.info("Triggered export HTTP request for job {}", jobId);
     }
 
     private static String normalizeBaseUrl(String baseUrl) {

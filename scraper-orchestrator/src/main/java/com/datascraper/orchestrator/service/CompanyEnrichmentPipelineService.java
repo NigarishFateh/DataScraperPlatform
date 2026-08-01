@@ -76,10 +76,16 @@ public class CompanyEnrichmentPipelineService {
         EnrichedCompany enrichedCompany = toEnrichedCompany(draft);
         boolean persisted = persistenceClient.persist(jobId, enrichedCompany);
 
+        // Authoritative local/Redis counter — concurrent enrichments must not read-modify-write job counts.
+        int enrichedCount = jobCompletionTracker.incrementEnriched(jobId);
+        int persistedCount = persisted
+                ? jobCompletionTracker.incrementPersisted(jobId)
+                : jobCompletionTracker.currentPersistedCount(jobId);
+        int failedCount = validation.softFailure()
+                ? jobCompletionTracker.incrementFailed(jobId)
+                : jobCompletionTracker.currentFailedCount(jobId);
+
         JobResponse currentJob = jobServiceClient.getJob(jobId);
-        int enrichedCount = (currentJob != null ? currentJob.enrichedCount() : 0) + 1;
-        int persistedCount = (currentJob != null ? currentJob.persistedCount() : 0) + (persisted ? 1 : 0);
-        int failedCount = (currentJob != null ? currentJob.failedCount() : 0) + (validation.softFailure() ? 1 : 0);
         String checkpoint = buildCheckpoint(message.company());
 
         jobServiceClient.patchProgress(jobServiceClient.enrichmentProgress(

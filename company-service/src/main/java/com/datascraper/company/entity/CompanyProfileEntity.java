@@ -376,7 +376,7 @@ public class CompanyProfileEntity {
     }
 
     public void setCategoryIds(List<String> categoryIds) {
-        this.categoryIds = new ArrayList<>(categoryIds);
+        this.categoryIds = categoryIds == null ? new ArrayList<>() : new ArrayList<>(categoryIds);
     }
 
     public List<CompanyContactEntity> getContacts() {

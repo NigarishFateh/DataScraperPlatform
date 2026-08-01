@@ -23,6 +23,8 @@ public class JobCompletionTracker {
     private final OrchestratorProperties properties;
     private final StringRedisTemplate redisTemplate;
     private final ConcurrentHashMap<UUID, AtomicInteger> localEnrichedCounts = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, AtomicInteger> localPersistedCounts = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, AtomicInteger> localFailedCounts = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Boolean> exportTriggered = new ConcurrentHashMap<>();
 
     public JobCompletionTracker(
@@ -38,11 +40,23 @@ public class JobCompletionTracker {
     }
 
     public int incrementEnriched(UUID jobId) {
-        if (properties.getRedis().isEnabled() && redisTemplate != null) {
-            Long count = redisTemplate.opsForValue().increment(enrichedCounterKey(jobId));
-            return count != null ? count.intValue() : 1;
-        }
-        return localEnrichedCounts.computeIfAbsent(jobId, ignored -> new AtomicInteger(0)).incrementAndGet();
+        return increment(jobId, "enriched", localEnrichedCounts);
+    }
+
+    public int incrementPersisted(UUID jobId) {
+        return increment(jobId, "persisted", localPersistedCounts);
+    }
+
+    public int incrementFailed(UUID jobId) {
+        return increment(jobId, "failed", localFailedCounts);
+    }
+
+    public int currentPersistedCount(UUID jobId) {
+        return current(jobId, "persisted", localPersistedCounts);
+    }
+
+    public int currentFailedCount(UUID jobId) {
+        return current(jobId, "failed", localFailedCounts);
     }
 
     public void checkAndTriggerExport(UUID jobId, int enrichedCount) {
@@ -52,35 +66,52 @@ public class JobCompletionTracker {
 
         JobResponse job = jobServiceClient.getJob(jobId);
         int discovered = job != null ? job.discoveredCount() : enrichedCount;
-        if (discovered <= 0) {
-            exportTriggered.remove(jobId);
-            return;
-        }
-
-        if (enrichedCount < discovered) {
+        if (discovered <= 0 || enrichedCount < discovered) {
             exportTriggered.remove(jobId);
             return;
         }
 
         log.info("Job {} enrichment complete ({}/{}), triggering export", jobId, enrichedCount, discovered);
-        exportTriggerClient.triggerExport(jobId);
+        try {
+            exportTriggerClient.triggerExport(jobId);
+        } catch (Exception ex) {
+            log.warn("Export trigger failed for job {}: {}", jobId, ex.getMessage());
+            exportTriggered.remove(jobId);
+            jobServiceClient.completeJob(jobId, null);
+        }
     }
 
     public int currentEnrichedCount(UUID jobId, JobResponse job) {
+        int local = current(jobId, "enriched", localEnrichedCounts);
+        if (local > 0) {
+            return local;
+        }
         if (job != null && job.enrichedCount() > 0) {
             return job.enrichedCount();
         }
+        return 0;
+    }
+
+    private int increment(UUID jobId, String kind, ConcurrentHashMap<UUID, AtomicInteger> localMap) {
         if (properties.getRedis().isEnabled() && redisTemplate != null) {
-            String value = redisTemplate.opsForValue().get(enrichedCounterKey(jobId));
+            Long count = redisTemplate.opsForValue().increment(counterKey(jobId, kind));
+            return count != null ? count.intValue() : 1;
+        }
+        return localMap.computeIfAbsent(jobId, ignored -> new AtomicInteger(0)).incrementAndGet();
+    }
+
+    private int current(UUID jobId, String kind, ConcurrentHashMap<UUID, AtomicInteger> localMap) {
+        if (properties.getRedis().isEnabled() && redisTemplate != null) {
+            String value = redisTemplate.opsForValue().get(counterKey(jobId, kind));
             if (value != null) {
                 return Integer.parseInt(value);
             }
         }
-        AtomicInteger local = localEnrichedCounts.get(jobId);
+        AtomicInteger local = localMap.get(jobId);
         return local != null ? local.get() : 0;
     }
 
-    private static String enrichedCounterKey(UUID jobId) {
-        return PlatformQueues.COMPANY_ENRICHMENT + ":count:" + jobId;
+    private static String counterKey(UUID jobId, String kind) {
+        return PlatformQueues.COMPANY_ENRICHMENT + ":count:" + kind + ":" + jobId;
     }
 }

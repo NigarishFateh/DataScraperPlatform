@@ -116,7 +116,7 @@ public class DiscoveryOrchestrationService {
         if (notifyJobService) {
             try {
                 if (unique.isEmpty()) {
-                    jobServiceClient.failJob(jobId, "No companies discovered for job criteria");
+                    jobServiceClient.failJob(jobId, buildEmptyDiscoveryMessage(request));
                 } else {
                     jobServiceClient.patchProgress(jobId, JobProgressPatchRequest.discoveredCount(unique.size()));
                 }
@@ -194,6 +194,16 @@ public class DiscoveryOrchestrationService {
                 + "; countries=" + join(request.countryCodes())
                 + "; cities=" + join(request.cityIds())
                 + "; maxResults=" + request.maxResults();
+    }
+
+    private String buildEmptyDiscoveryMessage(DiscoveryRequest request) {
+        String categories = join(request.categoryIds());
+        String countries = join(request.countryCodes());
+        String cities = join(request.cityIds());
+        return "No companies discovered for categories=[" + categories
+                + "] countries=[" + countries
+                + "] cities=[" + cities
+                + "]. Leave countries empty or pick US/GB/IN/DE for seeded catalog coverage.";
     }
 
     private String join(List<String> values) {

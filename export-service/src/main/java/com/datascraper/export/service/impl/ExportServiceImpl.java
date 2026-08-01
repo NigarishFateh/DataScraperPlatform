@@ -15,6 +15,8 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -56,9 +58,19 @@ public class ExportServiceImpl implements ExportService {
         entity.setFormat(format);
         entity.setStatus(ExportStatus.PENDING);
         entity.setCreatedAt(Instant.now());
-        repository.save(entity);
+        repository.saveAndFlush(entity);
 
-        exportGenerationService.generateExport(entity.getId());
+        UUID exportId = entity.getId();
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    exportGenerationService.generateExport(exportId);
+                }
+            });
+        } else {
+            exportGenerationService.generateExport(exportId);
+        }
         return mapper.toResponse(entity);
     }
 

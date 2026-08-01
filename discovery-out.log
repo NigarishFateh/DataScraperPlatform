@@ -1,0 +1,76 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.4.5)
+
+2026-08-01T13:27:12.699+05:00  INFO 17056 --- [discovery-service] [           main] c.d.d.DiscoveryServiceApplication        : Starting DiscoveryServiceApplication v0.0.1-SNAPSHOT using Java 26.0.1 with PID 17056 (C:\Users\nagar\OneDrive\Desktop\Java_SpringBoot_Projects\DataScraperPlatform\discovery-service\target\discovery-service-0.0.1-SNAPSHOT.jar started by nagar in C:\Users\nagar\OneDrive\Desktop\Java_SpringBoot_Projects\DataScraperPlatform)
+2026-08-01T13:27:12.712+05:00  INFO 17056 --- [discovery-service] [           main] c.d.d.DiscoveryServiceApplication        : The following 1 profile is active: "dev"
+2026-08-01T13:27:14.809+05:00  INFO 17056 --- [discovery-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-08-01T13:27:14.815+05:00  INFO 17056 --- [discovery-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-08-01T13:27:15.049+05:00  INFO 17056 --- [discovery-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 209 ms. Found 1 JPA repository interface.
+2026-08-01T13:27:17.074+05:00  INFO 17056 --- [discovery-service] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8087 (http)
+2026-08-01T13:27:17.115+05:00  INFO 17056 --- [discovery-service] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-08-01T13:27:17.117+05:00  INFO 17056 --- [discovery-service] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.40]
+2026-08-01T13:27:17.209+05:00  INFO 17056 --- [discovery-service] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-08-01T13:27:17.217+05:00  INFO 17056 --- [discovery-service] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 4377 ms
+2026-08-01T13:27:18.491+05:00  INFO 17056 --- [discovery-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-08-01T13:27:18.837+05:00  INFO 17056 --- [discovery-service] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@478530cb
+2026-08-01T13:27:18.839+05:00  INFO 17056 --- [discovery-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-08-01T13:27:18.875+05:00  INFO 17056 --- [discovery-service] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/discovery_db (PostgreSQL 18.4)
+2026-08-01T13:27:18.889+05:00  WARN 17056 --- [discovery-service] [           main] o.f.c.internal.database.base.Database    : Flyway upgrade recommended: PostgreSQL 18.4 is newer than this version of Flyway and support has not been tested. The latest supported version of PostgreSQL is 17.
+2026-08-01T13:27:18.940+05:00  INFO 17056 --- [discovery-service] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 1 migration (execution time 00:00.034s)
+2026-08-01T13:27:19.037+05:00  INFO 17056 --- [discovery-service] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 1
+2026-08-01T13:27:19.044+05:00  INFO 17056 --- [discovery-service] [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-08-01T13:27:19.259+05:00  INFO 17056 --- [discovery-service] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-08-01T13:27:19.369+05:00  INFO 17056 --- [discovery-service] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.13.Final
+2026-08-01T13:27:19.436+05:00  INFO 17056 --- [discovery-service] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-08-01T13:27:20.063+05:00  INFO 17056 --- [discovery-service] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-08-01T13:27:20.183+05:00  INFO 17056 --- [discovery-service] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 18.4
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-08-01T13:27:21.373+05:00  INFO 17056 --- [discovery-service] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-08-01T13:27:21.426+05:00  INFO 17056 --- [discovery-service] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-08-01T13:27:24.107+05:00  INFO 17056 --- [discovery-service] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoints beneath base path '/actuator'
+2026-08-01T13:27:24.273+05:00  INFO 17056 --- [discovery-service] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8087 (http) with context path '/'
+2026-08-01T13:27:24.303+05:00  INFO 17056 --- [discovery-service] [           main] c.d.d.DiscoveryServiceApplication        : Started DiscoveryServiceApplication in 12.864 seconds (process running for 14.308)
+2026-08-01T13:27:24.928+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-08-01T13:27:24.929+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-08-01T13:27:24.931+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-08-01T13:27:25.740+05:00  WARN 17056 --- [discovery-service] [nio-8087-exec-1] c.d.d.s.DiscoveryOrchestrationService    : Unable to notify job-service for job 22222222-2222-2222-2222-222222222222: 404 Not Found from PATCH http://localhost:8086/api/jobs/22222222-2222-2222-2222-222222222222/progress
+2026-08-01T13:27:25.954+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-1] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cleaning]; falling back to category-only
+2026-08-01T13:27:26.023+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-1] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cleaning]; falling back to category-only
+2026-08-01T13:27:26.098+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-1] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cleaning]; falling back to category-only
+2026-08-01T13:27:26.157+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-1] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cleaning]; falling back to category-only
+2026-08-01T13:27:26.206+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-1] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cleaning]; falling back to category-only
+2026-08-01T13:27:26.440+05:00  WARN 17056 --- [discovery-service] [nio-8087-exec-1] c.d.d.s.DiscoveryOrchestrationService    : Unable to update job 22222222-2222-2222-2222-222222222222 after discovery: 404 Not Found from PATCH http://localhost:8086/api/jobs/22222222-2222-2222-2222-222222222222/progress
+2026-08-01T13:27:48.721+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-3] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cleaning, automation, cybersecurity]; falling back to category-only
+2026-08-01T13:27:48.766+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-3] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cleaning, automation, cybersecurity]; falling back to category-only
+2026-08-01T13:27:48.805+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-3] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cleaning, automation, cybersecurity]; falling back to category-only
+2026-08-01T13:27:48.848+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-3] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cleaning, automation, cybersecurity]; falling back to category-only
+2026-08-01T13:27:48.915+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-3] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cleaning, automation, cybersecurity]; falling back to category-only
+2026-08-01T13:27:48.978+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-3] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[automation]; falling back to category-only
+2026-08-01T13:27:49.021+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-3] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cleaning]; falling back to category-only
+2026-08-01T13:27:49.056+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-3] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cybersecurity]; falling back to category-only
+2026-08-01T13:27:49.097+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-3] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[AF] categories=[cleaning, automation, cybersecurity]; falling back to category-only
+2026-08-01T13:27:49.366+05:00  WARN 17056 --- [discovery-service] [chment-dispatch] c.d.d.c.OrchestratorEnrichmentClient     : Failed to dispatch enrichment for job f6d19a37-74d7-4355-951a-285e4288b995 company Siemens: 500 Internal Server Error from POST http://localhost:8085/api/orchestrator/enrich
+2026-08-01T13:27:49.367+05:00  WARN 17056 --- [discovery-service] [chment-dispatch] c.d.d.c.OrchestratorEnrichmentClient     : Failed to dispatch enrichment for job f6d19a37-74d7-4355-951a-285e4288b995 company ABB: 500 Internal Server Error from POST http://localhost:8085/api/orchestrator/enrich
+2026-08-01T13:27:49.371+05:00  WARN 17056 --- [discovery-service] [chment-dispatch] c.d.d.c.OrchestratorEnrichmentClient     : Failed to dispatch enrichment for job f6d19a37-74d7-4355-951a-285e4288b995 company Volvo Cars: 500 Internal Server Error from POST http://localhost:8085/api/orchestrator/enrich
+2026-08-01T13:27:49.371+05:00  WARN 17056 --- [discovery-service] [chment-dispatch] c.d.d.c.OrchestratorEnrichmentClient     : Failed to dispatch enrichment for job f6d19a37-74d7-4355-951a-285e4288b995 company Airbus: 500 Internal Server Error from POST http://localhost:8085/api/orchestrator/enrich
+2026-08-01T13:27:49.380+05:00  WARN 17056 --- [discovery-service] [chment-dispatch] c.d.d.c.OrchestratorEnrichmentClient     : Failed to dispatch enrichment for job f6d19a37-74d7-4355-951a-285e4288b995 company ASML: 500 Internal Server Error from POST http://localhost:8085/api/orchestrator/enrich
+2026-08-01T13:27:49.381+05:00  WARN 17056 --- [discovery-service] [chment-dispatch] c.d.d.c.OrchestratorEnrichmentClient     : Failed to dispatch enrichment for job f6d19a37-74d7-4355-951a-285e4288b995 company Bosch: 500 Internal Server Error from POST http://localhost:8085/api/orchestrator/enrich
+2026-08-01T13:27:49.384+05:00  WARN 17056 --- [discovery-service] [chment-dispatch] c.d.d.c.OrchestratorEnrichmentClient     : Failed to dispatch enrichment for job f6d19a37-74d7-4355-951a-285e4288b995 company Counterserve: 500 Internal Server Error from POST http://localhost:8085/api/orchestrator/enrich
+2026-08-01T13:27:49.387+05:00  WARN 17056 --- [discovery-service] [chment-dispatch] c.d.d.c.OrchestratorEnrichmentClient     : Failed to dispatch enrichment for job f6d19a37-74d7-4355-951a-285e4288b995 company Merry Maids: 500 Internal Server Error from POST http://localhost:8085/api/orchestrator/enrich
+2026-08-01T13:30:00.326+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-5] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[CO] categories=[hospitality, blockchain, automotive, automation]; falling back to category-only
+2026-08-01T13:30:00.372+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-5] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[CO] categories=[hospitality, blockchain, automotive, automation]; falling back to category-only
+2026-08-01T13:30:00.448+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-5] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[CO] categories=[automation]; falling back to category-only
+2026-08-01T13:30:00.538+05:00  INFO 17056 --- [discovery-service] [nio-8087-exec-5] c.d.d.provider.CatalogSearchSupport      : Catalog search empty for countries=[CO] categories=[hospitality, blockchain, automotive, automation]; falling back to category-only

@@ -55,6 +55,22 @@ public class JobServiceClient {
         }
     }
 
+    public void completeJob(UUID jobId, String exportId) {
+        try {
+            String url = normalizeBaseUrl(properties.getJobServiceUri()) + "/api/jobs/" + jobId + "/complete";
+            webClient.post()
+                    .uri(url)
+                    .bodyValue(exportId == null || exportId.isBlank()
+                            ? java.util.Map.of()
+                            : java.util.Map.of("exportId", exportId))
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block();
+        } catch (Exception ex) {
+            log.warn("Unable to complete job {}: {}", jobId, ex.getMessage());
+        }
+    }
+
     public JobProgressUpdate enrichmentProgress(
             UUID jobId,
             JobResponse current,

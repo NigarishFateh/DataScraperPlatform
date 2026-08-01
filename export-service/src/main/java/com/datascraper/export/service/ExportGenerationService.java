@@ -6,12 +6,10 @@ import com.datascraper.export.client.CompanyServiceClient;
 import com.datascraper.export.client.JobServiceClient;
 import com.datascraper.export.config.ExportProperties;
 import com.datascraper.export.entity.ExportHistoryEntity;
-import com.datascraper.export.exception.ExportNotFoundException;
 import com.datascraper.export.repository.ExportHistoryRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,10 +44,12 @@ public class ExportGenerationService {
     }
 
     @Async("exportTaskExecutor")
-    @Transactional
     public void generateExport(UUID exportId) {
         ExportHistoryEntity entity = repository.findById(exportId)
-                .orElseThrow(() -> new ExportNotFoundException(exportId));
+                .orElse(null);
+        if (entity == null) {
+            return;
+        }
 
         entity.setStatus(com.datascraper.common.enums.ExportStatus.GENERATING);
         repository.save(entity);
@@ -86,10 +86,17 @@ public class ExportGenerationService {
 
             jobServiceClient.completeJob(entity.getJobId(), exportId);
         } catch (Exception ex) {
-            entity.setStatus(com.datascraper.common.enums.ExportStatus.FAILED);
-            entity.setErrorMessage(ex.getMessage());
-            entity.setCompletedAt(Instant.now());
-            repository.save(entity);
+            ExportHistoryEntity failed = repository.findById(exportId).orElse(entity);
+            failed.setStatus(com.datascraper.common.enums.ExportStatus.FAILED);
+            failed.setErrorMessage(ex.getMessage());
+            failed.setCompletedAt(Instant.now());
+            repository.save(failed);
+            try {
+                // Still close the job so the UI does not hang in ENRICHMENT forever.
+                jobServiceClient.completeJob(failed.getJobId(), exportId);
+            } catch (Exception ignored) {
+                // best-effort
+            }
         }
     }
 }

@@ -75,10 +75,14 @@ public class CompanyProfileMapper {
     }
 
     public EnrichedCompany toEnrichedCompany(CompanyProfileEntity entity) {
-        Map<String, String> socials = mapSocials(entity.getSocials());
-        CompanyContactEntity primaryContact = entity.getContacts().isEmpty()
-                ? null
-                : entity.getContacts().get(0);
+        Map<String, String> socials = mapSocials(
+                entity.getSocials() == null ? List.of() : entity.getSocials()
+        );
+        List<CompanyContactEntity> contacts = entity.getContacts() == null ? List.of() : entity.getContacts();
+        CompanyContactEntity primaryContact = contacts.isEmpty() ? null : contacts.get(0);
+        List<CompanyTechnologyEntity> technologies =
+                entity.getTechnologies() == null ? List.of() : entity.getTechnologies();
+        List<String> categoryIds = entity.getCategoryIds() == null ? List.of() : entity.getCategoryIds();
 
         return new EnrichedCompany(
                 entity.getId(),
@@ -97,7 +101,7 @@ public class CompanyProfileMapper {
                 entity.getDescription(),
                 entity.getServices(),
                 entity.getProducts(),
-                entity.getTechnologies().stream().map(CompanyTechnologyEntity::getName).toList(),
+                technologies.stream().map(CompanyTechnologyEntity::getName).toList(),
                 socials.get("linkedin"),
                 socials.get("github"),
                 socials.get("facebook"),
@@ -113,7 +117,7 @@ public class CompanyProfileMapper {
                 entity.getConfidenceScore() == null ? 0.0 : entity.getConfidenceScore(),
                 entity.getProviderName(),
                 entity.getNotes(),
-                List.copyOf(entity.getCategoryIds()),
+                List.copyOf(categoryIds),
                 readRawAttributes(entity)
         );
     }
@@ -216,14 +220,20 @@ public class CompanyProfileMapper {
 
     private Map<String, String> mapSocials(List<CompanySocialEntity> socials) {
         Map<String, String> mapped = new LinkedHashMap<>();
+        if (socials == null) {
+            return mapped;
+        }
         for (CompanySocialEntity social : socials) {
+            if (social.getPlatform() == null || social.getUrl() == null) {
+                continue;
+            }
             mapped.put(social.getPlatform().toLowerCase(Locale.ROOT), social.getUrl());
         }
         return mapped;
     }
 
     private Map<String, Object> readRawAttributes(CompanyProfileEntity entity) {
-        if (entity.getSources().isEmpty()) {
+        if (entity.getSources() == null || entity.getSources().isEmpty()) {
             return Map.of();
         }
         CompanySourceEntity latest = entity.getSources().get(entity.getSources().size() - 1);
