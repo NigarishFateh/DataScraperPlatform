@@ -141,14 +141,28 @@ class ExcelExportWriterTest {
 
         try (InputStream in = Files.newInputStream(outputFile);
              XSSFWorkbook workbook = new XSSFWorkbook(in)) {
-            assertEquals(4, workbook.getNumberOfSheets());
+            assertEquals(3, workbook.getNumberOfSheets());
             assertEquals("Companies", workbook.getSheetAt(0).getSheetName());
             assertEquals("Search Criteria", workbook.getSheetAt(1).getSheetName());
             assertEquals("Export Summary", workbook.getSheetAt(2).getSheetName());
-            assertEquals("Job Statistics", workbook.getSheetAt(3).getSheetName());
             assertEquals(3, workbook.getSheetAt(0).getPhysicalNumberOfRows());
+            assertEquals("Company Name", workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue());
+            assertEquals("Notes", workbook.getSheetAt(0).getRow(0).getCell(11).getStringCellValue());
             assertEquals("Alpha Analytics GmbH", workbook.getSheetAt(0).getRow(1).getCell(0).getStringCellValue());
+            assertEquals("Berlin", workbook.getSheetAt(0).getRow(1).getCell(1).getStringCellValue());
             assertEquals("Beta Systems AG", workbook.getSheetAt(0).getRow(2).getCell(0).getStringCellValue());
+            assertEquals("Pakistan_Artificial-Intelligence.xlsx",
+                    ExcelExportWriter.buildDownloadFileName(new JobResponse(
+                            jobId,
+                            JobStatus.COMPLETED,
+                            JobPhase.EXPORT,
+                            "user-123",
+                            List.of("ai"),
+                            List.of("PK"),
+                            List.of("pk-islamabad"),
+                            8, 8, 8, 0, 100, 0L, null, null, null,
+                            generatedAt, generatedAt, generatedAt, generatedAt
+                    )));
         }
     }
 }

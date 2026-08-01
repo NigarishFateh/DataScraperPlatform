@@ -64,8 +64,13 @@ public class ExportGenerationService {
             Path storageDir = Path.of(properties.getStoragePath()).toAbsolutePath().normalize();
             Files.createDirectories(storageDir);
 
-            String fileName = "export-" + entity.getJobId() + "-" + exportId + ".xlsx";
+            String fileName = ExcelExportWriter.buildDownloadFileName(job);
             Path outputFile = storageDir.resolve(fileName);
+            if (Files.exists(outputFile)) {
+                String stem = fileName.endsWith(".xlsx") ? fileName.substring(0, fileName.length() - 5) : fileName;
+                fileName = stem + "_" + exportId.toString().substring(0, 8) + ".xlsx";
+                outputFile = storageDir.resolve(fileName);
+            }
 
             ExcelExportWriter.ExportWriteResult result = excelExportWriter.writeWorkbook(
                     outputFile,
