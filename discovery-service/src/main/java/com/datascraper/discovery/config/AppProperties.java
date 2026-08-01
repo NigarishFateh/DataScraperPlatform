@@ -18,6 +18,7 @@ public class AppProperties {
     private String orchestratorServiceUri = "http://localhost:8085";
     private RedisProperties redis = new RedisProperties();
     private QueueProperties queue = new QueueProperties();
+    private String githubToken = "";
 
     @Getter
     @Setter

@@ -46,18 +46,19 @@ app:
   queue:
     poll-interval-ms: 1000
     block-timeout-seconds: 5
+  github-token: ${GITHUB_TOKEN:}
 
 discovery:
   providers:
     catalog-seed:
-      enabled: true
+      enabled: false
     open-data:
-      enabled: true
+      enabled: false
     industry-listing:
-      enabled: true
+      enabled: false
     business-directory:
       enabled: false
     government-registry:
       enabled: false
     business-search-api:
-      enabled: false
+      enabled: true

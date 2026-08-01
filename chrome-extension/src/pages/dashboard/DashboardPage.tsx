@@ -53,7 +53,7 @@ export function DashboardPage() {
           New scrape
         </h1>
         <p className="text-sm text-mist-300">
-          Configure filters and start an asynchronous business intelligence job.
+          Choose category and location. Discovery searches the public web, then scrapers enrich each company into an Excel export.
         </p>
       </section>
 
@@ -70,11 +70,7 @@ export function DashboardPage() {
           />
         </FilterSection>
 
-        <FilterSection
-          step="2"
-          title="Countries"
-          hint="Optional · leave empty for global catalog (seed coverage: US, GB, IN, DE)"
-        >
+        <FilterSection step="2" title="Countries" hint="Optional · filters discovery by country">
           <CountryMultiSelect
             selectedCodes={filters.countryCodes}
             onToggle={filters.toggleCountry}

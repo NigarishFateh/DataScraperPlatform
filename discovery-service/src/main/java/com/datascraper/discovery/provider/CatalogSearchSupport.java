@@ -6,8 +6,6 @@ import com.datascraper.discovery.client.CompanyCatalogClient;
 import com.datascraper.discovery.client.LocationCatalogClient;
 import com.datascraper.discovery.dto.CompanyDto;
 import com.datascraper.discovery.dto.CompanyPageDto;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -20,8 +18,6 @@ import java.util.Set;
 
 @Component
 public class CatalogSearchSupport {
-
-    private static final Logger log = LoggerFactory.getLogger(CatalogSearchSupport.class);
 
     private final CompanyCatalogClient companyCatalogClient;
     private final LocationCatalogClient locationCatalogClient;
@@ -39,40 +35,15 @@ public class CatalogSearchSupport {
             String searchTerm,
             String providerName
     ) {
-        boolean explicitCities = request.cityIds() != null && !request.cityIds().isEmpty();
-        boolean hasCountries = request.countryCodes() != null && !request.countryCodes().isEmpty();
         List<String> cityIds = locationCatalogClient.resolveCityIds(request.cityIds(), request.countryCodes());
-
-        List<DiscoveredCompany> results = paginate(
+        return paginate(
                 cityIds,
                 searchTerm,
                 request.categoryIds(),
                 request.countryCodes(),
                 request.maxResults(),
-                providerName,
-                false
+                providerName
         );
-
-        // Countries with no seeded cities (e.g. AF) or no catalog overlap would otherwise
-        // always yield 0. Widen to category/search-only so enrichment can still run.
-        if (results.isEmpty() && hasCountries && !explicitCities) {
-            log.info(
-                    "Catalog search empty for countries={} categories={}; falling back to category-only",
-                    request.countryCodes(),
-                    request.categoryIds()
-            );
-            results = paginate(
-                    List.of(),
-                    searchTerm,
-                    request.categoryIds(),
-                    List.of(),
-                    request.maxResults(),
-                    providerName,
-                    true
-            );
-        }
-
-        return results;
     }
 
     public List<DiscoveredCompany> paginateCatalog(
@@ -88,8 +59,7 @@ public class CatalogSearchSupport {
             List<String> categoryIds,
             List<String> countryCodes,
             int maxResults,
-            String providerName,
-            boolean geoFallback
+            String providerName
     ) {
         int remaining = maxResults;
         int page = 0;
@@ -110,7 +80,7 @@ public class CatalogSearchSupport {
                 if (!matchesCountryFilter(company, countryCodes)) {
                     continue;
                 }
-                DiscoveredCompany discovered = toDiscoveredCompany(company, providerName, geoFallback);
+                DiscoveredCompany discovered = toDiscoveredCompany(company, providerName);
                 String key = dedupeKey(discovered);
                 if (seenKeys.add(key)) {
                     results.add(discovered);
@@ -144,19 +114,8 @@ public class CatalogSearchSupport {
     }
 
     public DiscoveredCompany toDiscoveredCompany(CompanyDto company, String providerName) {
-        return toDiscoveredCompany(company, providerName, false);
-    }
-
-    private DiscoveredCompany toDiscoveredCompany(
-            CompanyDto company,
-            String providerName,
-            boolean geoFallback
-    ) {
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("industry", company.industry() == null ? "" : company.industry());
-        if (geoFallback) {
-            attributes.put("geoFallback", "true");
-        }
         return new DiscoveredCompany(
                 company.id(),
                 company.name(),

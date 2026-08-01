@@ -33,6 +33,40 @@ public class LocationCatalogClient {
                 .orElse(List.of());
     }
 
+    public CityDto findCityById(String cityId) {
+        if (cityId == null || cityId.isBlank()) {
+            return null;
+        }
+        String countryGuess = null;
+        int dash = cityId.indexOf('-');
+        if (dash > 0) {
+            countryGuess = cityId.substring(0, dash).toUpperCase();
+        }
+        List<CityDto> cities = countryGuess == null
+                ? searchCities(cityId)
+                : listCitiesByCountry(countryGuess);
+        return cities.stream()
+                .filter(city -> cityId.equalsIgnoreCase(city.id()))
+                .findFirst()
+                .orElseGet(() -> searchCities(cityId).stream()
+                        .filter(city -> cityId.equalsIgnoreCase(city.id()))
+                        .findFirst()
+                        .orElse(null));
+    }
+
+    public List<CityDto> searchCities(String search) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/locations/cities")
+                        .queryParam("search", search == null ? "" : search)
+                        .build())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<List<CityDto>>() {
+                })
+                .blockOptional()
+                .orElse(List.of());
+    }
+
     public List<String> resolveCityIds(List<String> cityIds, List<String> countryCodes) {
         if (cityIds != null && !cityIds.isEmpty()) {
             return cityIds;

@@ -5,6 +5,7 @@ import com.datascraper.common.dto.discovery.DiscoveryRequest;
 import com.datascraper.common.enums.DiscoveryProviderType;
 import com.datascraper.common.provider.DiscoveryProvider;
 import com.datascraper.discovery.config.DiscoveryProperties;
+import com.datascraper.discovery.service.WebCompanyDiscoveryService;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -15,9 +16,14 @@ public class BusinessSearchApiDiscoveryProvider implements DiscoveryProvider {
     static final String PROVIDER_NAME = "Business Search API";
 
     private final DiscoveryProperties discoveryProperties;
+    private final WebCompanyDiscoveryService webCompanyDiscoveryService;
 
-    public BusinessSearchApiDiscoveryProvider(DiscoveryProperties discoveryProperties) {
+    public BusinessSearchApiDiscoveryProvider(
+            DiscoveryProperties discoveryProperties,
+            WebCompanyDiscoveryService webCompanyDiscoveryService
+    ) {
         this.discoveryProperties = discoveryProperties;
+        this.webCompanyDiscoveryService = webCompanyDiscoveryService;
     }
 
     @Override
@@ -37,6 +43,6 @@ public class BusinessSearchApiDiscoveryProvider implements DiscoveryProvider {
 
     @Override
     public List<DiscoveredCompany> discover(DiscoveryRequest request) {
-        return List.of();
+        return webCompanyDiscoveryService.discover(request, name());
     }
 }

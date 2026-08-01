@@ -66,49 +66,78 @@ public class CompanyEnrichmentPipelineService {
             return skippedResult(message, "Job is paused");
         }
 
-        ProviderContext context = ProviderContextMapper.fromMessage(message);
-        List<ProviderResult> providerResults = enrichmentService.enrich(context, message.enabledProviders());
-
-        CompanyDraft draft = aggregationService.aggregate(message.company(), providerResults);
-        normalizationService.normalize(draft);
-        ValidationOutcome validation = validationService.validate(draft);
-
-        EnrichedCompany enrichedCompany = toEnrichedCompany(draft);
-        boolean persisted = persistenceClient.persist(jobId, enrichedCompany);
-
-        // Authoritative local/Redis counter — concurrent enrichments must not read-modify-write job counts.
-        int enrichedCount = jobCompletionTracker.incrementEnriched(jobId);
-        int persistedCount = persisted
-                ? jobCompletionTracker.incrementPersisted(jobId)
-                : jobCompletionTracker.currentPersistedCount(jobId);
-        int failedCount = validation.softFailure()
-                ? jobCompletionTracker.incrementFailed(jobId)
-                : jobCompletionTracker.currentFailedCount(jobId);
-
-        JobResponse currentJob = jobServiceClient.getJob(jobId);
         String checkpoint = buildCheckpoint(message.company());
+        try {
+            ProviderContext context = ProviderContextMapper.fromMessage(message);
+            List<ProviderResult> providerResults = enrichmentService.enrich(context, message.enabledProviders());
 
-        jobServiceClient.patchProgress(jobServiceClient.enrichmentProgress(
-                jobId,
-                currentJob,
-                enrichedCount,
-                persistedCount,
-                failedCount,
-                "Enriched company " + context.companyId(),
-                checkpoint
-        ));
+            CompanyDraft draft = aggregationService.aggregate(message.company(), providerResults);
+            normalizationService.normalize(draft);
+            ValidationOutcome validation = validationService.validate(draft);
 
-        jobCompletionTracker.checkAndTriggerExport(jobId, enrichedCount);
+            EnrichedCompany enrichedCompany = toEnrichedCompany(draft);
+            boolean persisted = false;
+            try {
+                persisted = persistenceClient.persist(jobId, enrichedCompany);
+            } catch (Exception persistEx) {
+                log.warn("Persist failed for job {} company {}: {}", jobId, context.companyId(), persistEx.getMessage());
+            }
 
-        return new EnrichmentProcessResult(
-                jobId,
-                context.companyId(),
-                enrichedCompany,
-                providerResults,
-                validation,
-                persisted,
-                checkpoint
-        );
+            int enrichedCount = jobCompletionTracker.incrementEnriched(jobId);
+            int persistedCount = persisted
+                    ? jobCompletionTracker.incrementPersisted(jobId)
+                    : jobCompletionTracker.currentPersistedCount(jobId);
+            int failedCount = (!persisted || validation.softFailure())
+                    ? jobCompletionTracker.incrementFailed(jobId)
+                    : jobCompletionTracker.currentFailedCount(jobId);
+
+            JobResponse currentJob = jobServiceClient.getJob(jobId);
+            jobServiceClient.patchProgress(jobServiceClient.enrichmentProgress(
+                    jobId,
+                    currentJob,
+                    enrichedCount,
+                    persistedCount,
+                    failedCount,
+                    persisted
+                            ? "Enriched company " + context.companyId()
+                            : "Enrichment finished with warnings for " + context.companyId(),
+                    checkpoint
+            ));
+
+            jobCompletionTracker.checkAndTriggerExport(jobId, enrichedCount);
+
+            return new EnrichmentProcessResult(
+                    jobId,
+                    context.companyId(),
+                    enrichedCompany,
+                    providerResults,
+                    validation,
+                    persisted,
+                    checkpoint
+            );
+        } catch (Exception ex) {
+            log.error("Enrichment failed for job {} company {}: {}",
+                    jobId,
+                    message.company() == null ? "?" : message.company().name(),
+                    ex.getMessage(),
+                    ex);
+
+            int enrichedCount = jobCompletionTracker.incrementEnriched(jobId);
+            int failedCount = jobCompletionTracker.incrementFailed(jobId);
+            JobResponse currentJob = jobServiceClient.getJob(jobId);
+            jobServiceClient.patchProgress(jobServiceClient.enrichmentProgress(
+                    jobId,
+                    currentJob,
+                    enrichedCount,
+                    jobCompletionTracker.currentPersistedCount(jobId),
+                    failedCount,
+                    "Enrichment error: " + ex.getMessage(),
+                    checkpoint
+            ));
+            jobCompletionTracker.checkAndTriggerExport(jobId, enrichedCount);
+
+            return skippedResult(message, "Enrichment error: " + ex.getMessage());
+        }
     }
 
     private boolean shouldSkipPausedJob(UUID jobId) {

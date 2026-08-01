@@ -203,7 +203,7 @@ public class DiscoveryOrchestrationService {
         return "No companies discovered for categories=[" + categories
                 + "] countries=[" + countries
                 + "] cities=[" + cities
-                + "]. Leave countries empty or pick US/GB/IN/DE for seeded catalog coverage.";
+                + "]. Web discovery found no matching company websites for these filters.";
     }
 
     private String join(List<String> values) {

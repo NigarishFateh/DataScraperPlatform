@@ -27,20 +27,18 @@ public class DiscoveryProperties {
 
     private static Map<String, ProviderToggle> defaultProviders() {
         Map<String, ProviderToggle> defaults = new java.util.HashMap<>();
-        defaults.put("catalog-seed", new ProviderToggle(true));
-        defaults.put("open-data", new ProviderToggle(true));
-        defaults.put("industry-listing", new ProviderToggle(true));
+        // Catalog-only discovery disabled until real web discovery providers are implemented.
+        defaults.put("catalog-seed", new ProviderToggle(false));
+        defaults.put("open-data", new ProviderToggle(false));
+        defaults.put("industry-listing", new ProviderToggle(false));
         defaults.put("business-directory", new ProviderToggle(false));
         defaults.put("government-registry", new ProviderToggle(false));
-        defaults.put("business-search-api", new ProviderToggle(false));
+        defaults.put("business-search-api", new ProviderToggle(true));
         return defaults;
     }
 
     private static boolean defaultEnabled(DiscoveryProviderType type) {
-        return switch (type) {
-            case CATALOG_SEED, OPEN_DATA, INDUSTRY_LISTING -> true;
-            case BUSINESS_DIRECTORY, GOVERNMENT_REGISTRY, BUSINESS_SEARCH_API -> false;
-        };
+        return type == DiscoveryProviderType.BUSINESS_SEARCH_API;
     }
 
     private static String toConfigKey(DiscoveryProviderType type) {
