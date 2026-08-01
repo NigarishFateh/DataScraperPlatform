@@ -1,0 +1,40 @@
+package com.datascraper.common.dto.job;
+
+import com.datascraper.common.enums.JobPhase;
+import com.datascraper.common.enums.JobStatus;
+import jakarta.validation.constraints.NotEmpty;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Request to create an asynchronous scraping job.
+ */
+public record CreateJobRequest(
+        @NotEmpty List<String> categoryIds,
+        List<String> countryCodes,
+        List<String> cityIds,
+        List<String> enabledProviders,
+        Integer maxCompanies,
+        Map<String, Object> options
+) {
+    public CreateJobRequest {
+        if (countryCodes == null) {
+            countryCodes = List.of();
+        }
+        if (cityIds == null) {
+            cityIds = List.of();
+        }
+        if (enabledProviders == null) {
+            enabledProviders = List.of();
+        }
+        if (maxCompanies == null || maxCompanies <= 0) {
+            maxCompanies = 200;
+        }
+        if (options == null) {
+            options = Map.of();
+        }
+    }
+}

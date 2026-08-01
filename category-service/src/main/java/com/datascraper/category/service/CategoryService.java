@@ -3,13 +3,19 @@
  */
 package com.datascraper.category.service;
 
+import com.datascraper.common.dto.PageResponse;
 import com.datascraper.category.dto.CategoryResponse;
 
 import java.util.List;
 
 public interface CategoryService {
 
-    List<CategoryResponse> listCategories();
+    PageResponse<CategoryResponse> searchCategories(
+            List<String> ids,
+            String search,
+            int page,
+            int pageSize
+    );
 
-    List<CategoryResponse> listByIds(List<String> ids);
+    CategoryResponse getDefaultCategory();
 }

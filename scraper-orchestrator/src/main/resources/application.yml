@@ -3,6 +3,10 @@ spring:
     name: scraper-orchestrator
   profiles:
     active: dev
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   data:
     redis:
       host: localhost
@@ -11,6 +15,32 @@ spring:
 server:
   # Gateway owns 8080. Orchestrator is an internal intelligence service.
   port: 8085
+
+app:
+  job-service-uri: ${JOB_SERVICE_URI:http://localhost:8086}
+  company-service-uri: ${COMPANY_SERVICE_URI:http://localhost:8083}
+  export-service-uri: ${EXPORT_SERVICE_URI:http://localhost:8088}
+  redis:
+    enabled: false
+  queue:
+    enabled: true
+    poll-interval-ms: 1000
+    block-timeout-seconds: 5
+  providers:
+    website:
+      enabled: true
+    contact:
+      enabled: true
+    github:
+      enabled: true
+    technology:
+      enabled: true
+    news:
+      enabled: true
+    social:
+      enabled: true
+  cors:
+    allowed-origins: chrome-extension://*,http://localhost:*,http://127.0.0.1:*
 
 scraper:
   resilience:
@@ -27,7 +57,6 @@ scraper:
     ttl-seconds: 3600
     key-prefix: intel:scraper
   services:
-    # Target architecture: scrapers by data source (Phase 9+)
     website:
       base-url: http://localhost:8091
     tech:
@@ -38,10 +67,8 @@ scraper:
       base-url: http://localhost:8094
     contact:
       base-url: http://localhost:8095
-
-app:
-  cors:
-    allowed-origins: chrome-extension://*,http://localhost:*,http://127.0.0.1:*
+    social:
+      base-url: http://localhost:8096
 
 logging:
   level:

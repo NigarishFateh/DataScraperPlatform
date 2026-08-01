@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: export-service
+  profiles:
+    active: dev
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/export_db
+    username: datascraper
+    password: datascraper
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+server:
+  port: 8088
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+export:
+  storage-path: ${EXPORT_STORAGE_PATH:./data/exports}
+  app-version: 1.0.0
+  queue:
+    enabled: ${REDIS_ENABLED:false}
+    poll-interval-ms: 2000
+
+services:
+  company:
+    base-url: http://localhost:8083
+  job:
+    base-url: http://localhost:8086

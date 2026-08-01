@@ -3,6 +3,7 @@
  */
 package com.datascraper.location.controller;
 
+import com.datascraper.common.dto.PageResponse;
 import com.datascraper.location.dto.CityResponse;
 import com.datascraper.location.dto.CountryResponse;
 import com.datascraper.location.service.LocationService;
@@ -24,13 +25,17 @@ public class LocationController {
     }
 
     @GetMapping("/countries")
-    public List<CountryResponse> countries() {
-        return locationService.listCountries();
+    public PageResponse<CountryResponse> countries(
+            @RequestParam(required = false, defaultValue = "") String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int pageSize
+    ) {
+        return locationService.searchCountries(search, page, pageSize);
     }
 
     @GetMapping("/cities")
     public List<CityResponse> cities(
-            @RequestParam String countryCode,
+            @RequestParam(required = false) String countryCode,
             @RequestParam(required = false, defaultValue = "") String search
     ) {
         return locationService.listCities(countryCode, search);

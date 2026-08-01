@@ -42,6 +42,6 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 Write-Host "PostgreSQL ready:" -ForegroundColor Green
 Write-Host "  User/Pass: datascraper / datascraper"
-Write-Host "  Databases: location_db, company_db, auth_db, category_db"
+Write-Host "  Databases: location_db, company_db, auth_db, category_db, job_db, discovery_db, export_db"
 Write-Host ""
 Write-Host "Next: restart services with .\stop-platform.ps1 then .\start-platform.ps1"

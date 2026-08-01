@@ -2,3 +2,6 @@ CREATE DATABASE location_db;
 CREATE DATABASE company_db;
 CREATE DATABASE auth_db;
 CREATE DATABASE category_db;
+CREATE DATABASE job_db;
+CREATE DATABASE discovery_db;
+CREATE DATABASE export_db;

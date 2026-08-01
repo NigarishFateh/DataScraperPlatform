@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: job-service
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  datasource:
+    url: ${JOB_DB_URL:jdbc:postgresql://localhost:5432/job_db}
+    username: ${JOB_DB_USER:datascraper}
+    password: ${JOB_DB_PASSWORD:datascraper}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
+
+server:
+  port: 8086
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  redis:
+    enabled: ${REDIS_ENABLED:false}
+  cors:
+    allowed-origins: chrome-extension://*,http://localhost:*,http://127.0.0.1:*
+  discovery:
+    base-url: ${DISCOVERY_SERVICE_URI:http://localhost:8087}
+  orchestrator:
+    base-url: ${ORCHESTRATOR_URI:http://localhost:8085}
+    resume-path: /api/orchestrator/jobs/{jobId}/resume

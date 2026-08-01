@@ -1,171 +1,146 @@
+import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CategorySelect } from "../../components/filters/CategorySelect";
 import { CityMultiSelect } from "../../components/filters/CityMultiSelect";
-import { CompanySelect } from "../../components/filters/CompanySelect";
-import { CountrySelect } from "../../components/filters/CountrySelect";
+import { CountryMultiSelect } from "../../components/filters/CountrySelect";
 import { FilterSection } from "../../components/filters/FilterSection";
 import { useDashboardFilters } from "../../hooks/useDashboardFilters";
-import type { Category, City, Company, DashboardSelection } from "../../types/catalog";
+import { createJob } from "../../services/jobs/jobApi";
+import {
+  appendSearchHistory,
+  createSavedSearch,
+  saveSavedSearch,
+} from "../../services/storage/settingsStorage";
 
-export const SEARCH_SELECTION_KEY = "li.lastSearchSelection";
-
-export type SearchPayload = DashboardSelection & {
-  companies?: Company[];
-  categories?: Category[];
-  countryName?: string | null;
-  cities?: City[];
-};
-
-/**
- * Screen 2 — Dashboard with cascading filters backed by catalog microservices.
- */
 export function DashboardPage() {
   const navigate = useNavigate();
   const filters = useDashboardFilters();
+  const [error, setError] = useState<string | null>(null);
+  const [saveName, setSaveName] = useState("");
+  const [showSaveForm, setShowSaveForm] = useState(false);
 
-  function onSearch() {
-    if (!filters.canSearch) return;
-    const payload: SearchPayload = {
-      ...filters.selection,
-      companies: filters.companies.filter((company) =>
-        filters.selection.companyIds.includes(company.id),
-      ),
-      categories: (filters.categoriesQuery.data ?? []).filter((category) =>
-        filters.selection.categoryIds.includes(category.id),
-      ),
-      countryName:
-        filters.countriesQuery.data?.find((country) => country.code === filters.countryCode)?.name ??
-        null,
-      cities: (filters.citiesQuery.data ?? []).filter((city) =>
-        filters.selection.cityIds.includes(city.id),
-      ),
-    };
-    sessionStorage.setItem(SEARCH_SELECTION_KEY, JSON.stringify(payload));
-    navigate("/report", { state: payload });
+  const startMutation = useMutation({
+    mutationFn: () =>
+      createJob({
+        categoryIds: filters.filters.categoryIds,
+        countryCodes: filters.filters.countryCodes,
+        cityIds: filters.filters.cityIds,
+        maxCompanies: filters.filters.maxCompanies,
+      }),
+    onSuccess: async (job) => {
+      setError(null);
+      await appendSearchHistory(filters.filters, job.id);
+      navigate(`/jobs/${job.id}`, { replace: true });
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err.message : "Failed to start scraping job");
+    },
+  });
+
+  async function onSaveSearch() {
+    const name = saveName.trim();
+    if (!name) return;
+    await saveSavedSearch(createSavedSearch(name, filters.filters));
+    setSaveName("");
+    setShowSaveForm(false);
   }
-
-  const countryName =
-    filters.countriesQuery.data?.find((country) => country.code === filters.countryCode)?.name ??
-    null;
 
   return (
     <div className="flex flex-1 flex-col gap-4">
       <section className="space-y-1">
         <h1 className="font-display text-xl font-semibold tracking-tight text-mist-100">
-          Intelligence search
+          New scrape
         </h1>
         <p className="text-sm text-mist-300">
-          Filter European IT companies, then run an enrichment job.
+          Configure filters and start an asynchronous business intelligence job.
         </p>
       </section>
 
       <section className="li-surface divide-y divide-white/10">
         <FilterSection
           step="1"
-          title="Country"
-          hint="European countries first"
-          status={filters.countriesQuery.isLoading ? "Loading" : undefined}
-        >
-          <CountrySelect
-            countries={filters.countriesQuery.data ?? []}
-            value={filters.countryCode}
-            loading={filters.countriesQuery.isLoading}
-            onChange={filters.setCountryCode}
-          />
-        </FilterSection>
-
-        <FilterSection
-          step="2"
-          title="City"
-          hint="Loads after country · multi-select · searchable"
-          locked={!filters.countryCode}
-          status={
-            !filters.countryCode
-              ? "Waiting"
-              : filters.citiesQuery.isFetching
-                ? "Loading"
-                : undefined
-          }
-        >
-          <CityMultiSelect
-            cities={filters.citiesQuery.data ?? []}
-            selectedIds={filters.cityIds}
-            search={filters.citySearch}
-            loading={filters.citiesQuery.isFetching}
-            locked={!filters.countryCode}
-            onSearchChange={filters.setCitySearch}
-            onToggle={filters.toggleCity}
-          />
-        </FilterSection>
-
-        <FilterSection
-          step="3"
-          title="Companies"
-          hint="Search · pagination · infinite scroll"
-          locked={filters.cityIds.length === 0}
-          status={
-            filters.cityIds.length === 0
-              ? "Waiting"
-              : filters.companiesQuery.isFetching && filters.companies.length === 0
-                ? "Loading"
-                : undefined
-          }
-        >
-          <CompanySelect
-            companies={filters.companies}
-            selectedIds={filters.companyIds}
-            search={filters.companySearch}
-            total={filters.totalCompanies}
-            loading={filters.companiesQuery.isFetching && filters.companies.length === 0}
-            loadingMore={filters.companiesQuery.isFetchingNextPage}
-            hasMore={Boolean(filters.companiesQuery.hasNextPage)}
-            locked={filters.cityIds.length === 0}
-            onSearchChange={filters.setCompanySearch}
-            onToggle={filters.toggleCompany}
-            onLoadMore={() => {
-              if (filters.companiesQuery.hasNextPage && !filters.companiesQuery.isFetchingNextPage) {
-                void filters.companiesQuery.fetchNextPage();
-              }
-            }}
-          />
-        </FilterSection>
-
-        <FilterSection
-          step="4"
           title="Categories"
-          hint="Depends on selected companies"
-          locked={filters.companyIds.length === 0}
-          status={
-            filters.companyIds.length === 0
-              ? "Waiting"
-              : filters.categoriesQuery.isFetching
-                ? "Loading"
-                : undefined
-          }
+          hint="Required · searchable multi-select"
+          status={!filters.defaultLoaded ? "Loading" : undefined}
         >
           <CategorySelect
-            categories={filters.categoriesQuery.data ?? []}
             selectedIds={filters.categoryIds}
-            loading={filters.categoriesQuery.isFetching}
-            locked={filters.companyIds.length === 0}
             onToggle={filters.toggleCategory}
           />
+        </FilterSection>
+
+        <FilterSection step="2" title="Countries" hint="Optional · searchable multi-select">
+          <CountryMultiSelect
+            selectedCodes={filters.countryCodes}
+            onToggle={filters.toggleCountry}
+          />
+        </FilterSection>
+
+        <FilterSection step="3" title="Cities" hint="Optional · searchable · no country required">
+          <CityMultiSelect selectedIds={filters.cityIds} onToggle={filters.toggleCity} />
+        </FilterSection>
+
+        <FilterSection step="4" title="Volume" hint="Maximum companies to process">
+          <label className="block">
+            <span className="sr-only">Max companies</span>
+            <input
+              type="number"
+              min={1}
+              max={5000}
+              value={filters.maxCompanies}
+              onChange={(event) => filters.setMaxCompanies(Number(event.target.value) || 200)}
+              className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2.5 text-sm text-mist-100 outline-none focus:border-signal/50"
+            />
+          </label>
         </FilterSection>
       </section>
 
       <button
         type="button"
         className="li-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
-        disabled={!filters.canSearch}
-        onClick={onSearch}
+        disabled={!filters.canStart || startMutation.isPending}
+        onClick={() => startMutation.mutate()}
       >
-        Search
+        {startMutation.isPending ? "Starting…" : "Start Scraping"}
       </button>
 
+      {error ? <p className="text-[11px] text-red-300">{error}</p> : null}
+
+      <div className="space-y-2">
+        {showSaveForm ? (
+          <div className="li-surface flex gap-2 p-3">
+            <input
+              type="text"
+              value={saveName}
+              onChange={(event) => setSaveName(event.target.value)}
+              placeholder="Saved search name"
+              className="min-w-0 flex-1 rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-mist-100 outline-none focus:border-signal/50"
+            />
+            <button type="button" className="li-btn-ghost !px-3" onClick={() => void onSaveSearch()}>
+              Save
+            </button>
+            <button
+              type="button"
+              className="li-btn-ghost !px-3"
+              onClick={() => setShowSaveForm(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="li-btn-ghost w-full text-xs"
+            onClick={() => setShowSaveForm(true)}
+          >
+            Save current filters
+          </button>
+        )}
+      </div>
+
       <p className="text-[11px] leading-relaxed text-mist-400">
-        {countryName
-          ? `Backend APIs · ${countryName} · Search runs intelligence job on Report page`
-          : "Countries/cities/companies/categories from backend when services are running."}
+        Jobs run asynchronously — you&apos;ll land on progress immediately after creation.
       </p>
     </div>
   );

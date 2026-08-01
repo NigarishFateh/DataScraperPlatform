@@ -74,4 +74,59 @@ public interface CompanyJpaRepository extends JpaRepository<CompanyEntity, Strin
             @Param("categoryIds") List<String> categoryIds,
             Pageable pageable
     );
+
+    @Query(
+            value = """
+                    SELECT DISTINCT c FROM CompanyEntity c
+                    JOIN c.categoryIds catFilter
+                    WHERE (
+                            :search = ''
+                         OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))
+                         OR LOWER(c.website) LIKE LOWER(CONCAT('%', :search, '%'))
+                         OR LOWER(c.industry) LIKE LOWER(CONCAT('%', :search, '%'))
+                      )
+                      AND catFilter IN :categoryIds
+                    """,
+            countQuery = """
+                    SELECT COUNT(DISTINCT c) FROM CompanyEntity c
+                    JOIN c.categoryIds catFilter
+                    WHERE (
+                            :search = ''
+                         OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))
+                         OR LOWER(c.website) LIKE LOWER(CONCAT('%', :search, '%'))
+                         OR LOWER(c.industry) LIKE LOWER(CONCAT('%', :search, '%'))
+                      )
+                      AND catFilter IN :categoryIds
+                    """
+    )
+    Page<CompanyEntity> searchByCategories(
+            @Param("search") String search,
+            @Param("categoryIds") List<String> categoryIds,
+            Pageable pageable
+    );
+
+    @Query(
+            value = """
+                    SELECT c FROM CompanyEntity c
+                    WHERE (
+                            :search = ''
+                         OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))
+                         OR LOWER(c.website) LIKE LOWER(CONCAT('%', :search, '%'))
+                         OR LOWER(c.industry) LIKE LOWER(CONCAT('%', :search, '%'))
+                      )
+                    """,
+            countQuery = """
+                    SELECT COUNT(c) FROM CompanyEntity c
+                    WHERE (
+                            :search = ''
+                         OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))
+                         OR LOWER(c.website) LIKE LOWER(CONCAT('%', :search, '%'))
+                         OR LOWER(c.industry) LIKE LOWER(CONCAT('%', :search, '%'))
+                      )
+                    """
+    )
+    Page<CompanyEntity> searchAll(
+            @Param("search") String search,
+            Pageable pageable
+    );
 }

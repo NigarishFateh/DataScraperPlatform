@@ -8,6 +8,6 @@ spring:
 
 app:
   auth:
-    dev-login-enabled: false
+    dev-login-enabled: ${AUTH_DEV_LOGIN:true}
   google:
     client-ids: ${GOOGLE_CLIENT_IDS:}

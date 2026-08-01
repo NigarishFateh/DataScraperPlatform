@@ -1,5 +1,5 @@
 /**
- * Tests that the location repository loads the seeded country and city catalog.
+ * Tests that the location repository loads the seeded global country and city catalog.
  */
 package com.datascraper.location.repository;
 
@@ -8,6 +8,7 @@ import com.datascraper.location.domain.Country;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
@@ -22,12 +23,29 @@ class LocationRepositoryIntegrationTest {
     private LocationRepository locationRepository;
 
     @Test
-    void loadsSeededEuropeanCatalog() {
+    void loadsGlobalCountryCatalog() {
         List<Country> countries = locationRepository.findAllCountries();
-        assertThat(countries).hasSize(15);
-        assertThat(countries).extracting(Country::code).contains("DE", "FR", "CH");
+        assertThat(countries).hasSizeGreaterThanOrEqualTo(200);
+        assertThat(countries).extracting(Country::code)
+                .contains("US", "CA", "IN", "AU", "BR", "JP", "CN", "DE", "FR", "GB");
+    }
 
-        List<City> berlinCities = locationRepository.findCitiesByCountry("DE", "ber");
-        assertThat(berlinCities).extracting(City::id).contains("DE-berlin");
+    @Test
+    void searchesCountriesByName() {
+        Page<Country> page = locationRepository.searchCountries("united", 0, 20);
+        assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(2);
+        assertThat(page.getContent()).extracting(Country::code).contains("US", "GB");
+    }
+
+    @Test
+    void findsCitiesWithinCountry() {
+        List<City> berlinCities = locationRepository.findCities("DE", "ber");
+        assertThat(berlinCities).extracting(City::name).contains("Berlin");
+    }
+
+    @Test
+    void searchesCitiesGloballyWithoutCountry() {
+        List<City> cities = locationRepository.findCities(null, "mumbai");
+        assertThat(cities).extracting(City::id).contains("in-mumbai");
     }
 }

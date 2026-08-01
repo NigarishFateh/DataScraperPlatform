@@ -1,5 +1,5 @@
-# Start the Lead Intelligence backend (Chrome extension architecture).
-# Usage: .\start-platform.ps1   (run from project root, not chrome-extension)
+# Start the Global Business Intelligence Platform backend.
+# Usage: .\start-platform.ps1   (run from project root)
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
@@ -41,9 +41,8 @@ function Start-ServiceJar([string]$Name, [string]$JarRelativePath, [int]$Port) {
 
     Write-Host "Starting $Name on port $Port..." -ForegroundColor Green
     Start-Process -FilePath "java" -ArgumentList "-jar", $jarPath -WorkingDirectory $root -WindowStyle Minimized
-    # Cold start on newer JDKs often exceeds 3s; poll instead of a fixed sleep.
     $ready = $false
-    for ($i = 0; $i -lt 20; $i++) {
+    for ($i = 0; $i -lt 30; $i++) {
         Start-Sleep -Seconds 1
         if (Test-PortListening $Port) {
             $ready = $true
@@ -52,10 +51,6 @@ function Start-ServiceJar([string]$Name, [string]$JarRelativePath, [int]$Port) {
     }
     if (-not $ready) {
         Write-Host "WARNING: $Name did not stay up on port $Port (crashed after start)." -ForegroundColor Red
-        if ($Name -eq "auth-service") {
-            Write-Host "  Fix DB permissions, then retry:" -ForegroundColor Yellow
-            Write-Host "  .\fix-auth-db.ps1"
-        }
     }
 }
 
@@ -68,16 +63,38 @@ $services = @(
     @{ Name = "company-service";      Jar = "company-service\target\company-service-0.0.1-SNAPSHOT.jar";  Port = 8083 },
     @{ Name = "category-service";     Jar = "category-service\target\category-service-0.0.1-SNAPSHOT.jar"; Port = 8084 },
     @{ Name = "scraper-orchestrator"; Jar = "scraper-orchestrator\target\scraper-orchestrator-0.0.1-SNAPSHOT.jar"; Port = 8085 },
+    @{ Name = "job-service";          Jar = "job-service\target\job-service-0.0.1-SNAPSHOT.jar";          Port = 8086 },
+    @{ Name = "discovery-service";    Jar = "discovery-service\target\discovery-service-0.0.1-SNAPSHOT.jar"; Port = 8087 },
+    @{ Name = "export-service";       Jar = "export-service\target\export-service-0.0.1-SNAPSHOT.jar";     Port = 8088 },
     @{ Name = "scraper-website";      Jar = "scraper-website\target\scraper-website-0.0.1-SNAPSHOT.jar";      Port = 8091 },
     @{ Name = "scraper-tech";         Jar = "scraper-tech\target\scraper-tech-0.0.1-SNAPSHOT.jar";         Port = 8092 },
     @{ Name = "scraper-news";         Jar = "scraper-news\target\scraper-news-0.0.1-SNAPSHOT.jar";         Port = 8093 },
     @{ Name = "scraper-github";       Jar = "scraper-github\target\scraper-github-0.0.1-SNAPSHOT.jar";       Port = 8094 },
-    @{ Name = "scraper-contact";      Jar = "scraper-contact\target\scraper-contact-0.0.1-SNAPSHOT.jar";  Port = 8095 }
+    @{ Name = "scraper-contact";      Jar = "scraper-contact\target\scraper-contact-0.0.1-SNAPSHOT.jar";  Port = 8095 },
+    @{ Name = "scraper-social";       Jar = "scraper-social\target\scraper-social-0.0.1-SNAPSHOT.jar";     Port = 8096 }
 )
 
 Write-Host "Ensuring PostgreSQL is available..." -ForegroundColor Cyan
 & "$root\start-postgres.ps1"
 if ($LASTEXITCODE -ne 0) { exit 1 }
+
+# Ensure new databases exist on reused Docker volumes (skip when Docker is unavailable)
+$dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
+if ($null -ne $dockerCmd) {
+    docker exec -i bi-platform-postgres psql -U datascraper -d postgres -c "SELECT 1" 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        foreach ($db in @("job_db","discovery_db","export_db")) {
+            $exists = docker exec bi-platform-postgres psql -U datascraper -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$db'" 2>$null
+            if ($exists -notmatch "1") {
+                Write-Host "Creating database $db..." -ForegroundColor Cyan
+                docker exec bi-platform-postgres psql -U datascraper -d postgres -c "CREATE DATABASE $db;"
+            }
+        }
+    }
+    docker compose up -d redis 2>$null
+} else {
+    Write-Host "Docker not found - using native PostgreSQL. Redis optional (HTTP queue fallbacks enabled)." -ForegroundColor DarkYellow
+}
 
 $toBuild = @()
 foreach ($svc in $services) {
@@ -88,8 +105,7 @@ foreach ($svc in $services) {
 
 if ($toBuild.Count -eq 0) {
     Write-Host "All platform services are already running. Skipping build." -ForegroundColor Green
-}
-else {
+} else {
     $moduleList = ($toBuild + @("platform-common") | Select-Object -Unique) -join ","
     Write-Host "Building modules not currently running: $moduleList" -ForegroundColor Cyan
     cmd /c ".\mvnw.cmd -q -pl $moduleList -am package -DskipTests"
@@ -104,19 +120,19 @@ foreach ($svc in $services) {
 }
 
 Write-Host ""
-Write-Host "Platform services:" -ForegroundColor Cyan
+Write-Host "Global Business Intelligence Platform:" -ForegroundColor Cyan
 Write-Host "  Gateway      http://localhost:8080"
 Write-Host "  Auth         http://localhost:8081"
 Write-Host "  Location     http://localhost:8082"
 Write-Host "  Company      http://localhost:8083"
 Write-Host "  Category     http://localhost:8084"
 Write-Host "  Orchestrator http://localhost:8085"
-Write-Host "  Scrapers     8091-8095"
+Write-Host "  Jobs         http://localhost:8086"
+Write-Host "  Discovery    http://localhost:8087"
+Write-Host "  Export       http://localhost:8088"
+Write-Host "  Scrapers     8091-8096"
 Write-Host ""
-Write-Host "Chrome extension (already built):" -ForegroundColor Cyan
-Write-Host '  Load unpacked from chrome-extension\dist in chrome://extensions'
+Write-Host "Chrome extension:" -ForegroundColor Cyan
+Write-Host "  cd chrome-extension; npm run build; load chrome-extension\dist in chrome://extensions"
 Write-Host ""
-Write-Host 'To stop services: .\stop-platform.ps1'
-Write-Host ""
-Write-Host "If auth fails to start (permission denied for schema public), run:" -ForegroundColor Yellow
-Write-Host "  .\setup-postgres.ps1"
+Write-Host "To stop services: .\stop-platform.ps1"

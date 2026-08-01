@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -21,6 +22,24 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleNotFound(CompanyNotFoundException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiError.of(404, "not_found", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(CompanyProfileNotFoundException.class)
+    public ResponseEntity<ApiError> handleProfileNotFound(
+            CompanyProfileNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(404, "not_found", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingParam(
+            MissingServletRequestParameterException ex,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(400, "bad_request", ex.getMessage(), request.getRequestURI()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

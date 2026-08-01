@@ -24,4 +24,11 @@ public interface CityJpaRepository extends JpaRepository<CityEntity, String> {
             @Param("countryCode") String countryCode,
             @Param("search") String search
     );
+
+    @Query("""
+            SELECT c FROM CityEntity c
+            WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))
+            ORDER BY c.name ASC
+            """)
+    List<CityEntity> searchByName(@Param("search") String search);
 }

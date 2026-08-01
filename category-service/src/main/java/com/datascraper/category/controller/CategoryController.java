@@ -3,6 +3,7 @@
  */
 package com.datascraper.category.controller;
 
+import com.datascraper.common.dto.PageResponse;
 import com.datascraper.category.dto.CategoryResponse;
 import com.datascraper.category.service.CategoryService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,12 +24,17 @@ public class CategoryController {
     }
 
     @GetMapping
-    public List<CategoryResponse> categories(
-            @RequestParam(required = false) List<String> ids
+    public PageResponse<CategoryResponse> categories(
+            @RequestParam(required = false) List<String> ids,
+            @RequestParam(required = false, defaultValue = "") String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int pageSize
     ) {
-        if (ids != null && !ids.isEmpty()) {
-            return categoryService.listByIds(ids);
-        }
-        return categoryService.listCategories();
+        return categoryService.searchCategories(ids, search, page, pageSize);
+    }
+
+    @GetMapping("/default")
+    public CategoryResponse defaultCategory() {
+        return categoryService.getDefaultCategory();
     }
 }

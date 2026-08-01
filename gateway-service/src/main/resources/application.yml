@@ -16,6 +16,7 @@ spring:
               - GET
               - POST
               - PUT
+              - PATCH
               - DELETE
               - OPTIONS
             allowedHeaders: "*"
@@ -41,6 +42,22 @@ spring:
           uri: ${ORCHESTRATOR_URI:http://localhost:8085}
           predicates:
             - Path=/api/intelligence/**
+        - id: scraper-orchestrator
+          uri: ${ORCHESTRATOR_URI:http://localhost:8085}
+          predicates:
+            - Path=/api/orchestrator/**
+        - id: job-service
+          uri: ${JOB_SERVICE_URI:http://localhost:8086}
+          predicates:
+            - Path=/api/jobs/**
+        - id: discovery-service
+          uri: ${DISCOVERY_SERVICE_URI:http://localhost:8087}
+          predicates:
+            - Path=/api/discovery/**
+        - id: export-service
+          uri: ${EXPORT_SERVICE_URI:http://localhost:8088}
+          predicates:
+            - Path=/api/exports/**
 
 server:
   port: 8080

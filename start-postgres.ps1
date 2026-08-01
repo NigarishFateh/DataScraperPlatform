@@ -22,7 +22,7 @@ function Get-DockerCommand {
 
 if (Test-PostgresPort) {
     Write-Host "PostgreSQL is already listening on localhost:5432" -ForegroundColor Green
-    Write-Host "  Expected databases: location_db, company_db, auth_db, category_db"
+    Write-Host "  Expected databases: location_db, company_db, auth_db, category_db, job_db, discovery_db, export_db"
     Write-Host "  Expected user/pass: datascraper / datascraper"
     Write-Host ""
     Write-Host "If services fail to connect, run once:" -ForegroundColor Yellow
@@ -52,10 +52,13 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Waiting for PostgreSQL to become healthy..." -ForegroundColor Yellow
 $attempts = 0
 while ($attempts -lt 30) {
-    $status = & $dockerExe inspect -f "{{.State.Health.Status}}" lead-intel-postgres 2>$null
+    $status = & $dockerExe inspect -f "{{.State.Health.Status}}" bi-platform-postgres 2>$null
+    if (-not $status) {
+        $status = & $dockerExe inspect -f "{{.State.Health.Status}}" lead-intel-postgres 2>$null
+    }
     if ($status -eq "healthy") {
         Write-Host "PostgreSQL is ready on localhost:5432" -ForegroundColor Green
-        Write-Host "  Databases: location_db, company_db, auth_db, category_db"
+        Write-Host "  Databases: location_db, company_db, auth_db, category_db, job_db, discovery_db, export_db"
         Write-Host "  User/Pass: datascraper / datascraper"
         exit 0
     }

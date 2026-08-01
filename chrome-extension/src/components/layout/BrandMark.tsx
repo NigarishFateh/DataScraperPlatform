@@ -22,10 +22,10 @@ export function BrandMark({ compact = false }: BrandMarkProps) {
       </div>
       <div className="min-w-0">
         <p className="font-display text-sm font-semibold tracking-tight text-mist-100">
-          Lead Intelligence
+          Global BI
         </p>
         {!compact ? (
-          <p className="truncate text-[11px] text-mist-400">European IT company insights</p>
+          <p className="truncate text-[11px] text-mist-400">Business Intelligence Platform</p>
         ) : null}
       </div>
     </div>

@@ -58,24 +58,27 @@ public class CompanyRepository {
             int page,
             int pageSize
     ) {
-        if (cityIds == null || cityIds.isEmpty()) {
-            return new CompanySearchPage(List.of(), 0);
-        }
-
-        List<String> normalizedCityIds = cityIds.stream().map(String::trim).toList();
+        List<String> normalizedCityIds = cityIds == null
+                ? List.of()
+                : cityIds.stream().map(String::trim).filter(id -> !id.isBlank()).distinct().toList();
         String q = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
         List<String> normalizedCategoryIds = categoryIds == null
                 ? List.of()
                 : categoryIds.stream().map(String::trim).filter(id -> !id.isBlank()).distinct().toList();
 
-        // Plain Sort.by("name") — ignoreCase() + DISTINCT joins breaks on PostgreSQL
-        // (ORDER BY LOWER(name) must appear in SELECT DISTINCT).
         PageRequest pageRequest = PageRequest.of(page, pageSize, Sort.by(Sort.Order.asc("name")));
 
-        Page<CompanyEntity> result = normalizedCategoryIds.isEmpty()
-                ? companyJpaRepository.searchByCities(normalizedCityIds, q, pageRequest)
-                : companyJpaRepository.searchByCitiesAndCategories(
-                        normalizedCityIds, q, normalizedCategoryIds, pageRequest);
+        Page<CompanyEntity> result;
+        if (!normalizedCityIds.isEmpty() && !normalizedCategoryIds.isEmpty()) {
+            result = companyJpaRepository.searchByCitiesAndCategories(
+                    normalizedCityIds, q, normalizedCategoryIds, pageRequest);
+        } else if (!normalizedCityIds.isEmpty()) {
+            result = companyJpaRepository.searchByCities(normalizedCityIds, q, pageRequest);
+        } else if (!normalizedCategoryIds.isEmpty()) {
+            result = companyJpaRepository.searchByCategories(q, normalizedCategoryIds, pageRequest);
+        } else {
+            result = companyJpaRepository.searchAll(q, pageRequest);
+        }
 
         List<Company> items = result.getContent().stream().map(this::toDomain).toList();
         return new CompanySearchPage(items, result.getTotalElements());

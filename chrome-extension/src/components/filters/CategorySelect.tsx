@@ -1,61 +1,59 @@
-import type { Category } from "../../types/catalog";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { fetchCategoriesPage } from "../../services/catalog/catalogApi";
+import { SearchableMultiSelect, type SelectOption } from "../ui/SearchableMultiSelect";
 
 type CategorySelectProps = {
-  categories: Category[];
   selectedIds: string[];
-  loading?: boolean;
-  locked?: boolean;
   onToggle: (categoryId: string) => void;
 };
 
-export function CategorySelect({
-  categories,
-  selectedIds,
-  loading,
-  locked,
-  onToggle,
-}: CategorySelectProps) {
-  if (locked) {
-    return (
-      <div className="rounded-lg border border-dashed border-white/10 bg-ink-900/50 px-3 py-2.5 text-sm text-mist-400">
-        Select companies first
-      </div>
-    );
-  }
+export function CategorySelect({ selectedIds, onToggle }: CategorySelectProps) {
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
 
-  if (loading) {
-    return <p className="text-xs text-mist-400">Loading categories…</p>;
-  }
+  const query = useInfiniteQuery({
+    queryKey: ["categories", debouncedSearch],
+    queryFn: ({ pageParam }) =>
+      fetchCategoriesPage({ search: debouncedSearch, page: pageParam, pageSize: 50 }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
+  });
 
-  if (categories.length === 0) {
-    return <p className="text-xs text-mist-400">No categories for the selected companies</p>;
-  }
+  const categories = useMemo(
+    () => query.data?.pages.flatMap((page) => page.items) ?? [],
+    [query.data],
+  );
+
+  const options: SelectOption[] = useMemo(
+    () =>
+      categories.map((category) => ({
+        id: category.id,
+        label: category.name,
+      })),
+    [categories],
+  );
 
   return (
-    <div className="space-y-2">
-      <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-white/10 bg-ink-900/40 p-2">
-        {categories.map((category) => {
-          const active = selectedIds.includes(category.id);
-          return (
-            <button
-              key={category.id}
-              type="button"
-              onClick={() => onToggle(category.id)}
-              className={[
-                "rounded-md px-2.5 py-1 text-[11px] font-medium transition",
-                active
-                  ? "bg-signal/20 text-signal ring-1 ring-signal/40"
-                  : "bg-white/5 text-mist-300 hover:bg-white/10 hover:text-mist-100",
-              ].join(" ")}
-            >
-              {category.name}
-            </button>
-          );
-        })}
-      </div>
-      {selectedIds.length > 0 ? (
-        <p className="text-[11px] text-signal">{selectedIds.length} selected</p>
-      ) : null}
-    </div>
+    <SearchableMultiSelect
+      options={options}
+      selectedIds={selectedIds}
+      search={search}
+      placeholder="Search categories…"
+      emptyMessage="No categories match"
+      loading={query.isLoading}
+      loadingMore={query.isFetchingNextPage}
+      hasMore={Boolean(query.hasNextPage)}
+      required
+      maxHeightClass="max-h-52"
+      onSearchChange={setSearch}
+      onToggle={onToggle}
+      onLoadMore={() => {
+        if (query.hasNextPage && !query.isFetchingNextPage) {
+          void query.fetchNextPage();
+        }
+      }}
+    />
   );
 }

@@ -1,17 +1,36 @@
-/**
- * Lists the kinds of scrapers the platform can run.
- */
 package com.datascraper.common.enums;
 
 /**
- * Scraper capabilities selected by the Factory (Strategy Pattern).
- * One enum value ≈ one data-source responsibility — not one company.
+ * @deprecated Prefer {@link ProviderType}. Kept for scraper HTTP compatibility.
  */
+@Deprecated
 public enum ScraperType {
     COMPANY_WEBSITE,
     TECHNOLOGY_STACK,
     NEWS,
     GITHUB,
-    CONTACT
-    // LINKEDIN intentionally omitted until a legal/API-approved adapter exists
+    CONTACT,
+    SOCIAL;
+
+    public ProviderType toProviderType() {
+        return switch (this) {
+            case COMPANY_WEBSITE -> ProviderType.WEBSITE;
+            case TECHNOLOGY_STACK -> ProviderType.TECHNOLOGY;
+            case NEWS -> ProviderType.NEWS;
+            case GITHUB -> ProviderType.GITHUB;
+            case CONTACT -> ProviderType.CONTACT;
+            case SOCIAL -> ProviderType.SOCIAL;
+        };
+    }
+
+    public static ScraperType fromProviderType(ProviderType type) {
+        return switch (type) {
+            case WEBSITE -> COMPANY_WEBSITE;
+            case TECHNOLOGY -> TECHNOLOGY_STACK;
+            case NEWS -> NEWS;
+            case GITHUB -> GITHUB;
+            case CONTACT -> CONTACT;
+            case SOCIAL -> SOCIAL;
+        };
+    }
 }

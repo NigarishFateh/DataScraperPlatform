@@ -1,138 +1,112 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import {
-  fetchCategoriesForCompanies,
-  fetchCities,
-  fetchCompanies,
-  fetchCountries,
-} from "../services/catalog/catalogApi";
-import type { DashboardSelection } from "../types/catalog";
+import { useEffect, useState } from "react";
+import { fetchDefaultCategory } from "../services/catalog/catalogApi";
+import { getUserSettings } from "../services/storage/settingsStorage";
+import type { DashboardFilters } from "../types/catalog";
 
-/**
- * Cascading filter state for the Dashboard.
- *
- * Ownership of truth:
- * - React Query cache = backend catalog data
- * - useState = user selection
- * Changing an upstream filter clears downstream selections (cascade).
- */
+export const PENDING_FILTERS_KEY = "gbi.pendingFilters";
+
+function readPendingFilters(): DashboardFilters | null {
+  try {
+    const raw = sessionStorage.getItem(PENDING_FILTERS_KEY);
+    if (!raw) return null;
+    sessionStorage.removeItem(PENDING_FILTERS_KEY);
+    return JSON.parse(raw) as DashboardFilters;
+  } catch {
+    return null;
+  }
+}
+
+export function stashPendingFilters(filters: DashboardFilters): void {
+  sessionStorage.setItem(PENDING_FILTERS_KEY, JSON.stringify(filters));
+}
+
 export function useDashboardFilters() {
-  const [countryCode, setCountryCodeState] = useState<string | null>(null);
-  const [cityIds, setCityIdsState] = useState<string[]>([]);
-  const [companyIds, setCompanyIdsState] = useState<string[]>([]);
-  const [categoryIds, setCategoryIdsState] = useState<string[]>([]);
-  const [citySearch, setCitySearch] = useState("");
-  const [companySearch, setCompanySearch] = useState("");
+  const [countryCodes, setCountryCodes] = useState<string[]>([]);
+  const [cityIds, setCityIds] = useState<string[]>([]);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [maxCompanies, setMaxCompanies] = useState(200);
+  const [defaultLoaded, setDefaultLoaded] = useState(false);
 
-  const countriesQuery = useQuery({
-    queryKey: ["countries"],
-    queryFn: fetchCountries,
-  });
+  useEffect(() => {
+    let cancelled = false;
 
-  const citiesQuery = useQuery({
-    queryKey: ["cities", countryCode, citySearch],
-    queryFn: () => fetchCities(countryCode!, citySearch),
-    enabled: Boolean(countryCode),
-  });
+    (async () => {
+      const pending = readPendingFilters();
+      if (pending) {
+        if (!cancelled) {
+          setCountryCodes(pending.countryCodes);
+          setCityIds(pending.cityIds);
+          setCategoryIds(pending.categoryIds);
+          setMaxCompanies(pending.maxCompanies);
+          setDefaultLoaded(true);
+        }
+        return;
+      }
 
-  const companiesQuery = useInfiniteQuery({
-    queryKey: ["companies", cityIds, companySearch],
-    queryFn: ({ pageParam }) =>
-      fetchCompanies({
-        cityIds,
-        search: companySearch,
-        page: pageParam,
-      }),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
-    enabled: cityIds.length > 0,
-  });
+      try {
+        const [settings, defaultCategory] = await Promise.all([
+          getUserSettings(),
+          fetchDefaultCategory(),
+        ]);
+        if (cancelled) return;
+        setMaxCompanies(settings.defaultMaxCompanies);
+        setCategoryIds([defaultCategory.id]);
+      } catch {
+        // Default category is best-effort; user can still pick manually.
+      } finally {
+        if (!cancelled) {
+          setDefaultLoaded(true);
+        }
+      }
+    })();
 
-  const companies = useMemo(
-    () => companiesQuery.data?.pages.flatMap((page) => page.items) ?? [],
-    [companiesQuery.data],
-  );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const totalCompanies = companiesQuery.data?.pages[0]?.total ?? 0;
-
-  const categoriesQuery = useQuery({
-    queryKey: ["categories", companyIds, companies.length],
-    queryFn: () => fetchCategoriesForCompanies(companyIds, companies),
-    enabled: companyIds.length > 0 && companies.length > 0,
-  });
-
-  function setCountryCode(next: string | null) {
-    setCountryCodeState(next);
-    setCityIdsState([]);
-    setCompanyIdsState([]);
-    setCategoryIdsState([]);
-    setCitySearch("");
-    setCompanySearch("");
+  function toggleCountry(countryCode: string) {
+    setCountryCodes((prev) =>
+      prev.includes(countryCode)
+        ? prev.filter((code) => code !== countryCode)
+        : [...prev, countryCode],
+    );
   }
 
   function toggleCity(cityId: string) {
-    setCityIdsState((prev) => {
-      const next = prev.includes(cityId)
-        ? prev.filter((id) => id !== cityId)
-        : [...prev, cityId];
-      return next;
-    });
-    setCompanyIdsState([]);
-    setCategoryIdsState([]);
-    setCompanySearch("");
-  }
-
-  function toggleCompany(companyId: string) {
-    setCompanyIdsState((prev) => {
-      const next = prev.includes(companyId)
-        ? prev.filter((id) => id !== companyId)
-        : [...prev, companyId];
-      return next;
-    });
-    setCategoryIdsState([]);
+    setCityIds((prev) =>
+      prev.includes(cityId) ? prev.filter((id) => id !== cityId) : [...prev, cityId],
+    );
   }
 
   function toggleCategory(categoryId: string) {
-    setCategoryIdsState((prev) =>
+    setCategoryIds((prev) =>
       prev.includes(categoryId)
         ? prev.filter((id) => id !== categoryId)
         : [...prev, categoryId],
     );
   }
 
-  const selection: DashboardSelection = {
-    countryCode,
+  const filters: DashboardFilters = {
+    countryCodes,
     cityIds,
-    companyIds,
     categoryIds,
+    maxCompanies,
   };
 
-  const canSearch =
-    Boolean(countryCode) &&
-    cityIds.length > 0 &&
-    companyIds.length > 0 &&
-    categoryIds.length > 0;
+  const canStart = categoryIds.length > 0 && defaultLoaded;
 
   return {
-    selection,
-    canSearch,
-    countryCode,
+    filters,
+    canStart,
+    defaultLoaded,
+    countryCodes,
     cityIds,
-    companyIds,
     categoryIds,
-    citySearch,
-    companySearch,
-    setCountryCode,
-    setCitySearch,
-    setCompanySearch,
+    maxCompanies,
+    setMaxCompanies,
+    toggleCountry,
     toggleCity,
-    toggleCompany,
     toggleCategory,
-    countriesQuery,
-    citiesQuery,
-    companiesQuery,
-    categoriesQuery,
-    companies,
-    totalCompanies,
   };
 }

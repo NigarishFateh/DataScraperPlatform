@@ -7,6 +7,9 @@ import com.datascraper.location.domain.City;
 import com.datascraper.location.domain.Country;
 import com.datascraper.location.entity.CityEntity;
 import com.datascraper.location.entity.CountryEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
@@ -15,7 +18,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * PostgreSQL-backed location catalog (Phase 13).
+ * PostgreSQL-backed global location catalog.
  */
 @Repository
 public class LocationRepository {
@@ -34,6 +37,15 @@ public class LocationRepository {
                 .toList();
     }
 
+    public Page<Country> searchCountries(String search, int page, int pageSize) {
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by("name"));
+        String q = search == null ? "" : search.trim();
+        Page<CountryEntity> result = q.isEmpty()
+                ? countryJpaRepository.findAll(pageable)
+                : countryJpaRepository.searchByNameOrCode(q, pageable);
+        return result.map(this::toCountry);
+    }
+
     public Optional<Country> findCountryByCode(String code) {
         if (code == null || code.isBlank()) {
             return Optional.empty();
@@ -42,13 +54,22 @@ public class LocationRepository {
                 .map(this::toCountry);
     }
 
-    public List<City> findCitiesByCountry(String countryCode, String search) {
-        String normalizedCode = countryCode.trim().toUpperCase(Locale.ROOT);
+    public List<City> findCities(String countryCode, String search) {
+        String normalizedCode = countryCode == null ? "" : countryCode.trim().toUpperCase(Locale.ROOT);
         String q = search == null ? "" : search.trim();
 
-        List<CityEntity> entities = q.isEmpty()
-                ? cityJpaRepository.findByCountryCodeOrderByNameAsc(normalizedCode)
-                : cityJpaRepository.searchByCountryAndName(normalizedCode, q);
+        if (normalizedCode.isEmpty() && q.isEmpty()) {
+            return List.of();
+        }
+
+        List<CityEntity> entities;
+        if (normalizedCode.isEmpty()) {
+            entities = cityJpaRepository.searchByName(q);
+        } else if (q.isEmpty()) {
+            entities = cityJpaRepository.findByCountryCodeOrderByNameAsc(normalizedCode);
+        } else {
+            entities = cityJpaRepository.searchByCountryAndName(normalizedCode, q);
+        }
 
         return entities.stream().map(this::toCity).toList();
     }

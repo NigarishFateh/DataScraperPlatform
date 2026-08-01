@@ -1,111 +1,35 @@
-# Deployment Guide
+# Deployment
 
-Lead Intelligence Platform: Spring Boot microservices + Chrome extension client.
-The extension talks to the **gateway**; the gateway routes to auth, company, category, location, and the intelligence orchestrator.
-
-## Architecture
-
-```
-Chrome Extension → Gateway (:8080)
-                     ├── Auth / Location / Company / Category
-                     └── Orchestrator (:8085)
-                           ├── scraper-website (:8091)
-                           ├── scraper-tech    (:8092)
-                           ├── scraper-news    (:8093)
-                           ├── scraper-github  (:8094)
-                           └── scraper-contact (:8095)
-```
-
-| Component | Where to deploy | Notes |
-|---|---|---|
-| `chrome-extension` | Chrome Web Store / unpacked load | Client UI |
-| `gateway-service` | Render, Railway, Fly.io, AWS, etc. | Public entrypoint |
-| `auth-service` | Same | OAuth / JWT |
-| `location-service` | Same | |
-| `company-service` | Same | |
-| `category-service` | Same | |
-| `scraper-orchestrator` | Same | Coordinates capability scrapers |
-| `scraper-website` / `tech` / `news` / `github` / `contact` | Same | Called via orchestrator `base-url` |
-
----
-
-## Step 1 — Build backends
+## Local
 
 ```powershell
-mvn clean package -DskipTests
-```
-
-JARs are under each module's `target/` folder, for example:
-
-- `gateway-service/target/gateway-service-*.jar`
-- `scraper-orchestrator/target/scraper-orchestrator-*.jar`
-- `scraper-website/target/scraper-website-*.jar`
-- …and the other services listed above
-
-Run services with the **prod** profile. Point the orchestrator at scraper URLs in env or `application-prod.yml`:
-
-```yaml
-scraper:
-  services:
-    website:
-      base-url: https://your-website-scraper.example.com
-    tech:
-      base-url: https://your-tech-scraper.example.com
-    news:
-      base-url: https://your-news-scraper.example.com
-    github:
-      base-url: https://your-github-scraper.example.com
-    contact:
-      base-url: https://your-contact-scraper.example.com
-
-app:
-  cors:
-    allowed-origins: chrome-extension://YOUR_EXTENSION_ID
-```
-
-Verify health:
-
-```bash
-curl https://your-orchestrator.example.com/api/health
-```
-
----
-
-## Step 2 — Local development
-
-```powershell
+docker compose up -d
+.\setup-postgres.ps1   # native Postgres only
 .\start-platform.ps1
-
-cd chrome-extension
-npm install
-npm run build
+cd chrome-extension; npm install; npm run build
 ```
 
-Load the unpacked extension from `chrome-extension/dist`. The extension should target the gateway at `http://localhost:8080`.
+Load `chrome-extension/dist` as an unpacked extension.
 
----
+## Hosted services
 
-## Step 3 — Verify
+Deploy each Spring Boot jar independently (Render, Railway, ECS, etc.).
 
-1. Sign in via the extension (auth-service through gateway).
-2. Run an intelligence job (`POST /api/intelligence/jobs`).
-3. Confirm scraper results appear in the report UI.
+| Service | Env highlights |
+|---------|----------------|
+| auth-service | `AUTH_DB_*`, `AUTH_JWT_SECRET`, `GOOGLE_CLIENT_IDS` |
+| job-service | `JOB_DB_*`, `REDIS_*`, `DISCOVERY_SERVICE_URI` |
+| discovery-service | `COMPANY_SERVICE_URI`, `ORCHESTRATOR_URI`, Redis |
+| scraper-orchestrator | scraper base URLs, `COMPANY_SERVICE_URI`, `EXPORT_SERVICE_URI` |
+| export-service | `EXPORT_STORAGE_PATH`, `EXPORT_DB_*` |
+| gateway-service | upstream `*_SERVICE_URI` |
 
----
+Point the extension `VITE_API_BASE_URL` at the gateway. Update Chrome OAuth client origins/redirects for production.
 
-## Troubleshooting
+## Redis
 
-### Orchestrator health DOWN
+Required for horizontal scale. Without Redis, job → discovery → orchestrator use HTTP fallbacks (single-node friendly).
 
-- Confirm the orchestrator process is listening (default local port **8085**).
-- Confirm gateway `ORCHESTRATOR_URI` points at that host.
-- Check `/api/health` returns JSON with `"status":"UP"`.
+## Observability
 
-### CORS errors from the extension
-
-- Add your extension origin (`chrome-extension://…`) to `app.cors.allowed-origins` on the orchestrator (and gateway if applicable).
-
-### Scraper timeouts
-
-- Increase `scraper.resilience.timeout-ms` / `scraper.execution.job-timeout-ms` on the orchestrator.
-- Confirm each capability scraper JAR is running and reachable from the orchestrator.
+Each service exposes `/actuator/health` (or `/api/health`). Gateway forwards correlation IDs via `X-Correlation-Id`.

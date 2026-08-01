@@ -1,7 +1,7 @@
-# Stop Lead Intelligence platform services (current architecture only).
+# Stop Global Business Intelligence Platform services.
 # Usage: .\stop-platform.ps1
 
-$ports = @(8080, 8081, 8082, 8083, 8084, 8085, 8091, 8092, 8093, 8094, 8095)
+$ports = @(8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8091, 8092, 8093, 8094, 8095, 8096)
 
 Write-Host "Stopping platform Java services on ports: $($ports -join ', ')" -ForegroundColor Cyan
 
@@ -23,4 +23,4 @@ foreach ($port in $ports) {
 }
 
 Write-Host "Stopped $stopped process(es)." -ForegroundColor Green
-Write-Host "PostgreSQL is left running (Docker container or local install)." -ForegroundColor DarkGray
+Write-Host "PostgreSQL and Redis containers are left running." -ForegroundColor DarkGray

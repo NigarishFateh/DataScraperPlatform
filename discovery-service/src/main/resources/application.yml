@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: discovery-service
+  profiles:
+    active: dev
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/discovery_db
+    username: datascraper
+    password: datascraper
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+server:
+  port: 8087
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  company-service-uri: ${COMPANY_SERVICE_URI:http://localhost:8083}
+  category-service-uri: ${CATEGORY_SERVICE_URI:http://localhost:8084}
+  job-service-uri: ${JOB_SERVICE_URI:http://localhost:8086}
+  location-service-uri: ${LOCATION_SERVICE_URI:http://localhost:8082}
+  orchestrator-service-uri: ${ORCHESTRATOR_URI:http://localhost:8085}
+  redis:
+    enabled: ${REDIS_ENABLED:false}
+  queue:
+    poll-interval-ms: 1000
+    block-timeout-seconds: 5
+
+discovery:
+  providers:
+    catalog-seed:
+      enabled: true
+    open-data:
+      enabled: true
+    industry-listing:
+      enabled: true
+    business-directory:
+      enabled: false
+    government-registry:
+      enabled: false
+    business-search-api:
+      enabled: false

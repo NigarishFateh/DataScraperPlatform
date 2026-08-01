@@ -16,7 +16,8 @@ import java.time.Duration;
 @Configuration
 @EnableConfigurationProperties({
         ScraperResilienceProperties.class,
-        IntelligenceScraperProperties.class
+        IntelligenceScraperProperties.class,
+        OrchestratorProperties.class
 })
 public class WebClientConfig {
 

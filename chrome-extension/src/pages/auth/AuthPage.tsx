@@ -31,7 +31,7 @@ export function AuthPage() {
             Welcome back
           </h1>
           <p className="mx-auto max-w-[18rem] text-sm leading-relaxed text-mist-300">
-            Sign in to discover and analyze Software &amp; IT companies across Europe.
+            Sign in to run global business intelligence scraping jobs from Chrome.
           </p>
         </div>
       </div>

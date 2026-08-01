@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:export_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+export:
+  storage-path: ${java.io.tmpdir}/export-test
+  queue:
+    enabled: false
+
+services:
+  company:
+    base-url: http://localhost:8083
+  job:
+    base-url: http://localhost:8086

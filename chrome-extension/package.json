@@ -1,8 +1,8 @@
 {
-  "name": "lead-intelligence-extension",
+  "name": "global-bi-extension",
   "private": true,
   "version": "0.1.0",
-  "description": "Lead Intelligence Platform — Chrome Side Panel (Manifest V3)",
+  "description": "Global Business Intelligence Platform — Chrome Side Panel (Manifest V3)",
   "type": "module",
   "scripts": {
     "dev": "vite",

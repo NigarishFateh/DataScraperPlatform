@@ -4,7 +4,7 @@
 package com.datascraper.location.domain;
 
 /**
- * European country reference row (ISO 3166-1 alpha-2 code).
+ * Country reference row (ISO 3166-1 alpha-2 code).
  */
 public record Country(String code, String name) {
 }
