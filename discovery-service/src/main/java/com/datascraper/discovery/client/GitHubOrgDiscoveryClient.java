@@ -42,13 +42,18 @@ public class GitHubOrgDiscoveryClient {
     public List<WebSearchHit> discover(ResolvedDiscoveryCriteria criteria) {
         List<String> locations = buildLocationQueries(criteria);
         if (locations.isEmpty()) {
-            locations = List.of("");
+            return List.of();
+        }
+
+        List<String> keywords = limit(criteria.searchKeywords(), 3).stream()
+                .filter(keyword -> keyword != null && !keyword.isBlank())
+                .toList();
+        if (keywords.isEmpty()) {
+            return List.of();
         }
 
         List<WebSearchHit> hits = new ArrayList<>();
         for (String location : locations) {
-            List<String> keywords = new ArrayList<>(limit(criteria.searchKeywords(), 3));
-            keywords.add(""); // location-only fallback expands recall for niche categories
             for (String keyword : keywords) {
                 String query = buildQuery(location, keyword);
                 try {

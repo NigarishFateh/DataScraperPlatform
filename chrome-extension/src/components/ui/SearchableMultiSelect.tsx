@@ -19,6 +19,8 @@ type SearchableMultiSelectProps = {
   maxHeightClass?: string;
   onSearchChange: (value: string) => void;
   onToggle: (id: string) => void;
+  /** When set, Enter on an empty result list (or with no focus target) creates from the search text. */
+  onCreateFromSearch?: () => void;
   onLoadMore?: () => void;
 };
 
@@ -38,6 +40,7 @@ export function SearchableMultiSelect({
   maxHeightClass = "max-h-44",
   onSearchChange,
   onToggle,
+  onCreateFromSearch,
   onLoadMore,
 }: SearchableMultiSelectProps) {
   const listId = useId();
@@ -103,9 +106,13 @@ export function SearchableMultiSelect({
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       moveFocus(-1);
-    } else if (event.key === "Enter" && options[focusedIndex]) {
+    } else if (event.key === "Enter") {
       event.preventDefault();
-      onToggle(options[focusedIndex].id);
+      if (options[focusedIndex]) {
+        onToggle(options[focusedIndex].id);
+      } else if (onCreateFromSearch && search.trim()) {
+        onCreateFromSearch();
+      }
     }
   }
 

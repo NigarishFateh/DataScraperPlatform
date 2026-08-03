@@ -47,6 +47,8 @@ app:
     poll-interval-ms: 1000
     block-timeout-seconds: 5
   github-token: ${GITHUB_TOKEN:}
+  google-places-api-key: ${GOOGLE_PLACES_API_KEY:}
+  serpapi-api-key: ${SERPAPI_API_KEY:}
 
 discovery:
   providers:

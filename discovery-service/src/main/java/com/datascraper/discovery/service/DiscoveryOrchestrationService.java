@@ -203,7 +203,8 @@ public class DiscoveryOrchestrationService {
         return "No companies discovered for categories=[" + categories
                 + "] countries=[" + countries
                 + "] cities=[" + cities
-                + "]. Web discovery found no matching company websites for these filters.";
+                + "]. Configure GOOGLE_PLACES_API_KEY or SERPAPI_API_KEY in .env for reliable "
+                + "category+city business search, pick a city, then retry.";
     }
 
     private String join(List<String> values) {

@@ -29,29 +29,37 @@ public class DuckDuckGoSearchClient {
 
     private static final Logger log = LoggerFactory.getLogger(DuckDuckGoSearchClient.class);
     private static final Pattern UDDG = Pattern.compile("uddg=([^&]+)");
+    private static final int MAX_CITIES = 6;
+    private static final int MAX_KEYWORDS = 2;
+    private static final int MAX_QUERIES = 12;
     private static final Set<String> BLOCKED_HOSTS = Set.of(
             "facebook.com", "instagram.com", "twitter.com", "x.com", "youtube.com",
-            "wikipedia.org", "reddit.com", "tiktok.com", "duckduckgo.com"
+            "wikipedia.org", "reddit.com", "tiktok.com", "duckduckgo.com",
+            "github.com", "linkedin.com", "crunchbase.com"
     );
 
     public List<WebSearchHit> discover(ResolvedDiscoveryCriteria criteria) {
         List<WebSearchHit> hits = new ArrayList<>();
-        for (String query : buildQueries(criteria)) {
+        List<CityQuery> queries = buildQueries(criteria);
+        log.info("DuckDuckGo running {} queries for categories={}", queries.size(), criteria.categoryNames());
+        for (CityQuery query : queries) {
             try {
-                hits.addAll(search(query, criteria));
+                List<WebSearchHit> batch = search(query, criteria);
+                log.info("DuckDuckGo '{}' -> {} links", query.text(), batch.size());
+                hits.addAll(batch);
             } catch (Exception ex) {
-                log.warn("DuckDuckGo search failed for '{}': {}", query, ex.getMessage());
+                log.warn("DuckDuckGo search failed for '{}': {}", query.text(), ex.getMessage());
             }
             if (hits.size() >= criteria.maxResults()) {
                 break;
             }
-            sleepQuietly(800);
+            sleepQuietly(500);
         }
         return hits;
     }
 
-    private List<WebSearchHit> search(String query, ResolvedDiscoveryCriteria criteria) throws Exception {
-        String url = "https://html.duckduckgo.com/html/?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
+    private List<WebSearchHit> search(CityQuery query, ResolvedDiscoveryCriteria criteria) throws Exception {
+        String url = "https://html.duckduckgo.com/html/?q=" + URLEncoder.encode(query.text(), StandardCharsets.UTF_8);
         Document doc = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
                 .timeout(25_000)
@@ -59,10 +67,17 @@ public class DuckDuckGoSearchClient {
                 .get();
 
         Elements links = doc.select("a.result__a");
+        if (links.isEmpty()) {
+            // Fallback selector used by some DDG HTML variants
+            links = doc.select("a[href*=uddg], a.result-link");
+        }
         List<WebSearchHit> hits = new ArrayList<>();
         for (Element link : links) {
             String title = cleanTitle(link.text());
             String href = unwrapDuckDuckGoUrl(link.attr("href"));
+            if (href.isBlank()) {
+                href = unwrapDuckDuckGoUrl(link.absUrl("href"));
+            }
             if (title.isBlank() || href.isBlank() || isBlocked(href) || looksLikeListicle(title, href)) {
                 continue;
             }
@@ -71,26 +86,73 @@ public class DuckDuckGoSearchClient {
                     href,
                     href,
                     firstCountry(criteria),
-                    firstCityId(criteria),
-                    firstCityName(criteria),
+                    query.cityId(),
+                    query.cityName(),
                     "duckduckgo"
             ));
         }
         return hits;
     }
 
-    private static List<String> buildQueries(ResolvedDiscoveryCriteria criteria) {
-        Set<String> queries = new LinkedHashSet<>();
-        String geo = String.join(" ", concat(criteria.cityNames(), criteria.countryNames()));
-        for (String keyword : limit(criteria.searchKeywords(), 3)) {
-            if (!geo.isBlank()) {
-                queries.add(keyword + " company " + geo);
-                queries.add(keyword + " software house " + geo);
-            } else {
-                queries.add(keyword + " company");
+    private static List<CityQuery> buildQueries(ResolvedDiscoveryCriteria criteria) {
+        List<CityQuery> queries = new ArrayList<>();
+        List<String> keywords = limit(criteria.searchKeywords(), MAX_KEYWORDS);
+        List<String> countries = criteria.countryNames();
+        String country = countries.isEmpty() ? "" : countries.get(0);
+
+        List<CityGeo> geos = new ArrayList<>();
+        int cityLimit = Math.min(criteria.cityNames().size(), MAX_CITIES);
+        for (int i = 0; i < cityLimit; i++) {
+            String cityName = criteria.cityNames().get(i);
+            if (cityName == null || cityName.isBlank()) {
+                continue;
+            }
+            String cityId = i < criteria.cityIds().size() ? criteria.cityIds().get(i) : null;
+            geos.add(new CityGeo(cityId, cityName));
+        }
+
+        if (geos.isEmpty() && !country.isBlank()) {
+            geos.add(new CityGeo(null, country));
+        }
+
+        Set<String> seen = new LinkedHashSet<>();
+        for (CityGeo geo : geos) {
+            for (String keyword : keywords) {
+                if (keyword == null || keyword.isBlank()) {
+                    continue;
+                }
+                String cityPart = geo.cityName();
+                String withCountry = country.isBlank() || country.equalsIgnoreCase(cityPart)
+                        ? cityPart
+                        : cityPart + " " + country;
+
+                // Keep queries short and local: industry + city (+ country).
+                addQuery(queries, seen, keyword + " " + withCountry, geo);
+                addQuery(queries, seen, "\"" + keyword + "\" " + cityPart, geo);
+
+                if (queries.size() >= MAX_QUERIES) {
+                    return queries;
+                }
             }
         }
-        return List.copyOf(queries);
+
+        if (queries.isEmpty()) {
+            for (String keyword : keywords) {
+                addQuery(queries, seen, keyword, new CityGeo(null, null));
+            }
+        }
+        return queries;
+    }
+
+    private static void addQuery(List<CityQuery> queries, Set<String> seen, String text, CityGeo geo) {
+        String normalized = text.trim().replaceAll("\\s+", " ");
+        if (normalized.isBlank() || !seen.add(normalized.toLowerCase(Locale.ROOT))) {
+            return;
+        }
+        if (queries.size() >= MAX_QUERIES) {
+            return;
+        }
+        queries.add(new CityQuery(normalized, geo.cityId(), geo.cityName()));
     }
 
     private static String unwrapDuckDuckGoUrl(String href) {
@@ -153,17 +215,6 @@ public class DuckDuckGoSearchClient {
         return cleaned;
     }
 
-    private static List<String> concat(List<String> a, List<String> b) {
-        List<String> values = new ArrayList<>();
-        if (a != null) {
-            values.addAll(a);
-        }
-        if (b != null) {
-            values.addAll(b);
-        }
-        return values;
-    }
-
     private static List<String> limit(List<String> values, int max) {
         if (values == null || values.isEmpty()) {
             return List.of("company");
@@ -175,19 +226,17 @@ public class DuckDuckGoSearchClient {
         return criteria.countryCodes().isEmpty() ? null : criteria.countryCodes().get(0);
     }
 
-    private static String firstCityId(ResolvedDiscoveryCriteria criteria) {
-        return criteria.cityIds().isEmpty() ? null : criteria.cityIds().get(0);
-    }
-
-    private static String firstCityName(ResolvedDiscoveryCriteria criteria) {
-        return criteria.cityNames().isEmpty() ? null : criteria.cityNames().get(0);
-    }
-
     private static void sleepQuietly(long millis) {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    private record CityGeo(String cityId, String cityName) {
+    }
+
+    private record CityQuery(String text, String cityId, String cityName) {
     }
 }

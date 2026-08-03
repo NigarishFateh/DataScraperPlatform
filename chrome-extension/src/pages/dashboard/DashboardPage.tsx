@@ -40,7 +40,7 @@ export function DashboardPage() {
           New scrape
         </h1>
         <p className="text-sm text-mist-300">
-          Pick a category, set volume, then optionally narrow by country and city.
+          Pick categories from the catalog, set volume, then choose country and city for local results.
         </p>
       </section>
 
@@ -48,7 +48,7 @@ export function DashboardPage() {
         <FilterSection
           step="1"
           title="Categories"
-          hint="Required · searchable multi-select"
+          hint="Required · searchable catalog"
           status={!filters.defaultLoaded ? "Loading" : undefined}
         >
           <CategorySelect
@@ -67,7 +67,7 @@ export function DashboardPage() {
         <FilterSection
           step="3"
           title="Cities"
-          hint="Optional · all cities for selected countries · empty = whole country"
+          hint="Recommended · each result is tagged with a city · empty expands to major cities in country"
         >
           <CityMultiSelect
             selectedIds={filters.cityIds}

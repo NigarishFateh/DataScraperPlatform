@@ -19,6 +19,8 @@ public class AppProperties {
     private RedisProperties redis = new RedisProperties();
     private QueueProperties queue = new QueueProperties();
     private String githubToken = "";
+    private String googlePlacesApiKey = "";
+    private String serpapiApiKey = "";
 
     @Getter
     @Setter

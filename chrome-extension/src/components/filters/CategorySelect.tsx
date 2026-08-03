@@ -16,7 +16,7 @@ export function CategorySelect({ selectedIds, onToggle }: CategorySelectProps) {
   const query = useInfiniteQuery({
     queryKey: ["categories", debouncedSearch],
     queryFn: ({ pageParam }) =>
-      fetchCategoriesPage({ search: debouncedSearch, page: pageParam, pageSize: 50 }),
+      fetchCategoriesPage({ search: debouncedSearch, page: pageParam, pageSize: 100 }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
   });
@@ -35,25 +35,34 @@ export function CategorySelect({ selectedIds, onToggle }: CategorySelectProps) {
     [categories],
   );
 
+  const totalHint = query.data?.pages[0]?.total;
+
   return (
-    <SearchableMultiSelect
-      options={options}
-      selectedIds={selectedIds}
-      search={search}
-      placeholder="Search categories…"
-      emptyMessage="No categories match"
-      loading={query.isLoading}
-      loadingMore={query.isFetchingNextPage}
-      hasMore={Boolean(query.hasNextPage)}
-      required
-      maxHeightClass="max-h-52"
-      onSearchChange={setSearch}
-      onToggle={onToggle}
-      onLoadMore={() => {
-        if (query.hasNextPage && !query.isFetchingNextPage) {
-          void query.fetchNextPage();
-        }
-      }}
-    />
+    <div className="space-y-2">
+      <p className="text-[11px] leading-relaxed text-mist-400">
+        Search and select from the full category catalog
+        {typeof totalHint === "number" ? ` (${totalHint.toLocaleString()} industries)` : ""}.
+        Scroll for more.
+      </p>
+      <SearchableMultiSelect
+        options={options}
+        selectedIds={selectedIds}
+        search={search}
+        placeholder="Search categories…"
+        emptyMessage="No categories match"
+        loading={query.isLoading}
+        loadingMore={query.isFetchingNextPage}
+        hasMore={Boolean(query.hasNextPage)}
+        required
+        maxHeightClass="max-h-64"
+        onSearchChange={setSearch}
+        onToggle={onToggle}
+        onLoadMore={() => {
+          if (query.hasNextPage && !query.isFetchingNextPage) {
+            void query.fetchNextPage();
+          }
+        }}
+      />
+    </div>
   );
 }

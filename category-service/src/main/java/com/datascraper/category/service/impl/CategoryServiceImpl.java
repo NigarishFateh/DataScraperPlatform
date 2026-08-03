@@ -33,7 +33,7 @@ public class CategoryServiceImpl implements CategoryService {
             int pageSize
     ) {
         int safePage = Math.max(page, 0);
-        int safePageSize = Math.min(Math.max(pageSize, 1), 100);
+        int safePageSize = Math.min(Math.max(pageSize, 1), 200);
         Page<Category> result =
                 categoryRepository.search(ids, search, safePage, safePageSize);
         List<CategoryResponse> items = result.getContent().stream()
