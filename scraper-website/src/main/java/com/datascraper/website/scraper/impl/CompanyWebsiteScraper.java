@@ -29,7 +29,7 @@ import java.util.Set;
 @Component
 public class CompanyWebsiteScraper implements WebsiteScraper {
 
-    private static final int MAX_EXTRA_PAGES = 2;
+    private static final int MAX_EXTRA_PAGES = 3;
 
     private final HtmlPageFetcher pageFetcher;
     private final CompanyWebsiteHtmlParser htmlParser;
@@ -60,7 +60,7 @@ public class CompanyWebsiteScraper implements WebsiteScraper {
                     htmlParser.parse(document, document.baseUri(), properties.getMaxItems())
             );
 
-            for (String extraUrl : findTeamOrAboutUrls(document, document.baseUri())) {
+            for (String extraUrl : findSupplementaryPages(document, document.baseUri())) {
                 try {
                     robotsTxtGuard.verifyAllowed(extraUrl);
                     Document extra = pageFetcher.fetch(extraUrl);
@@ -93,11 +93,12 @@ public class CompanyWebsiteScraper implements WebsiteScraper {
         }
     }
 
-    private List<String> findTeamOrAboutUrls(Document document, String baseUri) {
+    private List<String> findSupplementaryPages(Document document, String baseUri) {
         Set<String> urls = new LinkedHashSet<>();
         for (Element link : document.select(
-                "a[href*='about'], a[href*='team'], a[href*='over-ons'], a[href*='overons'], "
-                        + "a[href*='management'], a[href*='leadership'], a[href*='ons-team'], a[href*='founders']")) {
+                "a[href*='contact'], a[href*='about'], a[href*='team'], a[href*='over-ons'], a[href*='overons'], "
+                        + "a[href*='management'], a[href*='leadership'], a[href*='ons-team'], a[href*='founders'], "
+                        + "a[href*='impressum']")) {
             String href = link.absUrl("href");
             if (href.isBlank() || !sameHost(baseUri, href)) {
                 continue;

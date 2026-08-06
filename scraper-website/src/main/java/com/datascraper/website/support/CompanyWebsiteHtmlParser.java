@@ -1,12 +1,10 @@
 /**
- * Pulls useful fields like headings, links, and contacts from website HTML.
+ * Pulls contact and founder fields from public company website HTML.
  */
 package com.datascraper.website.support;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -16,12 +14,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Parses public company website HTML using CSS selectors (JSoup DOM API).
- */
 @Component
 public class CompanyWebsiteHtmlParser {
 
@@ -35,13 +31,7 @@ public class CompanyWebsiteHtmlParser {
         Set<String> seen = new LinkedHashSet<>();
 
         addMeta(items, seen, document, sourceUrl);
-        addHeadings(items, seen, document, sourceUrl);
         addFounders(items, seen, document, sourceUrl);
-        addParagraphs(items, seen, document, sourceUrl, maxItems);
-        addOfferingLinks(items, seen, document);
-        addCareerLinks(items, seen, document);
-        addTeamLinks(items, seen, document);
-        addSocialLinks(items, seen, document);
         addContactChannels(items, seen, document);
 
         return items.size() > maxItems ? items.subList(0, maxItems) : items;
@@ -54,10 +44,10 @@ public class CompanyWebsiteHtmlParser {
             String sourceUrl
     ) {
         Pattern labeled = Pattern.compile(
-                "(?i)\\b(founder|co[-\\s]?founder|ceo|owner|proprietor|managing director|directeur|oprichter|eigenaar|zaakvoerder)\\b\\s*[:\\-|–]?\\s*([A-Z][a-zA-Z'’\\-]+(?:\\s+[A-Z][a-zA-Z'’\\-]+){0,3})"
+                "(?i)\\b(founder|co[-\\s]?founder|ceo|owner|proprietor|managing director|directeur|oprichter|eigenaar|zaakvoerder)\\b\\s*[:\\-|–]?\\s*([A-Z][a-zA-Z''\\-]+(?:\\s+[A-Z][a-zA-Z''\\-]+){0,3})"
         );
         Pattern namedThenRole = Pattern.compile(
-                "(?i)\\b([A-Z][a-zA-Z'’\\-]+(?:\\s+[A-Z][a-zA-Z'’\\-]+){0,3})\\s*[,\\-|–]\\s*(founder|co[-\\s]?founder|ceo|owner|proprietor|managing director|directeur|oprichter|eigenaar)\\b"
+                "(?i)\\b([A-Z][a-zA-Z''\\-]+(?:\\s+[A-Z][a-zA-Z''\\-]+){0,3})\\s*[,\\-|–]\\s*(founder|co[-\\s]?founder|ceo|owner|proprietor|managing director|directeur|oprichter|eigenaar)\\b"
         );
 
         String pageText = document.text();
@@ -90,18 +80,21 @@ public class CompanyWebsiteHtmlParser {
         }
     }
 
-    private void addTeamLinks(List<Map<String, Object>> items, Set<String> seen, Document document) {
-        Elements links = document.select(
-                "a[href*='about'], a[href*='team'], a[href*='over-ons'], a[href*='overons'], "
-                        + "a[href*='management'], a[href*='leadership'], a[href*='ons-team'], a[href*='founders']");
-        addLinkItems(items, seen, links, "people", "team-or-about-link");
-    }
-
     private static String cleanPersonName(String raw) {
         if (raw == null) {
             return null;
         }
         String name = raw.replaceAll("\\s+", " ").trim();
+        String[] parts = name.split("\\s+");
+        StringJoiner joiner = new StringJoiner(" ");
+        for (String part : parts) {
+            String token = part.toLowerCase(Locale.ROOT);
+            if (NON_NAME_TOKENS.contains(token)) {
+                break;
+            }
+            joiner.add(part);
+        }
+        name = joiner.toString().trim();
         if (name.length() < 3 || name.length() > 60) {
             return null;
         }
@@ -113,66 +106,19 @@ public class CompanyWebsiteHtmlParser {
         return name;
     }
 
+    private static final Set<String> NON_NAME_TOKENS = Set.of(
+            "email", "call", "phone", "contact", "linkedin", "twitter", "facebook", "website", "us", "the"
+    );
+
     private void addMeta(List<Map<String, Object>> items, Set<String> seen, Document document, String sourceUrl) {
         putField(items, seen, "identity", "pageTitle", document.title(), sourceUrl);
-        putField(items, seen, "identity", "metaDescription", metaContent(document, "description"), sourceUrl);
         putField(items, seen, "identity", "ogTitle", metaContent(document, "og:title"), sourceUrl);
-        putField(items, seen, "identity", "ogDescription", metaContent(document, "og:description"), sourceUrl);
         putField(items, seen, "identity", "ogSiteName", metaContent(document, "og:site_name"), sourceUrl);
 
         Element canonical = document.selectFirst("link[rel=canonical]");
         if (canonical != null) {
             putField(items, seen, "identity", "canonicalUrl", canonical.attr("href"), sourceUrl);
         }
-    }
-
-    private void addHeadings(List<Map<String, Object>> items, Set<String> seen, Document document, String sourceUrl) {
-        for (Element heading : document.select("h1, h2")) {
-            String text = heading.text().trim();
-            if (!isUsefulText(text) || !seen.add("heading:" + text)) {
-                continue;
-            }
-            items.add(item("positioning", "heading", text, null, sourceUrl, heading.tagName()));
-        }
-    }
-
-    private void addParagraphs(
-            List<Map<String, Object>> items,
-            Set<String> seen,
-            Document document,
-            String sourceUrl,
-            int maxItems
-    ) {
-        for (Element paragraph : document.select("main p, article p, section p, p")) {
-            String text = paragraph.text().trim();
-            if (text.length() < 80 || !seen.add("p:" + text)) {
-                continue;
-            }
-            items.add(item("positioning", "paragraph", truncate(text, 120), text, sourceUrl, null));
-            if (items.size() >= maxItems) {
-                return;
-            }
-        }
-    }
-
-    private void addOfferingLinks(List<Map<String, Object>> items, Set<String> seen, Document document) {
-        Elements links = document.select(
-                "a[href*='service'], a[href*='services'], a[href*='product'], a[href*='products'], a[href*='solution']");
-        addLinkItems(items, seen, links, "offerings", "service-or-product-link");
-    }
-
-    private void addCareerLinks(List<Map<String, Object>> items, Set<String> seen, Document document) {
-        Elements links = document.select(
-                "a[href*='career'], a[href*='careers'], a[href*='jobs'], a[href*='join-us']");
-        addLinkItems(items, seen, links, "talent", "careers-link");
-    }
-
-    private void addSocialLinks(List<Map<String, Object>> items, Set<String> seen, Document document) {
-        addLinkItems(items, seen, document.select("a[href*='linkedin.com']"), "presence", "linkedin");
-        addLinkItems(items, seen, document.select("a[href*='github.com']"), "presence", "github");
-        addLinkItems(items, seen, document.select("a[href*='twitter.com'], a[href*='x.com']"), "presence", "twitter");
-        addLinkItems(items, seen, document.select("a[href*='facebook.com']"), "presence", "facebook");
-        addLinkItems(items, seen, document.select("a[href*='youtube.com']"), "presence", "youtube");
     }
 
     private void addContactChannels(List<Map<String, Object>> items, Set<String> seen, Document document) {
@@ -210,30 +156,6 @@ public class CompanyWebsiteHtmlParser {
                 continue;
             }
             items.add(item("contact", "phone", phone, null, "tel:" + phone.replaceAll("[^\\d+]", ""), null));
-        }
-        for (Element address : document.select("address")) {
-            String text = address.text().trim();
-            if (text.length() < 12 || !seen.add("address:" + text.toLowerCase(Locale.ROOT))) {
-                continue;
-            }
-            items.add(item("contact", "address", text, null, null, null));
-        }
-    }
-
-    private void addLinkItems(
-            List<Map<String, Object>> items,
-            Set<String> seen,
-            Elements links,
-            String section,
-            String field
-    ) {
-        for (Element link : links) {
-            String title = link.text().trim();
-            String href = link.absUrl("href");
-            if (title.length() < 3 || href.isBlank() || !seen.add(field + ":" + href)) {
-                continue;
-            }
-            items.add(item(section, field, title, null, href, null));
         }
     }
 
@@ -279,13 +201,5 @@ public class CompanyWebsiteHtmlParser {
         Element meta = document.selectFirst(
                 "meta[name=" + key + "], meta[property=" + key + "], meta[name=" + key.toLowerCase(Locale.ROOT) + "]");
         return meta != null ? meta.attr("content").trim() : null;
-    }
-
-    private static boolean isUsefulText(String text) {
-        return text.length() >= 4 && text.length() <= 200;
-    }
-
-    private static String truncate(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max) + "...";
     }
 }

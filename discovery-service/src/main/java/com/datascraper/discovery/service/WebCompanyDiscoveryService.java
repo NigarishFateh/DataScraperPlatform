@@ -3,10 +3,6 @@ package com.datascraper.discovery.service;
 import com.datascraper.common.dto.discovery.DiscoveredCompany;
 import com.datascraper.common.dto.discovery.DiscoveryRequest;
 import com.datascraper.discovery.client.BusinessSearchDiscoveryClient;
-import com.datascraper.discovery.client.DuckDuckGoSearchClient;
-import com.datascraper.discovery.client.GitHubOrgDiscoveryClient;
-import com.datascraper.discovery.client.OpenStreetMapDiscoveryClient;
-import com.datascraper.discovery.client.WikidataDiscoveryClient;
 import com.datascraper.discovery.dto.ResolvedDiscoveryCriteria;
 import com.datascraper.discovery.dto.WebSearchHit;
 import com.datascraper.discovery.support.WebsiteUrlSupport;
@@ -29,69 +25,40 @@ public class WebCompanyDiscoveryService {
 
     private final DiscoveryCriteriaResolver criteriaResolver;
     private final BusinessSearchDiscoveryClient businessSearchDiscoveryClient;
-    private final GitHubOrgDiscoveryClient gitHubOrgDiscoveryClient;
-    private final WikidataDiscoveryClient wikidataDiscoveryClient;
-    private final DuckDuckGoSearchClient duckDuckGoSearchClient;
-    private final OpenStreetMapDiscoveryClient openStreetMapDiscoveryClient;
 
     public WebCompanyDiscoveryService(
             DiscoveryCriteriaResolver criteriaResolver,
-            BusinessSearchDiscoveryClient businessSearchDiscoveryClient,
-            GitHubOrgDiscoveryClient gitHubOrgDiscoveryClient,
-            WikidataDiscoveryClient wikidataDiscoveryClient,
-            DuckDuckGoSearchClient duckDuckGoSearchClient,
-            OpenStreetMapDiscoveryClient openStreetMapDiscoveryClient
+            BusinessSearchDiscoveryClient businessSearchDiscoveryClient
     ) {
         this.criteriaResolver = criteriaResolver;
         this.businessSearchDiscoveryClient = businessSearchDiscoveryClient;
-        this.gitHubOrgDiscoveryClient = gitHubOrgDiscoveryClient;
-        this.wikidataDiscoveryClient = wikidataDiscoveryClient;
-        this.duckDuckGoSearchClient = duckDuckGoSearchClient;
-        this.openStreetMapDiscoveryClient = openStreetMapDiscoveryClient;
     }
 
     public List<DiscoveredCompany> discover(DiscoveryRequest request, String providerName) {
         ResolvedDiscoveryCriteria criteria = criteriaResolver.resolve(request);
-        boolean techOriented = CategoryDiscoverySupport.isTechOriented(criteria);
         boolean businessSearchReady = businessSearchDiscoveryClient.isConfigured();
 
         log.info(
-                "Web discovery start categories={} countries={} cities={} keywords={} tech={} businessSearch={} max={}",
+                "Web discovery start categories={} countries={} cities={} keywords={} businessSearch={} max={}",
                 criteria.categoryNames(),
                 criteria.countryCodes(),
                 criteria.cityNames(),
                 criteria.searchKeywords(),
-                techOriented,
                 businessSearchReady ? businessSearchDiscoveryClient.configuredProviders() : "disabled",
                 criteria.maxResults()
         );
 
         if (!businessSearchReady) {
             log.warn(
-                    "No business-search API key configured. Set GOOGLE_PLACES_API_KEY and/or SERPAPI_API_KEY "
-                            + "in .env for reliable category+city discovery. Falling back to OSM/Wikidata/GitHub."
+                    "No business-search API key configured. Set APOLLO_API_KEY, GOOGLE_PLACES_API_KEY, "
+                            + "and/or SERPAPI_API_KEY in .env for company discovery."
             );
         }
 
         List<WebSearchHit> hits = new ArrayList<>();
 
-        // 1) Primary: real business search (Google Places / SerpAPI Maps)
         if (businessSearchReady) {
             hits.addAll(safe(() -> businessSearchDiscoveryClient.discover(criteria), "business-search"));
-        }
-
-        // 2) Fallbacks to fill remaining slots
-        if (hits.size() < criteria.maxResults()) {
-            if (techOriented) {
-                hits.addAll(safe(() -> gitHubOrgDiscoveryClient.discover(criteria), "github"));
-            }
-            hits.addAll(safe(() -> openStreetMapDiscoveryClient.discover(criteria), "openstreetmap"));
-            if (hits.size() < criteria.maxResults()) {
-                hits.addAll(safe(() -> wikidataDiscoveryClient.discover(criteria), "wikidata"));
-            }
-            if (hits.size() < Math.min(5, criteria.maxResults())) {
-                hits.addAll(safe(() -> duckDuckGoSearchClient.discover(criteria), "duckduckgo"));
-            }
         }
 
         Map<String, DiscoveredCompany> unique = new LinkedHashMap<>();

@@ -67,11 +67,7 @@ $services = @(
     @{ Name = "discovery-service";    Jar = "discovery-service\target\discovery-service-0.0.1-SNAPSHOT.jar"; Port = 8087 },
     @{ Name = "export-service";       Jar = "export-service\target\export-service-0.0.1-SNAPSHOT.jar";     Port = 8088 },
     @{ Name = "scraper-website";      Jar = "scraper-website\target\scraper-website-0.0.1-SNAPSHOT.jar";      Port = 8091 },
-    @{ Name = "scraper-tech";         Jar = "scraper-tech\target\scraper-tech-0.0.1-SNAPSHOT.jar";         Port = 8092 },
-    @{ Name = "scraper-news";         Jar = "scraper-news\target\scraper-news-0.0.1-SNAPSHOT.jar";         Port = 8093 },
-    @{ Name = "scraper-github";       Jar = "scraper-github\target\scraper-github-0.0.1-SNAPSHOT.jar";       Port = 8094 },
-    @{ Name = "scraper-contact";      Jar = "scraper-contact\target\scraper-contact-0.0.1-SNAPSHOT.jar";  Port = 8095 },
-    @{ Name = "scraper-social";       Jar = "scraper-social\target\scraper-social-0.0.1-SNAPSHOT.jar";     Port = 8096 }
+    @{ Name = "scraper-contact";      Jar = "scraper-contact\target\scraper-contact-0.0.1-SNAPSHOT.jar";  Port = 8095 }
 )
 
 Write-Host "Ensuring PostgreSQL is available..." -ForegroundColor Cyan
@@ -130,7 +126,7 @@ Write-Host "  Orchestrator http://localhost:8085"
 Write-Host "  Jobs         http://localhost:8086"
 Write-Host "  Discovery    http://localhost:8087"
 Write-Host "  Export       http://localhost:8088"
-Write-Host "  Scrapers     8091-8096"
+Write-Host "  Scrapers     8091 (website), 8095 (contact)"
 Write-Host ""
 Write-Host "Chrome extension:" -ForegroundColor Cyan
 Write-Host "  cd chrome-extension; npm run build; load chrome-extension\dist in chrome://extensions"

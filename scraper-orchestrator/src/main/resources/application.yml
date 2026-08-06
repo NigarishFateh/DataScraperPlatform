@@ -32,13 +32,13 @@ app:
     contact:
       enabled: true
     github:
-      enabled: true
+      enabled: false
     technology:
-      enabled: true
+      enabled: false
     news:
-      enabled: true
+      enabled: false
     social:
-      enabled: true
+      enabled: false
   cors:
     allowed-origins: chrome-extension://*,http://localhost:*,http://127.0.0.1:*
 
