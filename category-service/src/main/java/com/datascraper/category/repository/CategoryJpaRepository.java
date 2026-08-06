@@ -11,15 +11,20 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface CategoryJpaRepository extends JpaRepository<CategoryEntity, String> {
 
-    List<CategoryEntity> findByIdInOrderByNameAsc(List<String> ids);
+    @Query("""
+            SELECT c FROM CategoryEntity c
+            WHERE c.id IN :ids
+            ORDER BY CASE WHEN c.id = 'cleaning' THEN 0 ELSE 1 END, c.name ASC
+            """)
+    List<CategoryEntity> findByIdInOrderByNameAsc(@Param("ids") List<String> ids);
 
     @Query("""
             SELECT c FROM CategoryEntity c
             WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))
+            ORDER BY CASE WHEN c.id = 'cleaning' THEN 0 ELSE 1 END, c.name ASC
             """)
     Page<CategoryEntity> searchByName(@Param("search") String search, Pageable pageable);
 
@@ -27,6 +32,7 @@ public interface CategoryJpaRepository extends JpaRepository<CategoryEntity, Str
             SELECT c FROM CategoryEntity c
             WHERE c.id IN :ids
               AND LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))
+            ORDER BY CASE WHEN c.id = 'cleaning' THEN 0 ELSE 1 END, c.name ASC
             """)
     Page<CategoryEntity> searchByIdsAndName(
             @Param("ids") List<String> ids,
@@ -37,6 +43,13 @@ public interface CategoryJpaRepository extends JpaRepository<CategoryEntity, Str
     @Query("""
             SELECT c FROM CategoryEntity c
             WHERE c.id IN :ids
+            ORDER BY CASE WHEN c.id = 'cleaning' THEN 0 ELSE 1 END, c.name ASC
             """)
     Page<CategoryEntity> findByIdIn(@Param("ids") List<String> ids, Pageable pageable);
+
+    @Query("""
+            SELECT c FROM CategoryEntity c
+            ORDER BY CASE WHEN c.id = 'cleaning' THEN 0 ELSE 1 END, c.name ASC
+            """)
+    Page<CategoryEntity> findAllOrdered(Pageable pageable);
 }

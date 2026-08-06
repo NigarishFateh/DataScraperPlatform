@@ -67,7 +67,7 @@ export function DashboardPage() {
         <FilterSection
           step="3"
           title="Cities"
-          hint="Recommended · each result is tagged with a city · empty expands to major cities in country"
+          hint="Select cities to scrape · empty uses every city listed for the country"
         >
           <CityMultiSelect
             selectedIds={filters.cityIds}

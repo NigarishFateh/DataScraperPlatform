@@ -30,7 +30,7 @@ import java.util.Set;
 public class SerpApiMapsDiscoveryClient {
 
     private static final Logger log = LoggerFactory.getLogger(SerpApiMapsDiscoveryClient.class);
-    private static final int MAX_CITIES = 6;
+    private static final int MAX_CITIES = 500;
     private static final int MAX_KEYWORDS = 2;
 
     private final HttpClient httpClient = HttpClient.newBuilder()

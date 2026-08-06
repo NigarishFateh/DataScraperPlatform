@@ -19,8 +19,6 @@ import java.util.Set;
 @Service
 public class DiscoveryCriteriaResolver {
 
-    private static final int MAX_EXPANDED_CITIES = 8;
-
     private static final Map<String, List<String>> PRIORITY_CITY_IDS = Map.ofEntries(
             Map.entry("PK", List.of(
                     "pk-karachi", "pk-lahore", "pk-islamabad", "pk-rawalpindi",
@@ -44,22 +42,33 @@ public class DiscoveryCriteriaResolver {
             Map.entry("DE", List.of(
                     "de-berlin", "de-munich", "de-hamburg", "de-frankfurt",
                     "de-cologne", "de-stuttgart", "de-dusseldorf"
+            )),
+            Map.entry("NL", List.of(
+                    "nl-amsterdam", "nl-rotterdam", "nl-the-hague", "nl-utrecht",
+                    "nl-eindhoven", "nl-groningen", "nl-tilburg", "nl-almere",
+                    "nl-breda", "nl-nijmegen", "nl-haarlem", "nl-arnhem",
+                    "nl-leiden", "nl-maastricht", "nl-delft", "nl-amersfoort"
+            )),
+            Map.entry("FR", List.of(
+                    "fr-paris", "fr-lyon", "fr-marseille", "fr-toulouse",
+                    "fr-bordeaux", "fr-lille", "fr-nantes", "fr-nice"
+            )),
+            Map.entry("ES", List.of(
+                    "es-madrid", "es-barcelona", "es-valencia", "es-seville",
+                    "es-malaga", "es-bilbao", "es-zaragoza", "es-murcia"
+            )),
+            Map.entry("IT", List.of(
+                    "it-rome", "it-milan", "it-naples", "it-turin",
+                    "it-florence", "it-bologna", "it-genoa", "it-venice"
+            )),
+            Map.entry("CA", List.of(
+                    "ca-toronto", "ca-montreal", "ca-vancouver", "ca-calgary",
+                    "ca-ottawa", "ca-edmonton", "ca-winnipeg", "ca-quebec-city"
+            )),
+            Map.entry("AU", List.of(
+                    "au-sydney", "au-melbourne", "au-brisbane", "au-perth",
+                    "au-adelaide", "au-canberra", "au-gold-coast", "au-newcastle"
             ))
-    );
-
-    private static final Map<String, String> COUNTRY_NAMES = Map.ofEntries(
-            Map.entry("PK", "Pakistan"),
-            Map.entry("US", "United States"),
-            Map.entry("GB", "United Kingdom"),
-            Map.entry("IN", "India"),
-            Map.entry("DE", "Germany"),
-            Map.entry("AE", "United Arab Emirates"),
-            Map.entry("SA", "Saudi Arabia"),
-            Map.entry("CA", "Canada"),
-            Map.entry("AU", "Australia"),
-            Map.entry("FR", "France"),
-            Map.entry("NL", "Netherlands"),
-            Map.entry("SG", "Singapore")
     );
 
     private static final Map<String, List<String>> CATEGORY_KEYWORDS = Map.ofEntries(
@@ -69,7 +78,13 @@ public class DiscoveryCriteriaResolver {
             Map.entry("software-dev", List.of("software development", "custom software", "IT company")),
             Map.entry("cybersecurity", List.of("cybersecurity", "infoSec", "security software")),
             Map.entry("fintech", List.of("fintech", "financial technology", "payments")),
-            Map.entry("cleaning", List.of("cleaning company", "janitorial", "facility cleaning")),
+            Map.entry("cleaning", List.of(
+                    "cleaning company",
+                    "janitorial",
+                    "facility cleaning",
+                    "schoonmaakbedrijf",
+                    "schoonmaak bedrijf"
+            )),
             Map.entry("automation", List.of("automation", "RPA", "industrial automation")),
             Map.entry("dental", List.of("dental clinic", "dentist", "dental practice", "dental care", "odontology")),
             Map.entry("dental-lab", List.of("dental laboratory", "dental lab", "dental technician")),
@@ -153,26 +168,26 @@ public class DiscoveryCriteriaResolver {
                 .toList();
         List<String> countryNames = new ArrayList<>();
         for (String code : countryCodes) {
-            countryNames.add(COUNTRY_NAMES.getOrDefault(code, code));
+            String catalogName = locationCatalogClient.findCountryName(code);
+            countryNames.add(catalogName != null && !catalogName.isBlank() ? catalogName : code);
         }
 
         List<String> cityIds = new ArrayList<>();
         List<String> cityNames = new ArrayList<>();
+        Set<String> seenCityKeys = new LinkedHashSet<>();
         List<String> requestedCityIds = request.cityIds() == null ? List.of() : request.cityIds();
 
         if (!requestedCityIds.isEmpty()) {
             for (String cityId : requestedCityIds) {
                 CityDto city = locationCatalogClient.findCityById(cityId);
                 if (city != null && city.name() != null && !city.name().isBlank()) {
-                    cityIds.add(city.id());
-                    cityNames.add(city.name());
+                    addCity(cityIds, cityNames, seenCityKeys, city.id(), city.name());
                 } else if (cityId != null && cityId.contains("-")) {
-                    cityIds.add(cityId);
-                    cityNames.add(humanizeCityId(cityId));
+                    addCity(cityIds, cityNames, seenCityKeys, cityId, humanizeCityId(cityId));
                 }
             }
         } else if (!countryCodes.isEmpty()) {
-            // Nationwide scrape still resolves concrete cities so every query/result mentions a city.
+            // Nationwide scrape expands to every catalog city for each selected country.
             for (String countryCode : countryCodes) {
                 List<CityDto> cities = locationCatalogClient.listCitiesByCountry(countryCode);
                 Map<String, CityDto> byId = new HashMap<>();
@@ -188,31 +203,19 @@ public class DiscoveryCriteriaResolver {
                     if (city == null || city.name() == null || city.name().isBlank()) {
                         continue;
                     }
-                    cityIds.add(city.id());
-                    cityNames.add(city.name());
-                    if (cityIds.size() >= MAX_EXPANDED_CITIES) {
-                        break;
-                    }
+                    addCity(cityIds, cityNames, seenCityKeys, city.id(), city.name());
                 }
 
-                if (cityIds.size() < MAX_EXPANDED_CITIES) {
-                    for (CityDto city : cities) {
-                        if (city == null || city.id() == null || city.name() == null || city.name().isBlank()) {
-                            continue;
-                        }
-                        if (!byId.containsKey(city.id().toLowerCase(Locale.ROOT))) {
-                            continue; // already added via priority
-                        }
-                        byId.remove(city.id().toLowerCase(Locale.ROOT));
-                        cityIds.add(city.id());
-                        cityNames.add(city.name());
-                        if (cityIds.size() >= MAX_EXPANDED_CITIES) {
-                            break;
-                        }
+                for (CityDto city : cities) {
+                    if (city == null || city.id() == null || city.name() == null || city.name().isBlank()) {
+                        continue;
                     }
-                }
-                if (cityIds.size() >= MAX_EXPANDED_CITIES) {
-                    break;
+                    String key = city.id().toLowerCase(Locale.ROOT);
+                    if (!byId.containsKey(key)) {
+                        continue; // already added via priority
+                    }
+                    byId.remove(key);
+                    addCity(cityIds, cityNames, seenCityKeys, city.id(), city.name());
                 }
             }
         }
@@ -234,11 +237,29 @@ public class DiscoveryCriteriaResolver {
                 categoryNames,
                 countryCodes,
                 countryNames,
-                cityIds.stream().distinct().toList(),
-                cityNames.stream().distinct().toList(),
+                List.copyOf(cityIds),
+                List.copyOf(cityNames),
                 List.copyOf(keywords),
                 request.maxResults()
         );
+    }
+
+    private static void addCity(
+            List<String> cityIds,
+            List<String> cityNames,
+            Set<String> seenCityKeys,
+            String cityId,
+            String cityName
+    ) {
+        if (cityId == null || cityId.isBlank() || cityName == null || cityName.isBlank()) {
+            return;
+        }
+        String key = cityId.toLowerCase(Locale.ROOT);
+        if (!seenCityKeys.add(key)) {
+            return;
+        }
+        cityIds.add(cityId);
+        cityNames.add(cityName);
     }
 
     private static String humanizeCityId(String cityId) {

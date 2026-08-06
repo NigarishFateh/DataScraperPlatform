@@ -24,6 +24,8 @@ public record DiscoveryRequest(
         }
         if (maxResults <= 0) {
             maxResults = 500;
+        } else if (maxResults > 100_000) {
+            maxResults = 100_000;
         }
     }
 }

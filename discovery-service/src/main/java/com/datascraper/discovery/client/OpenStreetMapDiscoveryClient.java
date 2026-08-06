@@ -31,7 +31,7 @@ public class OpenStreetMapDiscoveryClient {
 
     private static final Logger log = LoggerFactory.getLogger(OpenStreetMapDiscoveryClient.class);
     private static final String USER_AGENT = "DataScraperPlatform/0.1 (local company discovery)";
-    private static final int MAX_CITIES = 6;
+    private static final int MAX_CITIES = 500;
     private static final int MAX_KEYWORDS = 2;
 
     private final HttpClient httpClient = HttpClient.newBuilder()

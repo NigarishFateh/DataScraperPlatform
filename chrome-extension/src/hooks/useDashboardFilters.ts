@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { DashboardFilters } from "../types/catalog";
+import { UNLIMITED_MAX_COMPANIES } from "../components/filters/MaxCompaniesControl";
 
 export const PENDING_FILTERS_KEY = "gbi.pendingFilters";
 
@@ -25,7 +26,9 @@ function cityBelongsToCountry(cityId: string, countryCode: string): boolean {
 function normalizeMaxCompanies(value: unknown): number | null {
   if (value == null || value === "") return null;
   const n = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(n) || n <= 0) return null;
+  if (!Number.isFinite(n)) return null;
+  if (n === UNLIMITED_MAX_COMPANIES) return UNLIMITED_MAX_COMPANIES;
+  if (n <= 0) return null;
   return Math.min(5000, Math.floor(n));
 }
 
@@ -48,6 +51,10 @@ export function useDashboardFilters() {
   }, []);
 
   function setMaxCompanies(value: number | null) {
+    if (value === UNLIMITED_MAX_COMPANIES) {
+      setMaxCompaniesState(UNLIMITED_MAX_COMPANIES);
+      return;
+    }
     setMaxCompaniesState(normalizeMaxCompanies(value));
   }
 
@@ -88,7 +95,10 @@ export function useDashboardFilters() {
   };
 
   const canStart =
-    categoryIds.length > 0 && maxCompanies != null && maxCompanies > 0 && defaultLoaded;
+    categoryIds.length > 0 &&
+    maxCompanies != null &&
+    (maxCompanies > 0 || maxCompanies === UNLIMITED_MAX_COMPANIES) &&
+    defaultLoaded;
 
   return {
     filters,

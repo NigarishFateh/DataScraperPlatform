@@ -1,7 +1,9 @@
 package com.datascraper.discovery.client;
 
+import com.datascraper.common.dto.PageResponse;
 import com.datascraper.discovery.config.AppProperties;
 import com.datascraper.discovery.dto.CityDto;
+import com.datascraper.discovery.dto.CountryDto;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -31,6 +33,34 @@ public class LocationCatalogClient {
                 })
                 .blockOptional()
                 .orElse(List.of());
+    }
+
+    public String findCountryName(String countryCode) {
+        if (countryCode == null || countryCode.isBlank()) {
+            return null;
+        }
+        String code = countryCode.trim().toUpperCase();
+        PageResponse<CountryDto> page = webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/locations/countries")
+                        .queryParam("search", code)
+                        .queryParam("page", 0)
+                        .queryParam("pageSize", 50)
+                        .build())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<PageResponse<CountryDto>>() {
+                })
+                .blockOptional()
+                .orElse(null);
+        if (page == null || page.items() == null) {
+            return null;
+        }
+        return page.items().stream()
+                .filter(country -> country != null && code.equalsIgnoreCase(country.code()))
+                .map(CountryDto::name)
+                .filter(name -> name != null && !name.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 
     public CityDto findCityById(String cityId) {

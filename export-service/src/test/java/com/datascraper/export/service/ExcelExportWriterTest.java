@@ -147,9 +147,11 @@ class ExcelExportWriterTest {
             assertEquals("Export Summary", workbook.getSheetAt(2).getSheetName());
             assertEquals(3, workbook.getSheetAt(0).getPhysicalNumberOfRows());
             assertEquals("Company Name", workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue());
-            assertEquals("Notes", workbook.getSheetAt(0).getRow(0).getCell(11).getStringCellValue());
+            assertEquals("Founder Name", workbook.getSheetAt(0).getRow(0).getCell(5).getStringCellValue());
+            assertEquals(6, workbook.getSheetAt(0).getRow(0).getLastCellNum());
             assertEquals("Alpha Analytics GmbH", workbook.getSheetAt(0).getRow(1).getCell(0).getStringCellValue());
             assertEquals("Berlin", workbook.getSheetAt(0).getRow(1).getCell(1).getStringCellValue());
+            assertEquals("Jane Founder", workbook.getSheetAt(0).getRow(1).getCell(5).getStringCellValue());
             assertEquals("Beta Systems AG", workbook.getSheetAt(0).getRow(2).getCell(0).getStringCellValue());
             assertEquals("Pakistan_Artificial-Intelligence.xlsx",
                     ExcelExportWriter.buildDownloadFileName(new JobResponse(

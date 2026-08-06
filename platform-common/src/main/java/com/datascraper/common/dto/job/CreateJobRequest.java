@@ -30,8 +30,13 @@ public record CreateJobRequest(
         if (enabledProviders == null) {
             enabledProviders = List.of();
         }
-        if (maxCompanies == null || maxCompanies <= 0) {
+        if (maxCompanies == null) {
             maxCompanies = 500;
+        } else if (maxCompanies < 0) {
+            // UI "Unlimited" sentinel (-1) → practical soft ceiling for API/enrichment safety.
+            maxCompanies = 100_000;
+        } else if (maxCompanies > 100_000) {
+            maxCompanies = 100_000;
         }
         if (options == null) {
             options = Map.of();

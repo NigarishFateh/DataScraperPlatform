@@ -8,7 +8,6 @@ import com.datascraper.category.entity.CategoryEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -24,13 +23,13 @@ public class CategoryRepository {
     }
 
     public List<Category> findAll() {
-        return categoryJpaRepository.findAll(Sort.by("name")).stream()
+        return categoryJpaRepository.findAllOrdered(Pageable.unpaged()).stream()
                 .map(this::toDomain)
                 .toList();
     }
 
     public Page<Category> search(List<String> ids, String search, int page, int pageSize) {
-        Pageable pageable = PageRequest.of(page, pageSize, Sort.by("name"));
+        Pageable pageable = PageRequest.of(page, pageSize);
         String q = search == null ? "" : search.trim();
         boolean hasIds = ids != null && !ids.isEmpty();
 
@@ -42,7 +41,7 @@ public class CategoryRepository {
         } else if (!q.isEmpty()) {
             result = categoryJpaRepository.searchByName(q, pageable);
         } else {
-            result = categoryJpaRepository.findAll(pageable);
+            result = categoryJpaRepository.findAllOrdered(pageable);
         }
 
         return result.map(this::toDomain);

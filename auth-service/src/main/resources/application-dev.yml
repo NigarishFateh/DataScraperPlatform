@@ -8,6 +8,7 @@ spring:
 
 app:
   auth:
-    dev-login-enabled: ${AUTH_DEV_LOGIN:true}
+    # Real Google OAuth by default; set AUTH_DEV_LOGIN=true only for local bypass.
+    dev-login-enabled: ${AUTH_DEV_LOGIN:false}
   google:
     client-ids: ${GOOGLE_CLIENT_IDS:}

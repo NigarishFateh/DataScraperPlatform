@@ -1,3 +1,5 @@
+export const UNLIMITED_MAX_COMPANIES = -1;
+
 const PRESETS = [50, 100, 250, 500, 1000, 2000] as const;
 
 type MaxCompaniesControlProps = {
@@ -6,7 +8,8 @@ type MaxCompaniesControlProps = {
 };
 
 export function MaxCompaniesControl({ value, onChange }: MaxCompaniesControlProps) {
-  const sliderValue = value ?? 0;
+  const unlimited = value === UNLIMITED_MAX_COMPANIES;
+  const sliderValue = unlimited || value == null ? 1 : value;
 
   return (
     <div className="space-y-3">
@@ -29,13 +32,29 @@ export function MaxCompaniesControl({ value, onChange }: MaxCompaniesControlProp
             </button>
           );
         })}
+        <button
+          type="button"
+          onClick={() => onChange(UNLIMITED_MAX_COMPANIES)}
+          className={[
+            "rounded-md px-2.5 py-1 text-xs font-medium transition",
+            unlimited
+              ? "bg-signal/20 text-signal ring-1 ring-signal/40"
+              : "bg-ink-900/80 text-mist-300 ring-1 ring-white/10 hover:bg-white/[0.06] hover:text-mist-100",
+          ].join(" ")}
+        >
+          Unlimited
+        </button>
       </div>
 
       <label className="block space-y-2">
         <div className="flex items-center justify-between gap-2 text-[11px]">
           <span className="text-mist-400">Drag to set volume</span>
-          <span className={value ? "text-signal" : "text-mist-500"}>
-            {value ? `${value.toLocaleString()} companies` : "Not set"}
+          <span className={value != null ? "text-signal" : "text-mist-500"}>
+            {unlimited
+              ? "Unlimited (fetches as many as available)"
+              : value
+                ? `${value.toLocaleString()} companies`
+                : "Not set"}
           </span>
         </div>
         <input
@@ -43,9 +62,10 @@ export function MaxCompaniesControl({ value, onChange }: MaxCompaniesControlProp
           min={1}
           max={5000}
           step={1}
-          value={sliderValue || 1}
+          disabled={unlimited}
+          value={sliderValue}
           onChange={(event) => onChange(Number(event.target.value))}
-          className="w-full accent-signal"
+          className="w-full accent-signal disabled:opacity-40"
           aria-label="Max companies slider"
         />
       </label>
@@ -58,7 +78,8 @@ export function MaxCompaniesControl({ value, onChange }: MaxCompaniesControlProp
           max={5000}
           inputMode="numeric"
           placeholder="e.g. 150"
-          value={value ?? ""}
+          disabled={unlimited}
+          value={unlimited || value == null ? "" : value}
           onChange={(event) => {
             const raw = event.target.value.trim();
             if (raw === "") {
@@ -68,7 +89,7 @@ export function MaxCompaniesControl({ value, onChange }: MaxCompaniesControlProp
             const next = Number(raw);
             onChange(Number.isFinite(next) ? next : null);
           }}
-          className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2.5 text-sm text-mist-100 outline-none placeholder:text-mist-500 focus:border-signal/50"
+          className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2.5 text-sm text-mist-100 outline-none placeholder:text-mist-500 focus:border-signal/50 disabled:opacity-40"
         />
       </label>
     </div>

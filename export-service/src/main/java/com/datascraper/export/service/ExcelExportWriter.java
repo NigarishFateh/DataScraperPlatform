@@ -49,23 +49,15 @@ public class ExcelExportWriter {
             "Website",
             "Email",
             "Phone Number",
-            "Founder Name",
-            "Description",
-            "Services",
-            "Technology Stack",
-            "Github URL",
-            "Contact Page",
-            "Notes"
+            "Founder Name"
     };
 
     private static final int COL_WEBSITE = 2;
-    private static final int COL_GITHUB = 9;
-    private static final int COL_CONTACT = 10;
     private static final int SAMPLE_AUTO_SIZE_ROWS = 100;
     private static final int STREAM_WINDOW_SIZE = 100;
     private static final int MAX_COLUMN_WIDTH = 256 * 55;
-    private static final int HEADER_ROW_HEIGHT = 22;
-    private static final int DATA_ROW_HEIGHT = 45;
+    private static final int HEADER_ROW_HEIGHT = 18;
+    private static final int DATA_ROW_HEIGHT = 15;
 
     private static final Map<String, String> COUNTRY_NAMES = Map.ofEntries(
             Map.entry("PK", "Pakistan"),
@@ -251,8 +243,6 @@ public class ExcelExportWriter {
         int lastDataRow = Math.max(rowIndex - 1, 0);
         sheet.setAutoFilter(new CellRangeAddress(0, lastDataRow, 0, COMPANY_HEADERS.length - 1));
         widthTracker.applyToSheet(sheet);
-        sheet.setColumnWidth(6, Math.min(MAX_COLUMN_WIDTH, 40 * 256));
-        sheet.setColumnWidth(7, Math.min(MAX_COLUMN_WIDTH, 36 * 256));
     }
 
     private void writeCompanyRow(
@@ -265,19 +255,14 @@ public class ExcelExportWriter {
             int rowIndex
     ) {
         CreationHelper helper = workbook.getCreationHelper();
+        String founder = firstNonBlank(company.founder(), company.ceo());
         String[] values = {
                 company.name(),
                 company.city(),
                 company.website(),
                 company.email(),
                 company.phone(),
-                company.founder(),
-                company.description(),
-                company.services(),
-                joinList(company.technologyStack()),
-                company.github(),
-                company.contactPage(),
-                company.notes()
+                founder
         };
 
         for (int col = 0; col < values.length; col++) {
@@ -306,7 +291,14 @@ public class ExcelExportWriter {
     }
 
     private boolean isUrlColumn(int col) {
-        return col == COL_WEBSITE || col == COL_GITHUB || col == COL_CONTACT;
+        return col == COL_WEBSITE;
+    }
+
+    private static String firstNonBlank(String a, String b) {
+        if (a != null && !a.isBlank()) {
+            return a;
+        }
+        return b;
     }
 
     private static boolean looksLikeUrl(String value) {
@@ -385,7 +377,7 @@ public class ExcelExportWriter {
         headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         headerStyle.setAlignment(HorizontalAlignment.CENTER);
         headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-        headerStyle.setWrapText(true);
+        headerStyle.setWrapText(false);
         applyBorders(headerStyle);
 
         Font dataFont = workbook.createFont();
@@ -402,16 +394,16 @@ public class ExcelExportWriter {
         oddRowStyle.setFont(dataFont);
         oddRowStyle.setFillForegroundColor(IndexedColors.WHITE.index);
         oddRowStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        oddRowStyle.setWrapText(true);
-        oddRowStyle.setVerticalAlignment(VerticalAlignment.TOP);
+        oddRowStyle.setWrapText(false);
+        oddRowStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         applyBorders(oddRowStyle);
 
         CellStyle evenRowStyle = workbook.createCellStyle();
         evenRowStyle.setFont(dataFont);
         evenRowStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.index);
         evenRowStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        evenRowStyle.setWrapText(true);
-        evenRowStyle.setVerticalAlignment(VerticalAlignment.TOP);
+        evenRowStyle.setWrapText(false);
+        evenRowStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         applyBorders(evenRowStyle);
 
         return new Styles(headerStyle, oddRowStyle, evenRowStyle, linkFont);

@@ -13,15 +13,23 @@ import com.datascraper.website.support.HtmlPageFetcher;
 import com.datascraper.website.support.RobotsTxtGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Component
 public class CompanyWebsiteScraper implements WebsiteScraper {
+
+    private static final int MAX_EXTRA_PAGES = 2;
 
     private final HtmlPageFetcher pageFetcher;
     private final CompanyWebsiteHtmlParser htmlParser;
@@ -48,7 +56,19 @@ public class CompanyWebsiteScraper implements WebsiteScraper {
         try {
             robotsTxtGuard.verifyAllowed(url);
             Document document = pageFetcher.fetch(url);
-            List<Map<String, Object>> items = htmlParser.parse(document, document.baseUri(), properties.getMaxItems());
+            List<Map<String, Object>> items = new ArrayList<>(
+                    htmlParser.parse(document, document.baseUri(), properties.getMaxItems())
+            );
+
+            for (String extraUrl : findTeamOrAboutUrls(document, document.baseUri())) {
+                try {
+                    robotsTxtGuard.verifyAllowed(extraUrl);
+                    Document extra = pageFetcher.fetch(extraUrl);
+                    items.addAll(htmlParser.parse(extra, extra.baseUri(), Math.min(40, properties.getMaxItems())));
+                } catch (Exception ex) {
+                    log.debug("Extra page scrape skipped for {}: {}", extraUrl, ex.getMessage());
+                }
+            }
 
             if (items.isEmpty()) {
                 return ScraperResult.failed(
@@ -70,6 +90,40 @@ public class CompanyWebsiteScraper implements WebsiteScraper {
         } catch (IOException ex) {
             log.warn("Website scrape failed for {}: {}", url, ex.getMessage());
             return ScraperResult.failed(ScraperType.COMPANY_WEBSITE, ex.getMessage());
+        }
+    }
+
+    private List<String> findTeamOrAboutUrls(Document document, String baseUri) {
+        Set<String> urls = new LinkedHashSet<>();
+        for (Element link : document.select(
+                "a[href*='about'], a[href*='team'], a[href*='over-ons'], a[href*='overons'], "
+                        + "a[href*='management'], a[href*='leadership'], a[href*='ons-team'], a[href*='founders']")) {
+            String href = link.absUrl("href");
+            if (href.isBlank() || !sameHost(baseUri, href)) {
+                continue;
+            }
+            String lower = href.toLowerCase(Locale.ROOT);
+            if (lower.contains("career") || lower.contains("job") || lower.contains("blog") || lower.contains("news")) {
+                continue;
+            }
+            urls.add(href.split("#")[0]);
+            if (urls.size() >= MAX_EXTRA_PAGES) {
+                break;
+            }
+        }
+        return List.copyOf(urls);
+    }
+
+    private static boolean sameHost(String baseUri, String href) {
+        try {
+            String baseHost = URI.create(baseUri).getHost();
+            String hrefHost = URI.create(href).getHost();
+            if (baseHost == null || hrefHost == null) {
+                return false;
+            }
+            return baseHost.equalsIgnoreCase(hrefHost);
+        } catch (Exception ex) {
+            return false;
         }
     }
 }

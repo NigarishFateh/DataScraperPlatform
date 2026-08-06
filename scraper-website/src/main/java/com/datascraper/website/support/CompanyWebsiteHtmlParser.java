@@ -36,13 +36,81 @@ public class CompanyWebsiteHtmlParser {
 
         addMeta(items, seen, document, sourceUrl);
         addHeadings(items, seen, document, sourceUrl);
+        addFounders(items, seen, document, sourceUrl);
         addParagraphs(items, seen, document, sourceUrl, maxItems);
         addOfferingLinks(items, seen, document);
         addCareerLinks(items, seen, document);
+        addTeamLinks(items, seen, document);
         addSocialLinks(items, seen, document);
         addContactChannels(items, seen, document);
 
         return items.size() > maxItems ? items.subList(0, maxItems) : items;
+    }
+
+    private void addFounders(
+            List<Map<String, Object>> items,
+            Set<String> seen,
+            Document document,
+            String sourceUrl
+    ) {
+        Pattern labeled = Pattern.compile(
+                "(?i)\\b(founder|co[-\\s]?founder|ceo|owner|proprietor|managing director|directeur|oprichter|eigenaar|zaakvoerder)\\b\\s*[:\\-|–]?\\s*([A-Z][a-zA-Z'’\\-]+(?:\\s+[A-Z][a-zA-Z'’\\-]+){0,3})"
+        );
+        Pattern namedThenRole = Pattern.compile(
+                "(?i)\\b([A-Z][a-zA-Z'’\\-]+(?:\\s+[A-Z][a-zA-Z'’\\-]+){0,3})\\s*[,\\-|–]\\s*(founder|co[-\\s]?founder|ceo|owner|proprietor|managing director|directeur|oprichter|eigenaar)\\b"
+        );
+
+        String pageText = document.text();
+        Matcher labeledMatcher = labeled.matcher(pageText);
+        while (labeledMatcher.find()) {
+            String role = labeledMatcher.group(1).toLowerCase(Locale.ROOT);
+            String person = cleanPersonName(labeledMatcher.group(2));
+            if (person == null) {
+                continue;
+            }
+            String field = role.contains("ceo") || role.contains("directeur") ? "ceo" : "founder";
+            if (!seen.add(field + ":" + person.toLowerCase(Locale.ROOT))) {
+                continue;
+            }
+            items.add(item("people", field, person, role, sourceUrl, null));
+        }
+
+        Matcher namedMatcher = namedThenRole.matcher(pageText);
+        while (namedMatcher.find()) {
+            String person = cleanPersonName(namedMatcher.group(1));
+            String role = namedMatcher.group(2).toLowerCase(Locale.ROOT);
+            if (person == null) {
+                continue;
+            }
+            String field = role.contains("ceo") || role.contains("directeur") ? "ceo" : "founder";
+            if (!seen.add(field + ":" + person.toLowerCase(Locale.ROOT))) {
+                continue;
+            }
+            items.add(item("people", field, person, role, sourceUrl, null));
+        }
+    }
+
+    private void addTeamLinks(List<Map<String, Object>> items, Set<String> seen, Document document) {
+        Elements links = document.select(
+                "a[href*='about'], a[href*='team'], a[href*='over-ons'], a[href*='overons'], "
+                        + "a[href*='management'], a[href*='leadership'], a[href*='ons-team'], a[href*='founders']");
+        addLinkItems(items, seen, links, "people", "team-or-about-link");
+    }
+
+    private static String cleanPersonName(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String name = raw.replaceAll("\\s+", " ").trim();
+        if (name.length() < 3 || name.length() > 60) {
+            return null;
+        }
+        String lower = name.toLowerCase(Locale.ROOT);
+        if (lower.contains("company") || lower.contains("limited") || lower.contains("bv")
+                || lower.contains("inc") || lower.contains("llc") || lower.contains("our team")) {
+            return null;
+        }
+        return name;
     }
 
     private void addMeta(List<Map<String, Object>> items, Set<String> seen, Document document, String sourceUrl) {

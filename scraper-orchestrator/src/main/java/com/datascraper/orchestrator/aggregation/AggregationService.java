@@ -92,6 +92,11 @@ public class AggregationService {
             case "metaDescription", "ogDescription", "paragraph" -> preferLonger(draft::getDescription, draft::setDescription, value);
             case "email" -> prefer(draft::getEmail, draft::setEmail, value, 0.6);
             case "phone" -> prefer(draft::getPhone, draft::setPhone, value, 0.6);
+            case "founder" -> prefer(draft::getFounder, draft::setFounder, value, 0.8);
+            case "ceo" -> {
+                prefer(draft::getCeo, draft::setCeo, value, 0.8);
+                prefer(draft::getFounder, draft::setFounder, value, 0.55);
+            }
             case "linkedin" -> prefer(draft::getLinkedIn, draft::setLinkedIn, stringValue(item.get("url")), 0.7);
             case "github" -> prefer(draft::getGithub, draft::setGithub, stringValue(item.get("url")), 0.7);
             case "twitter" -> prefer(draft::getTwitter, draft::setTwitter, stringValue(item.get("url")), 0.7);

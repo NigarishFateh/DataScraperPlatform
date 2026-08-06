@@ -29,7 +29,7 @@ public class DuckDuckGoSearchClient {
 
     private static final Logger log = LoggerFactory.getLogger(DuckDuckGoSearchClient.class);
     private static final Pattern UDDG = Pattern.compile("uddg=([^&]+)");
-    private static final int MAX_CITIES = 6;
+    private static final int MAX_CITIES = 500;
     private static final int MAX_KEYWORDS = 2;
     private static final int MAX_QUERIES = 12;
     private static final Set<String> BLOCKED_HOSTS = Set.of(

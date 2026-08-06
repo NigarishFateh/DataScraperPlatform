@@ -41,10 +41,12 @@ public class GooglePlacesDiscoveryClient {
             "places.googleMapsUri",
             "places.nationalPhoneNumber",
             "places.internationalPhoneNumber",
-            "places.types"
+            "places.types",
+            "nextPageToken"
     );
-    private static final int MAX_CITIES = 8;
+    private static final int MAX_CITIES = 500;
     private static final int MAX_KEYWORDS = 2;
+    private static final int MAX_PAGES_PER_QUERY = 3;
 
     /** Best-effort mapping from our category ids to Places includedType (Table A). */
     private static final Map<String, String> INCLUDED_TYPES = Map.ofEntries(
@@ -83,7 +85,12 @@ public class GooglePlacesDiscoveryClient {
             Map.entry("laundry", "laundry"),
             Map.entry("moving-company", "moving_company"),
             Map.entry("storage-facility", "storage"),
-            Map.entry("funeral-services", "funeral_home")
+            Map.entry("funeral-services", "funeral_home"),
+            Map.entry("bakery", "bakery"),
+            Map.entry("florist", "florist"),
+            Map.entry("locksmith", "locksmith"),
+            Map.entry("roofing", "roofing_contractor"),
+            Map.entry("physiotherapy", "physiotherapist")
     );
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -146,84 +153,110 @@ public class GooglePlacesDiscoveryClient {
             ResolvedDiscoveryCriteria criteria,
             Set<String> seen
     ) throws Exception {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("textQuery", textQuery);
-        body.put("languageCode", "en");
-        body.put("pageSize", Math.min(20, Math.max(criteria.maxResults(), 10)));
-        if (regionCode != null && !regionCode.isBlank()) {
-            body.put("regionCode", regionCode);
-        }
-        if (includedType != null && !includedType.isBlank()) {
-            body.put("includedType", includedType);
-            body.put("strictTypeFiltering", false);
-        }
-
-        String json = objectMapper.writeValueAsString(body);
-        HttpRequest request = HttpRequest.newBuilder(URI.create(SEARCH_URL))
-                .timeout(Duration.ofSeconds(30))
-                .header("Content-Type", "application/json")
-                .header("X-Goog-Api-Key", apiKey)
-                .header("X-Goog-FieldMask", FIELD_MASK)
-                .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
-                .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() >= 400) {
-            throw new IllegalStateException("HTTP " + response.statusCode() + ": " + truncate(response.body(), 240));
-        }
-
-        JsonNode places = objectMapper.readTree(response.body()).path("places");
         List<WebSearchHit> hits = new ArrayList<>();
-        if (!places.isArray()) {
-            return hits;
-        }
-
-        for (JsonNode place : places) {
-            String name = text(place.path("displayName"), "text");
-            if (name.isBlank()) {
-                continue;
+        String pageToken = null;
+        for (int page = 0; page < MAX_PAGES_PER_QUERY; page++) {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("textQuery", textQuery);
+            body.put("languageCode", "en");
+            body.put("pageSize", 20);
+            if (regionCode != null && !regionCode.isBlank()) {
+                body.put("regionCode", regionCode);
             }
-            String placeId = text(place, "id");
-            String resourceName = text(place, "name");
-            if (resourceName.isBlank() && !placeId.isBlank()) {
-                resourceName = placeId.startsWith("places/") ? placeId : "places/" + placeId;
+            if (includedType != null && !includedType.isBlank()) {
+                body.put("includedType", includedType);
+                body.put("strictTypeFiltering", false);
             }
-            if (!placeId.isBlank() && !seen.add(placeId)) {
-                continue;
-            }
-            if (placeId.isBlank() && !seen.add(name.toLowerCase(Locale.ROOT) + "|" + city.cityName())) {
-                continue;
+            if (pageToken != null && !pageToken.isBlank()) {
+                body.put("pageToken", pageToken);
             }
 
-            String website = WebsiteUrlSupport.normalizeHttpUrl(text(place, "websiteUri"));
-            if (!WebsiteUrlSupport.isUsableCompanyWebsite(website) && !resourceName.isBlank()) {
-                website = fetchWebsiteFromPlaceDetails(resourceName);
-            }
-            if (!WebsiteUrlSupport.isUsableCompanyWebsite(website)) {
-                log.debug("Skipping Google place '{}' — no company website (maps-only)", name);
-                continue;
+            String json = objectMapper.writeValueAsString(body);
+            HttpRequest request = HttpRequest.newBuilder(URI.create(SEARCH_URL))
+                    .timeout(Duration.ofSeconds(30))
+                    .header("Content-Type", "application/json")
+                    .header("X-Goog-Api-Key", apiKey)
+                    .header("X-Goog-FieldMask", FIELD_MASK)
+                    .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 400) {
+                throw new IllegalStateException("HTTP " + response.statusCode() + ": " + truncate(response.body(), 240));
             }
 
-            String mapsUri = text(place, "googleMapsUri");
-            String sourceUrl = WebsiteUrlSupport.isMapOrDirectoryUrl(mapsUri) ? website : mapsUri;
-            if (sourceUrl == null || sourceUrl.isBlank()) {
-                sourceUrl = website;
+            JsonNode root = objectMapper.readTree(response.body());
+            JsonNode places = root.path("places");
+            if (places.isArray()) {
+                for (JsonNode place : places) {
+                    WebSearchHit hit = toHit(place, city, criteria, seen);
+                    if (hit != null) {
+                        hits.add(hit);
+                    }
+                    if (hits.size() >= criteria.maxResults()) {
+                        return hits;
+                    }
+                }
             }
 
-            String address = text(place, "formattedAddress");
-            String resolvedCity = extractCityFromAddress(address, city.cityName());
-
-            hits.add(new WebSearchHit(
-                    name,
-                    website,
-                    sourceUrl,
-                    firstCountry(criteria),
-                    city.cityId(),
-                    resolvedCity,
-                    "google-places"
-            ));
+            pageToken = text(root, "nextPageToken");
+            if (pageToken.isBlank()) {
+                break;
+            }
+            sleepQuietly(350);
         }
         return hits;
+    }
+
+    private WebSearchHit toHit(
+            JsonNode place,
+            CityGeo city,
+            ResolvedDiscoveryCriteria criteria,
+            Set<String> seen
+    ) {
+        String name = text(place.path("displayName"), "text");
+        if (name.isBlank()) {
+            return null;
+        }
+        String placeId = text(place, "id");
+        String resourceName = text(place, "name");
+        if (resourceName.isBlank() && !placeId.isBlank()) {
+            resourceName = placeId.startsWith("places/") ? placeId : "places/" + placeId;
+        }
+        if (!placeId.isBlank() && !seen.add(placeId)) {
+            return null;
+        }
+        if (placeId.isBlank() && !seen.add(name.toLowerCase(Locale.ROOT) + "|" + city.cityName())) {
+            return null;
+        }
+
+        String website = WebsiteUrlSupport.normalizeHttpUrl(text(place, "websiteUri"));
+        if (!WebsiteUrlSupport.isUsableCompanyWebsite(website) && !resourceName.isBlank()) {
+            website = fetchWebsiteFromPlaceDetails(resourceName);
+        }
+        if (!WebsiteUrlSupport.isUsableCompanyWebsite(website)) {
+            log.debug("Skipping Google place '{}' — no company website (maps-only)", name);
+            return null;
+        }
+
+        String mapsUri = text(place, "googleMapsUri");
+        String sourceUrl = WebsiteUrlSupport.isMapOrDirectoryUrl(mapsUri) ? website : mapsUri;
+        if (sourceUrl == null || sourceUrl.isBlank()) {
+            sourceUrl = website;
+        }
+
+        String address = text(place, "formattedAddress");
+        String resolvedCity = extractCityFromAddress(address, city.cityName());
+
+        return new WebSearchHit(
+                name,
+                website,
+                sourceUrl,
+                firstCountry(criteria),
+                city.cityId(),
+                resolvedCity,
+                "google-places"
+        );
     }
 
     private String fetchWebsiteFromPlaceDetails(String resourceName) {
