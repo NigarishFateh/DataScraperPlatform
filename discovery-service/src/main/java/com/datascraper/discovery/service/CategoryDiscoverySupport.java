@@ -14,13 +14,17 @@ import java.util.Set;
 final class CategoryDiscoverySupport {
 
     private static final Set<String> TECH_CATEGORY_IDS = Set.of(
-            "ai", "ml", "software", "software-dev", "web-dev", "mobile", "mobile-dev",
+            "ai", "ml", "deep-learning", "nlp", "computer-vision",
+            "software", "software-dev", "web-dev", "mobile", "mobile-dev",
             "saas", "paas", "iaas", "cloud", "devops", "sre", "cyber", "cybersecurity",
-            "infosec", "data-eng", "data-science", "big-data", "analytics", "bi-software",
+            "infosec", "network-security", "identity-access",
+            "data-eng", "data-science", "big-data", "analytics", "bi-software",
             "erp", "crm", "api", "blockchain", "web3", "iot", "robotics", "ar-vr",
-            "gaming", "game-dev", "it", "it-services", "it-support", "msp", "outsourcing",
+            "gaming", "game-dev", "it", "it-services", "it-support", "it-consulting",
+            "msp", "outsourcing",
             "qa-testing", "ui-ux", "digital-xform", "automation", "rpa", "low-code",
-            "embedded", "semiconductor", "fintech", "healthtech", "edtech", "legaltech",
+            "embedded", "semiconductor", "hosting", "open-source", "database", "observability",
+            "fintech", "healthtech", "edtech", "legaltech",
             "regtech", "govtech", "martech", "adtech", "hrtech", "proptech", "contech",
             "cleantech", "greentech", "foodtech", "retailtech", "logistics-tech",
             "mobility-tech", "climate-tech", "space-tech", "defense-tech", "medtech",
