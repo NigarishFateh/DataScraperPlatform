@@ -49,6 +49,7 @@ app:
   github-token: ${GITHUB_TOKEN:}
   google-places-api-key: ${GOOGLE_PLACES_API_KEY:}
   serpapi-api-key: ${SERPAPI_API_KEY:}
+  apollo-api-key: ${APOLLO_API_KEY:}
 
 discovery:
   providers:

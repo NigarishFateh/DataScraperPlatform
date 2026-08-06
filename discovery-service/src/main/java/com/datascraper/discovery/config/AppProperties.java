@@ -21,6 +21,7 @@ public class AppProperties {
     private String githubToken = "";
     private String googlePlacesApiKey = "";
     private String serpapiApiKey = "";
+    private String apolloApiKey = "";
 
     @Getter
     @Setter

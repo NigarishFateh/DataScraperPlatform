@@ -13,31 +13,39 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Facade over paid/real business-search providers (Google Places, SerpAPI Maps).
- * Query shape is always category keyword + city + country.
+ * Facade over B2B / business-search providers.
+ * Order: Apollo.io (primary) → Google Places → SerpAPI Maps.
  */
 @Component
 public class BusinessSearchDiscoveryClient {
 
     private static final Logger log = LoggerFactory.getLogger(BusinessSearchDiscoveryClient.class);
 
+    private final ApolloDiscoveryClient apolloDiscoveryClient;
     private final GooglePlacesDiscoveryClient googlePlacesDiscoveryClient;
     private final SerpApiMapsDiscoveryClient serpApiMapsDiscoveryClient;
 
     public BusinessSearchDiscoveryClient(
+            ApolloDiscoveryClient apolloDiscoveryClient,
             GooglePlacesDiscoveryClient googlePlacesDiscoveryClient,
             SerpApiMapsDiscoveryClient serpApiMapsDiscoveryClient
     ) {
+        this.apolloDiscoveryClient = apolloDiscoveryClient;
         this.googlePlacesDiscoveryClient = googlePlacesDiscoveryClient;
         this.serpApiMapsDiscoveryClient = serpApiMapsDiscoveryClient;
     }
 
     public boolean isConfigured() {
-        return googlePlacesDiscoveryClient.isConfigured() || serpApiMapsDiscoveryClient.isConfigured();
+        return apolloDiscoveryClient.isConfigured()
+                || googlePlacesDiscoveryClient.isConfigured()
+                || serpApiMapsDiscoveryClient.isConfigured();
     }
 
     public String configuredProviders() {
         List<String> names = new ArrayList<>();
+        if (apolloDiscoveryClient.isConfigured()) {
+            names.add("apollo");
+        }
         if (googlePlacesDiscoveryClient.isConfigured()) {
             names.add("google-places");
         }
@@ -50,7 +58,16 @@ public class BusinessSearchDiscoveryClient {
     public List<WebSearchHit> discover(ResolvedDiscoveryCriteria criteria) {
         Map<String, WebSearchHit> unique = new LinkedHashMap<>();
 
-        if (googlePlacesDiscoveryClient.isConfigured()) {
+        if (apolloDiscoveryClient.isConfigured()) {
+            for (WebSearchHit hit : safe(() -> apolloDiscoveryClient.discover(criteria), "apollo")) {
+                unique.putIfAbsent(dedupeKey(hit), hit);
+                if (unique.size() >= criteria.maxResults()) {
+                    return new ArrayList<>(unique.values());
+                }
+            }
+        }
+
+        if (unique.size() < criteria.maxResults() && googlePlacesDiscoveryClient.isConfigured()) {
             for (WebSearchHit hit : safe(() -> googlePlacesDiscoveryClient.discover(criteria), "google-places")) {
                 unique.putIfAbsent(dedupeKey(hit), hit);
                 if (unique.size() >= criteria.maxResults()) {

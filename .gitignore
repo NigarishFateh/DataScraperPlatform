@@ -35,6 +35,9 @@ build/
 ### Environment variables ###
 .env
 
+### GeoNames download cache ###
+scripts/geonames/
+
 ### Chrome extension (Lead Intelligence) ###
 chrome-extension/node_modules/
 chrome-extension/dist/

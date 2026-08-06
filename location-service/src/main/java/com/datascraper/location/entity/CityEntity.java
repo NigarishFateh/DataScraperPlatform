@@ -13,10 +13,10 @@ import jakarta.persistence.Table;
 public class CityEntity {
 
     @Id
-    @Column(length = 64)
+    @Column(length = 96)
     private String id;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 200)
     private String name;
 
     @Column(name = "country_code", nullable = false, length = 2)

@@ -88,7 +88,8 @@ final class CategoryDiscoverySupport {
 
         if ("openstreetmap".equals(source)
                 || "google-places".equals(source)
-                || "serpapi-maps".equals(source)) {
+                || "serpapi-maps".equals(source)
+                || "apollo".equals(source)) {
             if (!tech && looksLikePureTechNoise(haystack) && !containsAnyKeywordToken(haystack, criteria)) {
                 return false;
             }
