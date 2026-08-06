@@ -54,3 +54,17 @@
     @apply rounded-xl border border-white/10 bg-ink-800/70 shadow-panel backdrop-blur-sm;
   }
 }
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(320%);
+    opacity: 0.35;
+  }
+}

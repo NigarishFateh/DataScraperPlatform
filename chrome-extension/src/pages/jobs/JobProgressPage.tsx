@@ -1,7 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { JobPhaseIndicator } from "../../components/jobs/JobPhaseIndicator";
 import { ProgressBar } from "../../components/ui/ProgressBar";
+import { Spinner } from "../../components/ui/Spinner";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { downloadExport, listExportsByJob } from "../../services/exports/exportApi";
 import {
@@ -10,7 +12,14 @@ import {
   resumeJob,
   retryJob,
 } from "../../services/jobs/jobApi";
-import { isTerminalJobStatus } from "../../types/job";
+import { isTerminalJobStatus, type JobPhase, type JobStatus } from "../../types/job";
+
+function isDiscoveryOrEnrichmentActive(phase: JobPhase, status: JobStatus): boolean {
+  return (
+    (status === "RUNNING" || status === "QUEUED") &&
+    (phase === "DISCOVERY" || phase === "ENRICHMENT")
+  );
+}
 
 function formatEta(seconds: number | null): string {
   if (seconds == null || seconds <= 0) return "—";
@@ -111,8 +120,9 @@ export function JobProgressPage() {
 
   if (jobQuery.isLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center text-sm text-mist-300">
-        Loading job…
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-mist-300">
+        <Spinner size="lg" />
+        <p>Loading job…</p>
       </div>
     );
   }
@@ -132,6 +142,7 @@ export function JobProgressPage() {
   const showResume = job.status === "PAUSED";
   const showRetry = job.status === "FAILED";
   const showDownload = job.status === "COMPLETED" && Boolean(readyExport);
+  const showPhaseAnimation = isDiscoveryOrEnrichmentActive(job.phase, job.status);
 
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -146,12 +157,25 @@ export function JobProgressPage() {
       </section>
 
       <section className="li-surface space-y-4 p-4">
-        <ProgressBar value={job.progressPercent} />
+        <JobPhaseIndicator
+          phase={job.phase}
+          status={job.status}
+          discoveredCount={job.discoveredCount}
+          enrichedCount={job.enrichedCount}
+        />
+
+        <ProgressBar
+          value={job.progressPercent}
+          indeterminate={showPhaseAnimation}
+        />
 
         <dl className="grid grid-cols-2 gap-3 text-xs">
           <div>
             <dt className="text-mist-500">Phase</dt>
-            <dd className="font-medium text-mist-100">{job.phase.replace(/_/g, " ")}</dd>
+            <dd className="flex items-center gap-1.5 font-medium text-mist-100">
+              {showPhaseAnimation ? <Spinner size="sm" /> : null}
+              {job.phase.replace(/_/g, " ")}
+            </dd>
           </div>
           <div>
             <dt className="text-mist-500">ETA</dt>
@@ -225,7 +249,10 @@ export function JobProgressPage() {
             </button>
           ) : null}
           {job.status === "COMPLETED" && !readyExport ? (
-            <span className="self-center text-[11px] text-mist-400">Preparing export…</span>
+            <span className="flex items-center gap-1.5 self-center text-[11px] text-mist-400">
+              <Spinner size="sm" />
+              Preparing export…
+            </span>
           ) : null}
         </div>
 

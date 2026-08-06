@@ -1,11 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Spinner } from "../../components/ui/Spinner";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { listJobs } from "../../services/jobs/jobApi";
+import type { JobPhase, JobStatus } from "../../types/job";
 
 function formatWhen(value: string): string {
   return new Date(value).toLocaleString();
+}
+
+function phaseActivityLabel(phase: JobPhase, status: JobStatus): string | null {
+  if (status !== "RUNNING" && status !== "QUEUED") {
+    return null;
+  }
+  if (phase === "DISCOVERY") return "Discovering companies";
+  if (phase === "ENRICHMENT") return "Enriching details";
+  return null;
 }
 
 export function JobHistoryPage() {
@@ -29,7 +40,10 @@ export function JobHistoryPage() {
       </section>
 
       {query.isLoading ? (
-        <p className="text-sm text-mist-400">Loading jobs…</p>
+        <div className="flex items-center gap-2 text-sm text-mist-400">
+          <Spinner size="sm" />
+          Loading jobs…
+        </div>
       ) : query.isError ? (
         <p className="text-sm text-red-300">Failed to load jobs.</p>
       ) : jobs.length === 0 ? (
@@ -41,7 +55,10 @@ export function JobHistoryPage() {
         </div>
       ) : (
         <ul className="space-y-2">
-          {jobs.map((job) => (
+          {jobs.map((job) => {
+            const activity = phaseActivityLabel(job.phase, job.status);
+
+            return (
             <li key={job.id}>
               <Link
                 to={`/jobs/${job.id}`}
@@ -54,12 +71,19 @@ export function JobHistoryPage() {
                       {job.categoryIds.length} categories · {job.progressPercent}% ·{" "}
                       {formatWhen(job.createdAt)}
                     </p>
+                    {activity ? (
+                      <p className="flex items-center gap-1.5 text-[11px] text-signal">
+                        <Spinner size="sm" />
+                        {activity}
+                      </p>
+                    ) : null}
                   </div>
                   <StatusBadge status={job.status} />
                 </div>
               </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 
