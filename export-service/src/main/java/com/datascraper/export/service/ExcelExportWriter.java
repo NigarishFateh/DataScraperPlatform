@@ -56,8 +56,12 @@ public class ExcelExportWriter {
     private static final int SAMPLE_AUTO_SIZE_ROWS = 100;
     private static final int STREAM_WINDOW_SIZE = 100;
     private static final int MAX_COLUMN_WIDTH = 256 * 55;
-    private static final int HEADER_ROW_HEIGHT = 18;
-    private static final int DATA_ROW_HEIGHT = 15;
+    private static final int HEADER_ROW_HEIGHT = 20;
+    private static final int DATA_ROW_HEIGHT = 18;
+    private static final int META_ROW_HEIGHT = 17;
+
+    /** Preferred column widths (Excel character units) for the Companies sheet. */
+    private static final int[] COMPANY_COLUMN_WIDTH_CHARS = {32, 18, 36, 28, 16, 24};
 
     private static final Map<String, String> COUNTRY_NAMES = Map.ofEntries(
             Map.entry("PK", "Pakistan"),
@@ -242,7 +246,16 @@ public class ExcelExportWriter {
 
         int lastDataRow = Math.max(rowIndex - 1, 0);
         sheet.setAutoFilter(new CellRangeAddress(0, lastDataRow, 0, COMPANY_HEADERS.length - 1));
-        widthTracker.applyToSheet(sheet);
+        applyCompanyColumnWidths(sheet, widthTracker);
+    }
+
+    private void applyCompanyColumnWidths(SXSSFSheet sheet, ColumnWidthTracker widthTracker) {
+        for (int col = 0; col < COMPANY_HEADERS.length; col++) {
+            int minChars = COMPANY_COLUMN_WIDTH_CHARS[col];
+            int trackedChars = widthTracker.charsForColumn(col);
+            int widthChars = Math.max(minChars, trackedChars);
+            sheet.setColumnWidth(col, Math.min(widthChars * 256, MAX_COLUMN_WIDTH));
+        }
     }
 
     private void writeCompanyRow(
@@ -267,7 +280,14 @@ public class ExcelExportWriter {
 
         for (int col = 0; col < values.length; col++) {
             Cell cell = row.createCell(col);
-            cell.setCellStyle(rowStyle);
+            HorizontalAlignment alignment = horizontalAlignmentForColumn(col);
+            CellStyle cellStyle = rowStyle;
+            if (alignment != HorizontalAlignment.LEFT) {
+                cellStyle = workbook.createCellStyle();
+                cellStyle.cloneStyleFrom(rowStyle);
+                cellStyle.setAlignment(alignment);
+            }
+            cell.setCellStyle(cellStyle);
             String value = values[col];
             if (value == null || value.isBlank()) {
                 cell.setBlank();
@@ -277,7 +297,7 @@ public class ExcelExportWriter {
                 link.setAddress(normalizeUrl(value));
                 cell.setHyperlink(link);
                 CellStyle linkStyle = workbook.createCellStyle();
-                linkStyle.cloneStyleFrom(rowStyle);
+                linkStyle.cloneStyleFrom(cellStyle);
                 linkStyle.setFont(linkFont);
                 cell.setCellStyle(linkStyle);
             } else {
@@ -288,6 +308,13 @@ public class ExcelExportWriter {
                 widthTracker.track(col, value, rowIndex);
             }
         }
+    }
+
+    private static HorizontalAlignment horizontalAlignmentForColumn(int col) {
+        return switch (col) {
+            case 4 -> HorizontalAlignment.CENTER;
+            default -> HorizontalAlignment.LEFT;
+        };
     }
 
     private boolean isUrlColumn(int col) {
@@ -316,6 +343,7 @@ public class ExcelExportWriter {
 
     private void writeSearchCriteriaSheet(SXSSFWorkbook workbook, Styles styles, JobResponse job) {
         Sheet sheet = workbook.createSheet("Search Criteria");
+        sheet.setDisplayGridlines(false);
         int rowIndex = 0;
         rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "Countries", resolveCountryLabel(job).replace('-', ' '));
         rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "Categories", resolveCategoryLabel(job).replace('-', ' '));
@@ -324,8 +352,8 @@ public class ExcelExportWriter {
         rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "City IDs", joinList(job.cityIds()));
         writeLabelValueRow(sheet, rowIndex, styles, "Job ID", job.id() != null ? job.id().toString() : "");
 
-        sheet.setColumnWidth(0, 18 * 256);
-        sheet.setColumnWidth(1, 48 * 256);
+        sheet.setColumnWidth(0, 20 * 256);
+        sheet.setColumnWidth(1, 52 * 256);
     }
 
     private void writeExportSummarySheet(
@@ -337,6 +365,7 @@ public class ExcelExportWriter {
             Instant generatedAt
     ) {
         Sheet sheet = workbook.createSheet("Export Summary");
+        sheet.setDisplayGridlines(false);
         int rowIndex = 0;
         rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "File Scope",
                 resolveCountryLabel(job).replace('-', ' ') + " / " + resolveCategoryLabel(job).replace('-', ' '));
@@ -344,15 +373,17 @@ public class ExcelExportWriter {
         rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "Generated At", TIMESTAMP_FORMAT.format(generatedAt));
         writeLabelValueRow(sheet, rowIndex, styles, "Version", appVersion);
 
-        sheet.setColumnWidth(0, 18 * 256);
-        sheet.setColumnWidth(1, 48 * 256);
+        sheet.setColumnWidth(0, 20 * 256);
+        sheet.setColumnWidth(1, 52 * 256);
     }
 
     private int writeLabelValueRow(Sheet sheet, int rowIndex, Styles styles, String label, String value) {
         Row row = sheet.createRow(rowIndex);
+        row.setHeightInPoints(META_ROW_HEIGHT);
+
         Cell labelCell = row.createCell(0);
         labelCell.setCellValue(label);
-        labelCell.setCellStyle(styles.header());
+        labelCell.setCellStyle(styles.metaLabel());
 
         Cell valueCell = row.createCell(1);
         if (value == null || value.isBlank()) {
@@ -360,7 +391,7 @@ public class ExcelExportWriter {
         } else {
             valueCell.setCellValue(value);
         }
-        valueCell.setCellStyle(styles.evenRow());
+        valueCell.setCellStyle(rowIndex % 2 == 0 ? styles.metaValueEven() : styles.metaValueOdd());
         return rowIndex + 1;
     }
 
@@ -395,6 +426,7 @@ public class ExcelExportWriter {
         oddRowStyle.setFillForegroundColor(IndexedColors.WHITE.index);
         oddRowStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         oddRowStyle.setWrapText(false);
+        oddRowStyle.setAlignment(HorizontalAlignment.LEFT);
         oddRowStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         applyBorders(oddRowStyle);
 
@@ -403,10 +435,52 @@ public class ExcelExportWriter {
         evenRowStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.index);
         evenRowStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         evenRowStyle.setWrapText(false);
+        evenRowStyle.setAlignment(HorizontalAlignment.LEFT);
         evenRowStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         applyBorders(evenRowStyle);
 
-        return new Styles(headerStyle, oddRowStyle, evenRowStyle, linkFont);
+        Font metaLabelFont = workbook.createFont();
+        metaLabelFont.setBold(true);
+        metaLabelFont.setFontName("Calibri");
+        metaLabelFont.setFontHeightInPoints((short) 11);
+        metaLabelFont.setColor(IndexedColors.GREY_80_PERCENT.index);
+
+        CellStyle metaLabelStyle = workbook.createCellStyle();
+        metaLabelStyle.setFont(metaLabelFont);
+        metaLabelStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.index);
+        metaLabelStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        metaLabelStyle.setAlignment(HorizontalAlignment.LEFT);
+        metaLabelStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        metaLabelStyle.setIndention((short) 1);
+        applyBorders(metaLabelStyle);
+
+        CellStyle metaValueOddStyle = workbook.createCellStyle();
+        metaValueOddStyle.setFont(dataFont);
+        metaValueOddStyle.setFillForegroundColor(IndexedColors.WHITE.index);
+        metaValueOddStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        metaValueOddStyle.setAlignment(HorizontalAlignment.LEFT);
+        metaValueOddStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        metaValueOddStyle.setWrapText(true);
+        applyBorders(metaValueOddStyle);
+
+        CellStyle metaValueEvenStyle = workbook.createCellStyle();
+        metaValueEvenStyle.setFont(dataFont);
+        metaValueEvenStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.index);
+        metaValueEvenStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        metaValueEvenStyle.setAlignment(HorizontalAlignment.LEFT);
+        metaValueEvenStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        metaValueEvenStyle.setWrapText(true);
+        applyBorders(metaValueEvenStyle);
+
+        return new Styles(
+                headerStyle,
+                oddRowStyle,
+                evenRowStyle,
+                linkFont,
+                metaLabelStyle,
+                metaValueOddStyle,
+                metaValueEvenStyle
+        );
     }
 
     private void applyBorders(CellStyle style) {
@@ -433,7 +507,15 @@ public class ExcelExportWriter {
         return joiner.toString();
     }
 
-    private record Styles(CellStyle header, CellStyle oddRow, CellStyle evenRow, Font linkFont) {
+    private record Styles(
+            CellStyle header,
+            CellStyle oddRow,
+            CellStyle evenRow,
+            Font linkFont,
+            CellStyle metaLabel,
+            CellStyle metaValueOdd,
+            CellStyle metaValueEven
+    ) {
     }
 
     public record ExportWriteResult(long rowCount, long fileSizeBytes) {
@@ -448,20 +530,11 @@ public class ExcelExportWriter {
 
         void track(int column, String value, int rowIndex) {
             int length = value == null ? 0 : Math.min(value.length(), 80);
-            if (rowIndex == 0) {
-                maxWidths[column] = Math.max(maxWidths[column], Math.max(length, 12));
-            } else if (maxWidths[column] == 0) {
-                maxWidths[column] = Math.min(length, 30);
-            } else {
-                maxWidths[column] = Math.max(maxWidths[column], Math.min(length, maxWidths[column] + 1));
-            }
+            maxWidths[column] = Math.max(maxWidths[column], length);
         }
 
-        void applyToSheet(SXSSFSheet sheet) {
-            for (int col = 0; col < maxWidths.length; col++) {
-                int width = Math.max(12, maxWidths[col] + 2) * 256;
-                sheet.setColumnWidth(col, Math.min(width, MAX_COLUMN_WIDTH));
-            }
+        int charsForColumn(int column) {
+            return maxWidths[column] + 2;
         }
     }
 }
