@@ -3,6 +3,7 @@ package com.datascraper.orchestrator.aggregation;
 import com.datascraper.common.dto.discovery.DiscoveredCompany;
 import com.datascraper.common.dto.provider.ProviderResult;
 import com.datascraper.common.enums.ProviderExecutionStatus;
+import com.datascraper.common.support.CompanyEmailSupport;
 import com.datascraper.orchestrator.model.CompanyDraft;
 import org.springframework.stereotype.Service;
 
@@ -90,7 +91,7 @@ public class AggregationService {
         switch (field) {
             case "pageTitle", "ogTitle", "ogSiteName" -> prefer(draft::getName, draft::setName, value, 0.5);
             case "metaDescription", "ogDescription", "paragraph" -> preferLonger(draft::getDescription, draft::setDescription, value);
-            case "email" -> prefer(draft::getEmail, draft::setEmail, value, 0.6);
+            case "email" -> preferEmail(draft, value);
             case "phone" -> prefer(draft::getPhone, draft::setPhone, value, 0.6);
             case "founder" -> prefer(draft::getFounder, draft::setFounder, value, 0.8);
             case "ceo" -> {
@@ -114,7 +115,7 @@ public class AggregationService {
             return;
         }
         switch (field) {
-            case "email" -> prefer(draft::getEmail, draft::setEmail, value, 0.75);
+            case "email" -> preferEmail(draft, value);
             case "phone" -> prefer(draft::getPhone, draft::setPhone, value, 0.75);
             case "address" -> preferLonger(draft::getAddress, draft::setAddress, value);
             default -> draft.getRawAttributes().put(field, value);
@@ -122,6 +123,13 @@ public class AggregationService {
         String sourceUrl = stringValue(item.get("sourceUrl"));
         if (sourceUrl != null && sourceUrl.toLowerCase(Locale.ROOT).contains("contact")) {
             prefer(draft::getContactPage, draft::setContactPage, sourceUrl, 0.7);
+        }
+    }
+
+    private void preferEmail(CompanyDraft draft, String candidate) {
+        String chosen = CompanyEmailSupport.prefer(draft.getEmail(), candidate, draft.getWebsite());
+        if (chosen != null) {
+            draft.setEmail(chosen);
         }
     }
 

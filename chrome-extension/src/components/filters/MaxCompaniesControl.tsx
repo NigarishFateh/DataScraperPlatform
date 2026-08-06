@@ -1,6 +1,8 @@
 export const UNLIMITED_MAX_COMPANIES = -1;
+/** UI hard cap for typed/slider volume (server still allows up to 100k via Unlimited). */
+export const MAX_COMPANIES_LIMIT = 10_000;
 
-const PRESETS = [50, 100, 250, 500, 1000, 2000] as const;
+const PRESETS = [50, 100, 250, 500, 1000, 2000, 5000, 10000] as const;
 
 type MaxCompaniesControlProps = {
   value: number | null;
@@ -60,7 +62,7 @@ export function MaxCompaniesControl({ value, onChange }: MaxCompaniesControlProp
         <input
           type="range"
           min={1}
-          max={5000}
+          max={MAX_COMPANIES_LIMIT}
           step={1}
           disabled={unlimited}
           value={sliderValue}
@@ -75,7 +77,7 @@ export function MaxCompaniesControl({ value, onChange }: MaxCompaniesControlProp
         <input
           type="number"
           min={1}
-          max={5000}
+          max={MAX_COMPANIES_LIMIT}
           inputMode="numeric"
           placeholder="e.g. 150"
           disabled={unlimited}

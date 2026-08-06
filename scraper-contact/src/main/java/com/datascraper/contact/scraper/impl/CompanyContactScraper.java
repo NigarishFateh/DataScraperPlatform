@@ -33,14 +33,20 @@ public class CompanyContactScraper implements ContactScraper {
             "/contact",
             "/contact-us",
             "/contactus",
+            "/contact.html",
+            "/about",
+            "/about-us",
             "/about/contact",
             "/company/contact",
+            "/support",
             "/support/contact",
+            "/get-in-touch",
             "/en/contact",
             "/en/contact-us",
             "/fr/contact",
             "/impressum",
-            "/legal/contact"
+            "/legal/contact",
+            "/team"
     };
 
     private final HtmlPageFetcher pageFetcher;
@@ -70,7 +76,7 @@ public class CompanyContactScraper implements ContactScraper {
             Set<String> seenKeys = new LinkedHashSet<>();
             List<String> pagesVisited = new ArrayList<>();
 
-            mergeItems(items, seenKeys, htmlParser.parse(home, homeUri, properties.getMaxItems()));
+            mergeItems(items, seenKeys, htmlParser.parse(home, homeUri, properties.getMaxItems(), url));
             pagesVisited.add(homeUri);
 
             for (String candidate : discoverContactPages(home, homeUri)) {
@@ -83,7 +89,7 @@ public class CompanyContactScraper implements ContactScraper {
                 try {
                     Document page = pageFetcher.fetch(candidate);
                     String pageUri = page.baseUri().isBlank() ? candidate : page.baseUri();
-                    mergeItems(items, seenKeys, htmlParser.parse(page, pageUri, properties.getMaxItems()));
+                    mergeItems(items, seenKeys, htmlParser.parse(page, pageUri, properties.getMaxItems(), url));
                     pagesVisited.add(pageUri);
                 } catch (IOException ex) {
                     log.debug("Contact page fetch skipped {}: {}", candidate, ex.getMessage());
@@ -154,7 +160,10 @@ public class CompanyContactScraper implements ContactScraper {
                     || haystack.contains("support")
                     || haystack.contains("impressum")
                     || haystack.contains("get-in-touch")
-                    || haystack.contains("reach-us")) {
+                    || haystack.contains("reach-us")
+                    || haystack.contains("about-us")
+                    || haystack.contains("about us")
+                    || haystack.contains("team")) {
                 candidates.add(stripFragment(abs));
             }
         }
@@ -172,7 +181,7 @@ public class CompanyContactScraper implements ContactScraper {
                 continue;
             }
             limited.add(candidate);
-            if (limited.size() >= 6) {
+            if (limited.size() >= 8) {
                 break;
             }
         }

@@ -15,6 +15,11 @@ spring:
 server:
   # Gateway owns 8080. Orchestrator is an internal intelligence service.
   port: 8085
+  tomcat:
+    threads:
+      # Headroom for parallel /enrich requests (default Tomcat max is fine; keep explicit).
+      max: ${ORCHESTRATOR_TOMCAT_MAX_THREADS:120}
+      min-spare: 10
 
 app:
   job-service-uri: ${JOB_SERVICE_URI:http://localhost:8086}
@@ -24,8 +29,10 @@ app:
     enabled: false
   queue:
     enabled: true
-    poll-interval-ms: 1000
+    poll-interval-ms: 250
     block-timeout-seconds: 5
+    # Parallel company enrichments from Redis/in-memory queue. Clamped to 1–16.
+    consumer-concurrency: ${ENRICHMENT_CONSUMER_CONCURRENCY:8}
   providers:
     website:
       enabled: true
@@ -48,9 +55,10 @@ scraper:
     max-retries: 3
     retry-delay-ms: 1000
   execution:
-    core-pool-size: 4
-    max-pool-size: 10
-    queue-capacity: 25
+    # Sized for ~8 concurrent companies × website+contact providers + headroom.
+    core-pool-size: 8
+    max-pool-size: 24
+    queue-capacity: 64
     job-timeout-ms: 60000
   cache:
     enabled: false

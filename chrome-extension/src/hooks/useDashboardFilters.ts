@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { DashboardFilters } from "../types/catalog";
-import { UNLIMITED_MAX_COMPANIES } from "../components/filters/MaxCompaniesControl";
+import { UNLIMITED_MAX_COMPANIES, MAX_COMPANIES_LIMIT } from "../components/filters/MaxCompaniesControl";
 
 export const PENDING_FILTERS_KEY = "gbi.pendingFilters";
 
@@ -29,7 +29,7 @@ function normalizeMaxCompanies(value: unknown): number | null {
   if (!Number.isFinite(n)) return null;
   if (n === UNLIMITED_MAX_COMPANIES) return UNLIMITED_MAX_COMPANIES;
   if (n <= 0) return null;
-  return Math.min(5000, Math.floor(n));
+  return Math.min(MAX_COMPANIES_LIMIT, Math.floor(n));
 }
 
 export function useDashboardFilters() {

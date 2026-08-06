@@ -1,6 +1,7 @@
 package com.datascraper.orchestrator.normalization;
 
 import com.datascraper.orchestrator.model.CompanyDraft;
+import com.datascraper.common.support.CompanyEmailSupport;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -87,10 +88,7 @@ public class NormalizationService {
     }
 
     public String normalizeEmail(String email) {
-        if (email == null || email.isBlank()) {
-            return null;
-        }
-        return email.trim().toLowerCase(Locale.ROOT);
+        return CompanyEmailSupport.clean(email);
     }
 
     public String normalizePhone(String phone) {

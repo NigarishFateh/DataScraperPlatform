@@ -46,6 +46,10 @@ app:
   queue:
     poll-interval-ms: 1000
     block-timeout-seconds: 5
+  # HTTP enrichment path (when Redis is off). Keep ≤16 to protect scrapers.
+  enrichment:
+    dispatch-concurrency: ${ENRICHMENT_DISPATCH_CONCURRENCY:8}
+    dispatch-queue-capacity: ${ENRICHMENT_DISPATCH_QUEUE_CAPACITY:64}
   github-token: ${GITHUB_TOKEN:}
   google-places-api-key: ${GOOGLE_PLACES_API_KEY:}
   serpapi-api-key: ${SERPAPI_API_KEY:}

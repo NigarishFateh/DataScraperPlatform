@@ -143,8 +143,10 @@ class ExcelExportWriterTest {
              XSSFWorkbook workbook = new XSSFWorkbook(in)) {
             assertEquals(3, workbook.getNumberOfSheets());
             assertEquals("Companies", workbook.getSheetAt(0).getSheetName());
-            assertEquals("Search Criteria", workbook.getSheetAt(1).getSheetName());
-            assertEquals("Export Summary", workbook.getSheetAt(2).getSheetName());
+            assertEquals("With Emails", workbook.getSheetAt(1).getSheetName());
+            assertEquals("Without Emails", workbook.getSheetAt(2).getSheetName());
+
+            // All companies
             assertEquals(3, workbook.getSheetAt(0).getPhysicalNumberOfRows());
             assertEquals("Company Name", workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue());
             assertEquals("Founder Name", workbook.getSheetAt(0).getRow(0).getCell(5).getStringCellValue());
@@ -153,6 +155,16 @@ class ExcelExportWriterTest {
             assertEquals("Berlin", workbook.getSheetAt(0).getRow(1).getCell(1).getStringCellValue());
             assertEquals("Jane Founder", workbook.getSheetAt(0).getRow(1).getCell(5).getStringCellValue());
             assertEquals("Beta Systems AG", workbook.getSheetAt(0).getRow(2).getCell(0).getStringCellValue());
+
+            // With emails — only Alpha
+            assertEquals(2, workbook.getSheetAt(1).getPhysicalNumberOfRows());
+            assertEquals("Alpha Analytics GmbH", workbook.getSheetAt(1).getRow(1).getCell(0).getStringCellValue());
+            assertEquals("contact@alpha.example.com", workbook.getSheetAt(1).getRow(1).getCell(3).getStringCellValue());
+
+            // Without emails — only Beta
+            assertEquals(2, workbook.getSheetAt(2).getPhysicalNumberOfRows());
+            assertEquals("Beta Systems AG", workbook.getSheetAt(2).getRow(1).getCell(0).getStringCellValue());
+
             assertEquals("Pakistan_Artificial-Intelligence.xlsx",
                     ExcelExportWriter.buildDownloadFileName(new JobResponse(
                             jobId,

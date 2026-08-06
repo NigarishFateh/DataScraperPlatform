@@ -31,6 +31,8 @@ public class OrchestratorProperties {
         private boolean enabled = true;
         private long pollIntervalMs = 1000;
         private long blockTimeoutSeconds = 5;
+        /** Parallel enrichment workers for Redis/in-memory queue. Clamped to 1–16. */
+        private int consumerConcurrency = 8;
     }
 
     @Getter

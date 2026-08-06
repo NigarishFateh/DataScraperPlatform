@@ -3,6 +3,7 @@
  */
 package com.datascraper.website.support;
 
+import com.datascraper.common.support.CompanyEmailSupport;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Component;
@@ -21,8 +22,6 @@ import java.util.regex.Pattern;
 @Component
 public class CompanyWebsiteHtmlParser {
 
-    private static final Pattern EMAIL_PATTERN =
-            Pattern.compile("[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", Pattern.CASE_INSENSITIVE);
     private static final Pattern PHONE_PATTERN =
             Pattern.compile("(?:\\+\\d{1,3}[\\s.-]?)?(?:\\(?\\d{2,4}\\)?[\\s.-]?)?\\d{3,4}[\\s.-]?\\d{3,4}");
 
@@ -122,13 +121,30 @@ public class CompanyWebsiteHtmlParser {
     }
 
     private void addContactChannels(List<Map<String, Object>> items, Set<String> seen, Document document) {
+        List<String> emails = new ArrayList<>();
         for (Element link : document.select("a[href^=mailto:]")) {
-            String email = link.attr("href").replace("mailto:", "").split("\\?")[0].trim();
-            if (email.isBlank() || !seen.add("email:" + email.toLowerCase(Locale.ROOT))) {
+            String email = CompanyEmailSupport.clean(link.attr("href"));
+            if (email != null) {
+                emails.add(email);
+            }
+        }
+        for (Element el : document.select("[data-email], [itemprop=email]")) {
+            String raw = el.hasAttr("data-email") ? el.attr("data-email") : el.attr("content");
+            if (raw == null || raw.isBlank()) {
+                raw = el.text();
+            }
+            emails.addAll(CompanyEmailSupport.extractFromText(raw));
+        }
+        emails.addAll(CompanyEmailSupport.extractFromText(document.text()));
+
+        String websiteHint = document.baseUri();
+        for (String email : CompanyEmailSupport.rank(emails, websiteHint)) {
+            if (!seen.add("email:" + email.toLowerCase(Locale.ROOT))) {
                 continue;
             }
             items.add(item("contact", "email", email, null, "mailto:" + email, null));
         }
+
         for (Element link : document.select("a[href^=tel:]")) {
             String phone = link.attr("href").replace("tel:", "").trim();
             if (phone.isBlank() || !seen.add("phone:" + phone)) {
@@ -137,16 +153,7 @@ public class CompanyWebsiteHtmlParser {
             items.add(item("contact", "phone", phone, null, "tel:" + phone, null));
         }
 
-        String pageText = document.text();
-        Matcher emailMatcher = EMAIL_PATTERN.matcher(pageText);
-        while (emailMatcher.find()) {
-            String email = emailMatcher.group().trim();
-            if (!seen.add("email:" + email.toLowerCase(Locale.ROOT))) {
-                continue;
-            }
-            items.add(item("contact", "email", email, null, "mailto:" + email, null));
-        }
-        Matcher phoneMatcher = PHONE_PATTERN.matcher(pageText);
+        Matcher phoneMatcher = PHONE_PATTERN.matcher(document.text());
         while (phoneMatcher.find()) {
             String phone = phoneMatcher.group().trim();
             if (phone.matches("^19\\d{2}\\s*[-–—]\\s*20\\d{2}$")) {

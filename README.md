@@ -79,7 +79,7 @@ Supports retry, resume, checkpoint recovery, progress %, and ETA.
 
 ## Excel export
 
-Apache POI **SXSSF** streaming for large exports. Sheets: Companies, Search Criteria, Export Summary, Job Statistics. Never fabricates data — empty cells when unavailable.
+Apache POI **SXSSF** streaming for large exports. Sheets: **Companies** (all), **With Emails**, **Without Emails**. Never fabricates data — empty cells when unavailable.
 
 ## Configuration
 

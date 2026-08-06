@@ -2,6 +2,7 @@ package com.datascraper.export.service;
 
 import com.datascraper.common.dto.company.EnrichedCompany;
 import com.datascraper.common.dto.job.JobResponse;
+import com.datascraper.common.support.CompanyEmailSupport;
 import org.apache.poi.common.usermodel.HyperlinkType;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
@@ -13,7 +14,6 @@ import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.Hyperlink;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -42,6 +43,10 @@ public class ExcelExportWriter {
     private static final String CREATOR = "Global Business Intelligence Platform";
     private static final DateTimeFormatter TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss' UTC'").withZone(ZoneOffset.UTC);
+
+    private static final String SHEET_ALL = "Companies";
+    private static final String SHEET_WITH_EMAILS = "With Emails";
+    private static final String SHEET_WITHOUT_EMAILS = "Without Emails";
 
     private static final String[] COMPANY_HEADERS = {
             "Company Name",
@@ -58,9 +63,8 @@ public class ExcelExportWriter {
     private static final int MAX_COLUMN_WIDTH = 256 * 55;
     private static final int HEADER_ROW_HEIGHT = 20;
     private static final int DATA_ROW_HEIGHT = 18;
-    private static final int META_ROW_HEIGHT = 17;
 
-    /** Preferred column widths (Excel character units) for the Companies sheet. */
+    /** Preferred column widths (Excel character units) for company sheets. */
     private static final int[] COMPANY_COLUMN_WIDTH_CHARS = {32, 18, 36, 28, 16, 24};
 
     private static final Map<String, String> COUNTRY_NAMES = Map.ofEntries(
@@ -99,16 +103,25 @@ public class ExcelExportWriter {
     ) throws IOException {
         Files.createDirectories(outputFile.getParent());
 
+        List<EnrichedCompany> withEmails = new ArrayList<>();
+        List<EnrichedCompany> withoutEmails = new ArrayList<>();
+        for (EnrichedCompany company : companies) {
+            if (CompanyEmailSupport.hasEmail(company.email())) {
+                withEmails.add(company);
+            } else {
+                withoutEmails.add(company);
+            }
+        }
+
         try (SXSSFWorkbook workbook = new SXSSFWorkbook(STREAM_WINDOW_SIZE)) {
             workbook.setCompressTempFiles(true);
             applyWorkbookProperties(workbook, appVersion, generatedAt, job);
 
             Styles styles = createStyles(workbook);
-            ColumnWidthTracker widthTracker = new ColumnWidthTracker(COMPANY_HEADERS.length);
 
-            writeCompaniesSheet(workbook, styles, widthTracker, companies);
-            writeSearchCriteriaSheet(workbook, styles, job);
-            writeExportSummarySheet(workbook, styles, companies, job, appVersion, generatedAt);
+            writeCompaniesSheet(workbook, styles, SHEET_ALL, companies);
+            writeCompaniesSheet(workbook, styles, SHEET_WITH_EMAILS, withEmails);
+            writeCompaniesSheet(workbook, styles, SHEET_WITHOUT_EMAILS, withoutEmails);
 
             try (OutputStream out = Files.newOutputStream(outputFile)) {
                 workbook.write(out);
@@ -219,10 +232,11 @@ public class ExcelExportWriter {
     private void writeCompaniesSheet(
             SXSSFWorkbook workbook,
             Styles styles,
-            ColumnWidthTracker widthTracker,
+            String sheetName,
             List<EnrichedCompany> companies
     ) {
-        SXSSFSheet sheet = workbook.createSheet("Companies");
+        ColumnWidthTracker widthTracker = new ColumnWidthTracker(COMPANY_HEADERS.length);
+        SXSSFSheet sheet = workbook.createSheet(sheetName);
         sheet.createFreezePane(0, 1);
         sheet.setDisplayGridlines(false);
 
@@ -341,60 +355,6 @@ public class ExcelExportWriter {
         return trimmed;
     }
 
-    private void writeSearchCriteriaSheet(SXSSFWorkbook workbook, Styles styles, JobResponse job) {
-        Sheet sheet = workbook.createSheet("Search Criteria");
-        sheet.setDisplayGridlines(false);
-        int rowIndex = 0;
-        rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "Countries", resolveCountryLabel(job).replace('-', ' '));
-        rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "Categories", resolveCategoryLabel(job).replace('-', ' '));
-        rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "Country Codes", joinList(job.countryCodes()));
-        rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "Category IDs", joinList(job.categoryIds()));
-        rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "City IDs", joinList(job.cityIds()));
-        writeLabelValueRow(sheet, rowIndex, styles, "Job ID", job.id() != null ? job.id().toString() : "");
-
-        sheet.setColumnWidth(0, 20 * 256);
-        sheet.setColumnWidth(1, 52 * 256);
-    }
-
-    private void writeExportSummarySheet(
-            SXSSFWorkbook workbook,
-            Styles styles,
-            List<EnrichedCompany> companies,
-            JobResponse job,
-            String appVersion,
-            Instant generatedAt
-    ) {
-        Sheet sheet = workbook.createSheet("Export Summary");
-        sheet.setDisplayGridlines(false);
-        int rowIndex = 0;
-        rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "File Scope",
-                resolveCountryLabel(job).replace('-', ' ') + " / " + resolveCategoryLabel(job).replace('-', ' '));
-        rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "Company Count", String.valueOf(companies.size()));
-        rowIndex = writeLabelValueRow(sheet, rowIndex, styles, "Generated At", TIMESTAMP_FORMAT.format(generatedAt));
-        writeLabelValueRow(sheet, rowIndex, styles, "Version", appVersion);
-
-        sheet.setColumnWidth(0, 20 * 256);
-        sheet.setColumnWidth(1, 52 * 256);
-    }
-
-    private int writeLabelValueRow(Sheet sheet, int rowIndex, Styles styles, String label, String value) {
-        Row row = sheet.createRow(rowIndex);
-        row.setHeightInPoints(META_ROW_HEIGHT);
-
-        Cell labelCell = row.createCell(0);
-        labelCell.setCellValue(label);
-        labelCell.setCellStyle(styles.metaLabel());
-
-        Cell valueCell = row.createCell(1);
-        if (value == null || value.isBlank()) {
-            valueCell.setBlank();
-        } else {
-            valueCell.setCellValue(value);
-        }
-        valueCell.setCellStyle(rowIndex % 2 == 0 ? styles.metaValueEven() : styles.metaValueOdd());
-        return rowIndex + 1;
-    }
-
     private Styles createStyles(SXSSFWorkbook workbook) {
         Font headerFont = workbook.createFont();
         headerFont.setBold(true);
@@ -439,48 +399,7 @@ public class ExcelExportWriter {
         evenRowStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         applyBorders(evenRowStyle);
 
-        Font metaLabelFont = workbook.createFont();
-        metaLabelFont.setBold(true);
-        metaLabelFont.setFontName("Calibri");
-        metaLabelFont.setFontHeightInPoints((short) 11);
-        metaLabelFont.setColor(IndexedColors.GREY_80_PERCENT.index);
-
-        CellStyle metaLabelStyle = workbook.createCellStyle();
-        metaLabelStyle.setFont(metaLabelFont);
-        metaLabelStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.index);
-        metaLabelStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        metaLabelStyle.setAlignment(HorizontalAlignment.LEFT);
-        metaLabelStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-        metaLabelStyle.setIndention((short) 1);
-        applyBorders(metaLabelStyle);
-
-        CellStyle metaValueOddStyle = workbook.createCellStyle();
-        metaValueOddStyle.setFont(dataFont);
-        metaValueOddStyle.setFillForegroundColor(IndexedColors.WHITE.index);
-        metaValueOddStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        metaValueOddStyle.setAlignment(HorizontalAlignment.LEFT);
-        metaValueOddStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-        metaValueOddStyle.setWrapText(true);
-        applyBorders(metaValueOddStyle);
-
-        CellStyle metaValueEvenStyle = workbook.createCellStyle();
-        metaValueEvenStyle.setFont(dataFont);
-        metaValueEvenStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.index);
-        metaValueEvenStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        metaValueEvenStyle.setAlignment(HorizontalAlignment.LEFT);
-        metaValueEvenStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-        metaValueEvenStyle.setWrapText(true);
-        applyBorders(metaValueEvenStyle);
-
-        return new Styles(
-                headerStyle,
-                oddRowStyle,
-                evenRowStyle,
-                linkFont,
-                metaLabelStyle,
-                metaValueOddStyle,
-                metaValueEvenStyle
-        );
+        return new Styles(headerStyle, oddRowStyle, evenRowStyle, linkFont);
     }
 
     private void applyBorders(CellStyle style) {
@@ -494,27 +413,11 @@ public class ExcelExportWriter {
         style.setRightBorderColor(IndexedColors.GREY_40_PERCENT.index);
     }
 
-    private static String joinList(List<String> values) {
-        if (values == null || values.isEmpty()) {
-            return "";
-        }
-        StringJoiner joiner = new StringJoiner(", ");
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                joiner.add(value);
-            }
-        }
-        return joiner.toString();
-    }
-
     private record Styles(
             CellStyle header,
             CellStyle oddRow,
             CellStyle evenRow,
-            Font linkFont,
-            CellStyle metaLabel,
-            CellStyle metaValueOdd,
-            CellStyle metaValueEven
+            Font linkFont
     ) {
     }
 

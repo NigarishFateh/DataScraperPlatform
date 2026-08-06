@@ -63,9 +63,9 @@ public class IntelligenceScraperProperties {
     }
 
     public static class Execution {
-        private int corePoolSize = 4;
-        private int maxPoolSize = 10;
-        private int queueCapacity = 25;
+        private int corePoolSize = 8;
+        private int maxPoolSize = 24;
+        private int queueCapacity = 64;
         private long jobTimeoutMs = 60_000;
 
         public int getCorePoolSize() {

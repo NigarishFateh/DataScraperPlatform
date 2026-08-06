@@ -6,6 +6,7 @@ import com.datascraper.orchestrator.dto.EnrichmentProcessResponse;
 import com.datascraper.orchestrator.model.EnrichmentProcessResult;
 import com.datascraper.orchestrator.service.CompanyEnrichmentPipelineService;
 import com.datascraper.orchestrator.service.EnrichmentResumeService;
+import com.datascraper.orchestrator.support.EnrichmentConcurrencyGuard;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,18 +23,21 @@ public class OrchestratorController {
 
     private final CompanyEnrichmentPipelineService pipelineService;
     private final EnrichmentResumeService resumeService;
+    private final EnrichmentConcurrencyGuard concurrencyGuard;
 
     public OrchestratorController(
             CompanyEnrichmentPipelineService pipelineService,
-            EnrichmentResumeService resumeService
+            EnrichmentResumeService resumeService,
+            EnrichmentConcurrencyGuard concurrencyGuard
     ) {
         this.pipelineService = pipelineService;
         this.resumeService = resumeService;
+        this.concurrencyGuard = concurrencyGuard;
     }
 
     @PostMapping("/enrich")
     public ResponseEntity<EnrichmentProcessResponse> enrich(@Valid @RequestBody CompanyEnrichmentMessage message) {
-        EnrichmentProcessResult result = pipelineService.process(message);
+        EnrichmentProcessResult result = concurrencyGuard.run(() -> pipelineService.process(message));
         return ResponseEntity.ok(toResponse(result));
     }
 
