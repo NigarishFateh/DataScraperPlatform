@@ -26,13 +26,14 @@ import java.util.Set;
 
 /**
  * Apollo.io Organization Search — primary B2B company discovery by city/country.
- * POST https://api.apollo.io/api/v1/mixed_companies/search
+ * Uses /api/v1/organizations/search (works on Free when that endpoint is enabled).
+ * Do NOT use /mixed_companies/search — Free plan returns API_INACCESSIBLE (HTTP 403).
  */
 @Component
 public class ApolloDiscoveryClient {
 
     private static final Logger log = LoggerFactory.getLogger(ApolloDiscoveryClient.class);
-    private static final String SEARCH_URL = "https://api.apollo.io/api/v1/mixed_companies/search";
+    private static final String SEARCH_URL = "https://api.apollo.io/api/v1/organizations/search";
     private static final int MAX_CITIES = 500;
     private static final int MAX_KEYWORDS = 3;
     private static final int PER_PAGE = 100;

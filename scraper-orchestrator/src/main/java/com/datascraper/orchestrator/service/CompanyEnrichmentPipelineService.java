@@ -87,9 +87,19 @@ public class CompanyEnrichmentPipelineService {
             int persistedCount = persisted
                     ? jobCompletionTracker.incrementPersisted(jobId)
                     : jobCompletionTracker.currentPersistedCount(jobId);
-            int failedCount = (!persisted || validation.softFailure())
+            // Failed = not saved. Soft validation warnings must not double-count as failures.
+            int failedCount = !persisted
                     ? jobCompletionTracker.incrementFailed(jobId)
                     : jobCompletionTracker.currentFailedCount(jobId);
+
+            String progressMessage;
+            if (persisted && validation.softFailure()) {
+                progressMessage = "Persisted company " + context.companyId() + " with validation warnings";
+            } else if (persisted) {
+                progressMessage = "Persisted company " + context.companyId();
+            } else {
+                progressMessage = "Failed to persist company " + context.companyId();
+            }
 
             JobResponse currentJob = jobServiceClient.getJob(jobId);
             jobServiceClient.patchProgress(jobServiceClient.enrichmentProgress(
@@ -98,9 +108,7 @@ public class CompanyEnrichmentPipelineService {
                     enrichedCount,
                     persistedCount,
                     failedCount,
-                    persisted
-                            ? "Enriched company " + context.companyId()
-                            : "Enrichment finished with warnings for " + context.companyId(),
+                    progressMessage,
                     checkpoint
             ));
 

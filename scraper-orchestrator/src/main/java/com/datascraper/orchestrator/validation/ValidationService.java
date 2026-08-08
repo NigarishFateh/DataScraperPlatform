@@ -13,7 +13,7 @@ public class ValidationService {
 
     private static final Pattern EMAIL = Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", Pattern.CASE_INSENSITIVE);
     private static final Pattern COUNTRY = Pattern.compile("^[A-Z]{2}$");
-    private static final Pattern WEBSITE = Pattern.compile("^https://[^\\s/$.?#].[^\\s]*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern WEBSITE = Pattern.compile("^https?://[^\\s/$.?#].[^\\s]*$", Pattern.CASE_INSENSITIVE);
     private static final double CONFIDENCE_WARN_THRESHOLD = 0.3;
 
     public ValidationOutcome validate(CompanyDraft draft) {
