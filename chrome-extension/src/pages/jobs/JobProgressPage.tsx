@@ -164,6 +164,47 @@ export function JobProgressPage() {
           enrichedCount={job.enrichedCount}
         />
 
+        <div className="grid grid-cols-2 gap-2">
+          <div
+            className={`rounded-lg border px-3 py-3 text-center transition-colors ${
+              job.phase === "DISCOVERY" && (job.status === "RUNNING" || job.status === "QUEUED")
+                ? "border-signal/40 bg-signal/10"
+                : "border-white/10 bg-ink-900/40"
+            }`}
+          >
+            <p className="text-[10px] uppercase tracking-wide text-mist-400">Discovered</p>
+            <p
+              className={`mt-1 font-display text-2xl font-semibold tabular-nums ${
+                job.phase === "DISCOVERY" && job.status === "RUNNING"
+                  ? "animate-pulse text-signal"
+                  : "text-mist-100"
+              }`}
+            >
+              {job.discoveredCount.toLocaleString()}
+            </p>
+            <p className="text-[10px] text-mist-500">companies found</p>
+          </div>
+          <div
+            className={`rounded-lg border px-3 py-3 text-center transition-colors ${
+              job.phase === "ENRICHMENT" && job.status === "RUNNING"
+                ? "border-signal/40 bg-signal/10"
+                : "border-white/10 bg-ink-900/40"
+            }`}
+          >
+            <p className="text-[10px] uppercase tracking-wide text-mist-400">Enriched</p>
+            <p
+              className={`mt-1 font-display text-2xl font-semibold tabular-nums ${
+                job.phase === "ENRICHMENT" && job.status === "RUNNING"
+                  ? "animate-pulse text-signal"
+                  : "text-mist-100"
+              }`}
+            >
+              {job.enrichedCount.toLocaleString()}
+            </p>
+            <p className="text-[10px] text-mist-500">details collected</p>
+          </div>
+        </div>
+
         <ProgressBar
           value={job.progressPercent}
           indeterminate={showPhaseAnimation}
@@ -182,14 +223,6 @@ export function JobProgressPage() {
             <dd className="font-medium text-mist-100">
               {formatEta(job.estimatedRemainingSeconds)}
             </dd>
-          </div>
-          <div>
-            <dt className="text-mist-500">Discovered</dt>
-            <dd className="font-medium text-mist-100">{job.discoveredCount}</dd>
-          </div>
-          <div>
-            <dt className="text-mist-500">Enriched</dt>
-            <dd className="font-medium text-mist-100">{job.enrichedCount}</dd>
           </div>
           <div>
             <dt className="text-mist-500">Persisted</dt>

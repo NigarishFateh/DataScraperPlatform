@@ -26,6 +26,7 @@ public class DiscoveryQueuePublisher implements QueueService {
     private static final Logger log = LoggerFactory.getLogger(DiscoveryQueuePublisher.class);
 
     private final ObjectProvider<StringRedisTemplate> redisTemplateProvider;
+    private final ObjectProvider<JobService> jobServiceProvider;
     private final InMemoryQueueService inMemoryQueueService;
     private final ObjectMapper objectMapper;
     private final WebClient webClient;
@@ -39,6 +40,7 @@ public class DiscoveryQueuePublisher implements QueueService {
 
     public DiscoveryQueuePublisher(
             ObjectProvider<StringRedisTemplate> redisTemplateProvider,
+            ObjectProvider<JobService> jobServiceProvider,
             InMemoryQueueService inMemoryQueueService,
             ObjectMapper objectMapper,
             WebClient.Builder webClientBuilder,
@@ -46,6 +48,7 @@ public class DiscoveryQueuePublisher implements QueueService {
             @Value("${app.redis.enabled:false}") boolean redisEnabled
     ) {
         this.redisTemplateProvider = redisTemplateProvider;
+        this.jobServiceProvider = jobServiceProvider;
         this.inMemoryQueueService = inMemoryQueueService;
         this.objectMapper = objectMapper;
         this.webClient = webClientBuilder.build();
@@ -99,7 +102,31 @@ public class DiscoveryQueuePublisher implements QueueService {
                     message.jobId(),
                     ex.getMessage()
             );
+            failJobBestEffort(
+                    message.jobId(),
+                    "Discovery service unreachable or failed: " + truncate(ex.getMessage(), 240)
+            );
         }
+    }
+
+    private void failJobBestEffort(java.util.UUID jobId, String message) {
+        try {
+            JobService jobService = jobServiceProvider.getIfAvailable();
+            if (jobService != null) {
+                jobService.failJob(jobId, message == null ? "Discovery dispatch failed" : message);
+                return;
+            }
+            log.warn("JobService unavailable; cannot mark job {} failed after discovery dispatch error", jobId);
+        } catch (Exception failEx) {
+            log.warn("Unable to mark job {} failed after discovery dispatch error: {}", jobId, failEx.getMessage());
+        }
+    }
+
+    private static String truncate(String value, int max) {
+        if (value == null) {
+            return "";
+        }
+        return value.length() <= max ? value : value.substring(0, max);
     }
 
     @Override

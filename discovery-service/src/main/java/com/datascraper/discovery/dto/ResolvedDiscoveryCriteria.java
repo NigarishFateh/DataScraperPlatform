@@ -13,6 +13,16 @@ public record ResolvedDiscoveryCriteria(
         List<String> cityIds,
         List<String> cityNames,
         List<String> searchKeywords,
-        int maxResults
+        int maxResults,
+        List<String> companyNames
 ) {
+    public ResolvedDiscoveryCriteria {
+        if (companyNames == null) {
+            companyNames = List.of();
+        }
+    }
+
+    public boolean hasCompanyNames() {
+        return companyNames != null && !companyNames.isEmpty();
+    }
 }

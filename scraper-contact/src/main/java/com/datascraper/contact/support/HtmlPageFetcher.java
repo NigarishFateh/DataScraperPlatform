@@ -21,6 +21,9 @@ public class HtmlPageFetcher {
     }
 
     public Document fetch(String url) throws IOException {
+        if (url == null || url.isBlank()) {
+            throw new IOException("websiteUrl is required");
+        }
         URI uri = URI.create(normalizeUrl(url));
         return Jsoup.connect(uri.toString())
                 .userAgent(properties.getUserAgent())

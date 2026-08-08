@@ -6,6 +6,8 @@ import com.datascraper.discovery.client.LocationCatalogClient;
 import com.datascraper.discovery.dto.CategoryDto;
 import com.datascraper.discovery.dto.CityDto;
 import com.datascraper.discovery.dto.ResolvedDiscoveryCriteria;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,6 +20,8 @@ import java.util.Set;
 
 @Service
 public class DiscoveryCriteriaResolver {
+
+    private static final Logger log = LoggerFactory.getLogger(DiscoveryCriteriaResolver.class);
 
     private static final Map<String, List<String>> PRIORITY_CITY_IDS = Map.ofEntries(
             Map.entry("PK", List.of(
@@ -214,6 +218,8 @@ public class DiscoveryCriteriaResolver {
         List<String> cityNames = new ArrayList<>();
         Set<String> seenCityKeys = new LinkedHashSet<>();
         List<String> requestedCityIds = request.cityIds() == null ? List.of() : request.cityIds();
+        List<String> companyNames = normalizeCompanyNames(request.companyNames());
+        boolean namedMode = !companyNames.isEmpty();
 
         if (!requestedCityIds.isEmpty()) {
             for (String cityId : requestedCityIds) {
@@ -224,8 +230,8 @@ public class DiscoveryCriteriaResolver {
                     addCity(cityIds, cityNames, seenCityKeys, cityId, humanizeCityId(cityId));
                 }
             }
-        } else if (!countryCodes.isEmpty()) {
-            // Nationwide scrape expands to every catalog city for each selected country.
+        } else if (!countryCodes.isEmpty() && !namedMode) {
+            // No city selected → nationwide: priority/major cities first, then remaining catalog cities.
             for (String countryCode : countryCodes) {
                 List<CityDto> cities = locationCatalogClient.listCitiesByCountry(countryCode);
                 Map<String, CityDto> byId = new HashMap<>();
@@ -239,6 +245,8 @@ public class DiscoveryCriteriaResolver {
                 for (String priorityId : priority) {
                     CityDto city = byId.remove(priorityId.toLowerCase(Locale.ROOT));
                     if (city == null || city.name() == null || city.name().isBlank()) {
+                        // Priority id may not be in catalog yet — still search by humanized name.
+                        addCity(cityIds, cityNames, seenCityKeys, priorityId, humanizeCityId(priorityId));
                         continue;
                     }
                     addCity(cityIds, cityNames, seenCityKeys, city.id(), city.name());
@@ -256,19 +264,32 @@ public class DiscoveryCriteriaResolver {
                     addCity(cityIds, cityNames, seenCityKeys, city.id(), city.name());
                 }
             }
+            log.info(
+                    "Nationwide discovery city plan countries={} cities={} (priority-first)",
+                    countryCodes,
+                    cityNames.size()
+            );
         }
 
         Set<String> keywords = new LinkedHashSet<>();
-        for (String categoryId : requestedIds) {
-            List<String> mapped = CATEGORY_KEYWORDS.get(categoryId == null ? "" : categoryId.toLowerCase(Locale.ROOT));
-            if (mapped != null) {
-                keywords.addAll(mapped);
+        if (namedMode) {
+            keywords.addAll(companyNames);
+        } else {
+            for (String categoryId : requestedIds) {
+                List<String> mapped = CATEGORY_KEYWORDS.get(categoryId == null ? "" : categoryId.toLowerCase(Locale.ROOT));
+                if (mapped != null) {
+                    keywords.addAll(mapped);
+                }
+            }
+            keywords.addAll(categoryNames);
+            if (keywords.isEmpty()) {
+                keywords.add("company");
             }
         }
-        keywords.addAll(categoryNames);
-        if (keywords.isEmpty()) {
-            keywords.add("company");
-        }
+
+        int maxResults = namedMode
+                ? Math.min(request.maxResults(), Math.max(companyNames.size(), 1))
+                : request.maxResults();
 
         return new ResolvedDiscoveryCriteria(
                 requestedIds,
@@ -278,8 +299,20 @@ public class DiscoveryCriteriaResolver {
                 List.copyOf(cityIds),
                 List.copyOf(cityNames),
                 List.copyOf(keywords),
-                request.maxResults()
+                maxResults,
+                companyNames
         );
+    }
+
+    private static List<String> normalizeCompanyNames(List<String> raw) {
+        if (raw == null || raw.isEmpty()) {
+            return List.of();
+        }
+        return raw.stream()
+                .filter(name -> name != null && !name.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
     }
 
     private static void addCity(

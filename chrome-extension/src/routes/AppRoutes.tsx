@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthPage } from "../pages/auth/AuthPage";
+import { CustomScrapePage } from "../pages/custom/CustomScrapePage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
 import { ExportsPage } from "../pages/exports/ExportsPage";
 import { JobHistoryPage } from "../pages/jobs/JobHistoryPage";
@@ -27,6 +28,7 @@ export function AppRoutes() {
       />
       <Route element={<RequireAuth />}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/custom" element={<CustomScrapePage />} />
         <Route path="/jobs" element={<JobHistoryPage />} />
         <Route path="/jobs/:id" element={<JobProgressPage />} />
         <Route path="/exports" element={<ExportsPage />} />

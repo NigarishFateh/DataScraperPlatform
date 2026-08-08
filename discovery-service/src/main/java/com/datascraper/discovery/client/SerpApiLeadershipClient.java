@@ -33,10 +33,11 @@ public class SerpApiLeadershipClient {
     );
 
     private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(20))
+            .connectTimeout(Duration.ofSeconds(10))
             .build();
     private final ObjectMapper objectMapper;
     private final String apiKey;
+    private volatile boolean rateLimited;
 
     public SerpApiLeadershipClient(ObjectMapper objectMapper, AppProperties appProperties) {
         this.objectMapper = objectMapper;
@@ -46,7 +47,7 @@ public class SerpApiLeadershipClient {
     }
 
     public boolean isConfigured() {
-        return !apiKey.isBlank();
+        return !apiKey.isBlank() && !rateLimited;
     }
 
     public Optional<OpenLeadershipClient.Lead> findLeadership(String companyName) {
@@ -62,11 +63,19 @@ public class SerpApiLeadershipClient {
                     + "&api_key=" + URLEncoder.encode(apiKey, StandardCharsets.UTF_8);
 
             HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                    .timeout(Duration.ofSeconds(40))
+                    .timeout(Duration.ofSeconds(15))
                     .header("Accept", "application/json")
                     .GET()
                     .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 429 || response.statusCode() == 401 || response.statusCode() == 403) {
+                rateLimited = true;
+                log.warn(
+                        "SerpAPI leadership HTTP {} — skipping further SerpAPI leadership calls this process",
+                        response.statusCode()
+                );
+                return Optional.empty();
+            }
             if (response.statusCode() >= 400) {
                 log.warn("SerpAPI leadership HTTP {} for {}", response.statusCode(), companyName);
                 return Optional.empty();

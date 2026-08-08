@@ -38,6 +38,7 @@ public class SerpApiMapsDiscoveryClient {
             .build();
     private final ObjectMapper objectMapper;
     private final String apiKey;
+    private volatile boolean skipFurtherCalls;
 
     public SerpApiMapsDiscoveryClient(ObjectMapper objectMapper, AppProperties appProperties) {
         this.objectMapper = objectMapper;
@@ -47,12 +48,16 @@ public class SerpApiMapsDiscoveryClient {
     }
 
     public boolean isConfigured() {
-        return !apiKey.isBlank();
+        return !apiKey.isBlank() && !skipFurtherCalls;
     }
 
     public List<WebSearchHit> discover(ResolvedDiscoveryCriteria criteria) {
         if (!isConfigured()) {
             return List.of();
+        }
+
+        if (criteria.hasCompanyNames()) {
+            return discoverByCompanyNames(criteria);
         }
 
         List<WebSearchHit> hits = new ArrayList<>();
@@ -96,6 +101,33 @@ public class SerpApiMapsDiscoveryClient {
         return hits;
     }
 
+    /** Custom scrape: one Maps query per company name (no keyword cap). */
+    private List<WebSearchHit> discoverByCompanyNames(ResolvedDiscoveryCriteria criteria) {
+        List<WebSearchHit> hits = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        String country = criteria.countryNames().isEmpty() ? "" : criteria.countryNames().get(0);
+        CityGeo location = new CityGeo(null, country.isBlank() ? "Global" : country);
+
+        for (String companyName : criteria.companyNames()) {
+            if (companyName == null || companyName.isBlank()) {
+                continue;
+            }
+            String query = (companyName.trim() + " " + country).trim().replaceAll("\\s+", " ");
+            try {
+                List<WebSearchHit> batch = searchMaps(query, location, criteria, seen);
+                log.info("SerpAPI Maps name '{}' -> {} places", query, batch.size());
+                hits.addAll(batch);
+            } catch (Exception ex) {
+                log.warn("SerpAPI Maps name search failed for '{}': {}", query, ex.getMessage());
+            }
+            if (hits.size() >= criteria.maxResults()) {
+                return hits.subList(0, criteria.maxResults());
+            }
+            sleepQuietly(200);
+        }
+        return hits;
+    }
+
     private List<WebSearchHit> searchMaps(
             String query,
             CityGeo city,
@@ -118,6 +150,14 @@ public class SerpApiMapsDiscoveryClient {
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() >= 400) {
+            if (response.statusCode() == 429 || response.statusCode() == 401 || response.statusCode() == 403) {
+                skipFurtherCalls = true;
+                log.warn(
+                        "SerpAPI Maps disabled for this process (HTTP {}) — {}",
+                        response.statusCode(),
+                        truncate(response.body(), 160)
+                );
+            }
             throw new IllegalStateException("HTTP " + response.statusCode() + ": " + truncate(response.body(), 240));
         }
 

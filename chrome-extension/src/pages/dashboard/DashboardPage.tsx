@@ -57,7 +57,7 @@ export function DashboardPage() {
           />
         </FilterSection>
 
-        <FilterSection step="2" title="Countries" hint="Optional · filters discovery by country">
+        <FilterSection step="2" title="Countries" hint="Optional · leave empty for global; with country + no cities = nationwide">
           <CountryMultiSelect
             selectedCodes={filters.countryCodes}
             onToggle={filters.toggleCountry}
@@ -67,7 +67,7 @@ export function DashboardPage() {
         <FilterSection
           step="3"
           title="Cities"
-          hint="Select cities to scrape · empty uses every city listed for the country"
+          hint="Optional · empty scrapes the whole country (major cities first, then the rest)"
         >
           <CityMultiSelect
             selectedIds={filters.cityIds}

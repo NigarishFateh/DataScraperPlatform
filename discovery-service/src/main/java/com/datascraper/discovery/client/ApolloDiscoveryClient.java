@@ -23,6 +23,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.IntConsumer;
 
 /**
  * Apollo.io Organization Search — primary B2B company discovery by city/country.
@@ -44,6 +45,8 @@ public class ApolloDiscoveryClient {
             .build();
     private final ObjectMapper objectMapper;
     private final String apiKey;
+    /** Process-level skip after Apollo credit / plan errors (422 insufficient credits, 401/403). */
+    private volatile boolean skipFurtherCalls;
 
     public ApolloDiscoveryClient(ObjectMapper objectMapper, AppProperties appProperties) {
         this.objectMapper = objectMapper;
@@ -53,12 +56,20 @@ public class ApolloDiscoveryClient {
     }
 
     public boolean isConfigured() {
-        return !apiKey.isBlank();
+        return !apiKey.isBlank() && !skipFurtherCalls;
     }
 
     public List<WebSearchHit> discover(ResolvedDiscoveryCriteria criteria) {
+        return discover(criteria, null);
+    }
+
+    public List<WebSearchHit> discover(ResolvedDiscoveryCriteria criteria, IntConsumer onProgress) {
         if (!isConfigured()) {
             return List.of();
+        }
+
+        if (criteria.hasCompanyNames()) {
+            return discoverByCompanyNames(criteria);
         }
 
         List<WebSearchHit> hits = new ArrayList<>();
@@ -77,6 +88,9 @@ public class ApolloDiscoveryClient {
                     List<WebSearchHit> batch = searchCityKeyword(location, keyword, city, criteria, seen);
                     log.info("Apollo '{}' / '{}' -> {} orgs", location, keyword, batch.size());
                     hits.addAll(batch);
+                    if (onProgress != null) {
+                        onProgress.accept(hits.size());
+                    }
                 } catch (Exception ex) {
                     log.warn("Apollo search failed for '{}' / '{}': {}", location, keyword, ex.getMessage());
                 }
@@ -87,6 +101,97 @@ public class ApolloDiscoveryClient {
             }
         }
         return hits;
+    }
+
+    /**
+     * Targeted org lookup by exact/partial company names (custom scrape mode).
+     */
+    public List<WebSearchHit> discoverByCompanyNames(ResolvedDiscoveryCriteria criteria) {
+        List<WebSearchHit> hits = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        String country = criteria.countryNames().isEmpty() ? "" : criteria.countryNames().get(0);
+        CityGeo locationHint = new CityGeo(null, country.isBlank() ? "Global" : country);
+
+        for (String companyName : criteria.companyNames()) {
+            if (companyName == null || companyName.isBlank()) {
+                continue;
+            }
+            try {
+                WebSearchHit hit = searchOrganizationName(companyName.trim(), locationHint, criteria, seen);
+                if (hit != null) {
+                    hits.add(hit);
+                    log.info("Apollo name '{}' -> {}", companyName, hit.name());
+                } else {
+                    log.info("Apollo name '{}' -> no org", companyName);
+                }
+            } catch (Exception ex) {
+                log.warn("Apollo name search failed for '{}': {}", companyName, ex.getMessage());
+            }
+            if (hits.size() >= criteria.maxResults()) {
+                break;
+            }
+            sleepQuietly(150);
+        }
+        return hits;
+    }
+
+    private WebSearchHit searchOrganizationName(
+            String companyName,
+            CityGeo locationHint,
+            ResolvedDiscoveryCriteria criteria,
+            Set<String> seen
+    ) throws Exception {
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("q_organization_name", companyName);
+        body.put("page", 1);
+        body.put("per_page", 10);
+        if (!criteria.countryNames().isEmpty()) {
+            ArrayNode locations = body.putArray("organization_locations");
+            locations.add(criteria.countryNames().get(0));
+        }
+
+        HttpRequest request = HttpRequest.newBuilder(URI.create(SEARCH_URL))
+                .timeout(Duration.ofSeconds(45))
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .header("Cache-Control", "no-cache")
+                .header("x-api-key", apiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() >= 400) {
+            maybeDisableOnQuota(response.statusCode(), response.body());
+            throw new IllegalStateException(
+                    "HTTP " + response.statusCode() + ": " + truncate(response.body(), 280)
+            );
+        }
+
+        JsonNode root = objectMapper.readTree(response.body());
+        JsonNode orgs = root.path("organizations");
+        if (!orgs.isArray() || orgs.isEmpty()) {
+            orgs = root.path("companies");
+        }
+        if (!orgs.isArray() || orgs.isEmpty()) {
+            return null;
+        }
+
+        String needle = companyName.toLowerCase(Locale.ROOT);
+        WebSearchHit best = null;
+        for (JsonNode org : orgs) {
+            WebSearchHit hit = toHit(org, locationHint, criteria, seen);
+            if (hit == null) {
+                continue;
+            }
+            String hitName = hit.name().toLowerCase(Locale.ROOT);
+            if (hitName.equals(needle) || hitName.contains(needle) || needle.contains(hitName)) {
+                return hit;
+            }
+            if (best == null) {
+                best = hit;
+            }
+        }
+        return best;
     }
 
     private List<WebSearchHit> searchCityKeyword(
@@ -124,6 +229,7 @@ public class ApolloDiscoveryClient {
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() >= 400) {
+                maybeDisableOnQuota(response.statusCode(), response.body());
                 throw new IllegalStateException(
                         "HTTP " + response.statusCode() + ": " + truncate(response.body(), 280)
                 );
@@ -250,6 +356,21 @@ public class ApolloDiscoveryClient {
         }
         JsonNode value = node.path(field);
         return value.isMissingNode() || value.isNull() ? "" : value.asText("").trim();
+    }
+
+    private void maybeDisableOnQuota(int statusCode, String body) {
+        String lower = body == null ? "" : body.toLowerCase(Locale.ROOT);
+        boolean credits = statusCode == 422 && (lower.contains("insufficient credits") || lower.contains("credit"));
+        boolean denied = statusCode == 401 || statusCode == 403;
+        if (!credits && !denied) {
+            return;
+        }
+        skipFurtherCalls = true;
+        log.warn(
+                "Apollo organization search disabled for this process (HTTP {}): {}",
+                statusCode,
+                truncate(body, 200)
+        );
     }
 
     private static String truncate(String value, int max) {

@@ -18,8 +18,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Isolated leadership lookup for priority NL restaurant brands.
- * Does not participate in category discovery / enrichment jobs.
+ * Leadership lookup for brand / company names (FMP → curated → Apollo → open → SerpAPI).
+ * Used by the isolated leadership API and by custom (named) scrape discovery.
  */
 @Service
 public class NlRestaurantLeadershipService {
@@ -56,14 +56,13 @@ public class NlRestaurantLeadershipService {
             }
         }
 
-        String notes = "Sources tried in order: FMP Company Executives (public tickers if FMP_API_KEY set), "
-                + "Apollo People (if plan allows), Wikipedia/Wikidata/DuckDuckGo, SerpAPI Google, "
-                + "then curated public reference leaders for seeded brands.";
+        String notes = "Sources tried in order: FMP (public tickers), curated seed, Apollo People (if plan allows), "
+                + "Wikipedia/Wikidata/DuckDuckGo, then SerpAPI Google.";
 
         return new LeadershipLookupResponse(brands.size(), found, notes, results);
     }
 
-    private LeadershipPersonResponse lookupOne(String brand) {
+    public LeadershipPersonResponse lookupOne(String brand) {
         String canonical = NlRestaurantBrandSeed.canonicalBrandName(brand);
         String website = NlRestaurantBrandSeed.officialWebsite(canonical);
         String domain = NlRestaurantBrandSeed.domain(canonical);
@@ -89,7 +88,16 @@ public class NlRestaurantLeadershipService {
             }
         }
 
-        // 2) Apollo People (optional — Free plans usually 403)
+        // 2) Curated seed early for known brands (fast path; avoids Apollo 403 / SerpAPI 429 waits)
+        NlRestaurantBrandSeed.KnownLeader known = NlRestaurantBrandSeed.knownLeader(canonical);
+        if (known != null
+                && known.name() != null
+                && !known.name().toLowerCase(java.util.Locale.ROOT).contains("leadership")) {
+            log.info("Leadership {} -> {} ({}) via curated-seed", canonical, known.name(), known.title());
+            return hit(canonical, website, known.name(), known.title(), "curated-seed", ticker, null);
+        }
+
+        // 3) Apollo People (optional — Free plans usually 403)
         if (domain != null) {
             Optional<ApolloPeopleLeadershipClient.Lead> apollo =
                     apolloPeopleLeadershipClient.findLeadership(domain, "Netherlands");
@@ -100,7 +108,7 @@ public class NlRestaurantLeadershipService {
             }
         }
 
-        // 3) Free open sources
+        // 4) Free open sources (unknown brands only)
         Optional<OpenLeadershipClient.Lead> open = openLeadershipClient.findLeadership(canonical, "Netherlands");
         if (open.isPresent() && open.get().score() >= 70) {
             OpenLeadershipClient.Lead lead = open.get();
@@ -108,7 +116,7 @@ public class NlRestaurantLeadershipService {
             return hit(canonical, website, lead.name(), lead.title(), lead.source());
         }
 
-        // 4) SerpAPI Google
+        // 5) SerpAPI Google (skipped after first 429/401/403 for this process)
         Optional<OpenLeadershipClient.Lead> serp = serpApiLeadershipClient.findLeadership(canonical);
         if (serp.isPresent()) {
             OpenLeadershipClient.Lead lead = serp.get();
@@ -120,15 +128,6 @@ public class NlRestaurantLeadershipService {
         if (open.isPresent()) {
             OpenLeadershipClient.Lead lead = open.get();
             return hit(canonical, website, lead.name(), lead.title(), lead.source());
-        }
-
-        // 5) Curated public reference (seeded brands only)
-        NlRestaurantBrandSeed.KnownLeader known = NlRestaurantBrandSeed.knownLeader(canonical);
-        if (known != null
-                && known.name() != null
-                && !known.name().toLowerCase(java.util.Locale.ROOT).contains("leadership")) {
-            log.info("Leadership {} -> {} ({}) via curated-seed", canonical, known.name(), known.title());
-            return hit(canonical, website, known.name(), known.title(), "curated-seed", ticker, null);
         }
 
         log.info("Leadership {} -> not found", canonical);

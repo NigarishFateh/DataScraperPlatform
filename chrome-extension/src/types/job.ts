@@ -22,6 +22,12 @@ export type CreateJobRequest = {
   countryCodes?: string[];
   cityIds?: string[];
   maxCompanies?: number;
+  /** Preferred: named-company scrape list (Custom page). */
+  companyNames?: string[];
+  /** Backward-compatible mirror of companyNames. */
+  options?: {
+    companyNames?: string[];
+  };
 };
 
 export type JobResponse = {

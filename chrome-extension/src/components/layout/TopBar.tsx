@@ -28,6 +28,9 @@ export function TopBar() {
             <NavLink to="/dashboard" className={linkClass}>
               Dashboard
             </NavLink>
+            <NavLink to="/custom" className={linkClass}>
+              Custom
+            </NavLink>
             <NavLink to="/jobs" className={linkClass}>
               Jobs
             </NavLink>

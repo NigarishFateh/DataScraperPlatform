@@ -75,7 +75,8 @@ public class OpenDataDiscoveryProvider implements DiscoveryProvider {
                     request.countryCodes(),
                     request.cityIds(),
                     request.categoryIds(),
-                    remaining
+                    remaining,
+                    request.companyNames()
             );
             for (DiscoveredCompany company : catalogSearchSupport.searchCatalog(narrowed, term, name())) {
                 String key = company.website() != null && !company.website().isBlank()

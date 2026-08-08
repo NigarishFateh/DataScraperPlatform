@@ -39,7 +39,8 @@ export function CityMultiSelect({ selectedIds, countryCodes, onToggle }: CityMul
   if (!hasCountries) {
     return (
       <p className="rounded-lg border border-dashed border-white/10 bg-ink-900/40 px-3 py-2.5 text-xs text-mist-400">
-        Select a country first to see its cities. Leave cities empty to scrape all cities in the country.
+        Select a country first to see its cities. Leave cities empty to scrape nationwide
+        (major cities first, then the rest of the country).
       </p>
     );
   }

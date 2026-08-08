@@ -43,7 +43,57 @@ public class AggregationService {
             mergeProviderResult(draft, result);
         }
         draft.setSuccessfulProviderCount(successCount);
+        applySeedLeadership(draft, seed);
         return draft;
+    }
+
+    /**
+     * Custom scrape attaches CEO/founder via discovery metadata; fill blanks after website scrape.
+     */
+    private void applySeedLeadership(CompanyDraft draft, DiscoveredCompany seed) {
+        if (seed == null || seed.metadata() == null || seed.metadata().isEmpty()) {
+            return;
+        }
+        String founder = stringMeta(seed.metadata(), "founder");
+        String ceo = stringMeta(seed.metadata(), "ceo");
+        String leadershipName = stringMeta(seed.metadata(), "leadershipName");
+        String leadershipTitle = stringMeta(seed.metadata(), "leadershipTitle");
+        if (founder == null && leadershipName != null) {
+            founder = leadershipTitle == null || leadershipTitle.isBlank()
+                    ? leadershipName
+                    : leadershipName + " (" + leadershipTitle + ")";
+        }
+        if (ceo == null && leadershipName != null) {
+            String titleLower = leadershipTitle == null ? "" : leadershipTitle.toLowerCase(Locale.ROOT);
+            if (titleLower.contains("ceo")
+                    || titleLower.contains("chief executive")
+                    || titleLower.contains("managing director")
+                    || titleLower.contains("directeur")
+                    || titleLower.isBlank()) {
+                ceo = founder != null ? founder : leadershipName;
+            }
+        }
+        if (isBlank(draft.getFounder()) && !isBlank(founder)) {
+            draft.setFounder(founder);
+        }
+        if (isBlank(draft.getCeo()) && !isBlank(ceo)) {
+            draft.setCeo(ceo);
+        } else if (isBlank(draft.getCeo()) && !isBlank(founder)) {
+            draft.setCeo(founder);
+        }
+    }
+
+    private static String stringMeta(Map<String, Object> metadata, String key) {
+        Object value = metadata.get(key);
+        if (value == null) {
+            return null;
+        }
+        String text = value.toString().trim();
+        return text.isEmpty() ? null : text;
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private void mergeProviderResult(CompanyDraft draft, ProviderResult result) {

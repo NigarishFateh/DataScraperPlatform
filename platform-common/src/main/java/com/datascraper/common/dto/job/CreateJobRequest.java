@@ -18,7 +18,8 @@ public record CreateJobRequest(
         List<String> cityIds,
         List<String> enabledProviders,
         Integer maxCompanies,
-        Map<String, Object> options
+        Map<String, Object> options,
+        List<String> companyNames
 ) {
     public CreateJobRequest {
         if (countryCodes == null) {
@@ -40,6 +41,9 @@ public record CreateJobRequest(
         }
         if (options == null) {
             options = Map.of();
+        }
+        if (companyNames == null) {
+            companyNames = List.of();
         }
     }
 }

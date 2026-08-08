@@ -9,6 +9,7 @@ import {
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 const REQUEST_TIMEOUT_MS = 15_000;
 const DOWNLOAD_TIMEOUT_MS = 120_000;
+const LEADERSHIP_TIMEOUT_MS = 120_000;
 
 async function fetchWithTimeout(
   url: string,
@@ -62,7 +63,11 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  const timeoutMs = path.includes("/download") ? DOWNLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+  const timeoutMs = path.includes("/download")
+    ? DOWNLOAD_TIMEOUT_MS
+    : path.includes("/leadership/")
+      ? LEADERSHIP_TIMEOUT_MS
+      : REQUEST_TIMEOUT_MS;
   let response = await fetchWithTimeout(`${API_BASE}${path}`, { ...init, headers }, timeoutMs);
 
   if (response.status === 401 && !path.includes("/api/auth/")) {

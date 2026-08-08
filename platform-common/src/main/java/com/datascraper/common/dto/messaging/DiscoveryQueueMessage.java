@@ -14,6 +14,12 @@ public record DiscoveryQueueMessage(
         List<String> cityIds,
         List<String> categoryIds,
         List<String> enabledProviders,
-        int maxCompanies
+        int maxCompanies,
+        List<String> companyNames
 ) {
+    public DiscoveryQueueMessage {
+        if (companyNames == null) {
+            companyNames = List.of();
+        }
+    }
 }

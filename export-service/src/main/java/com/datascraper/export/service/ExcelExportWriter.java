@@ -31,10 +31,13 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.StringJoiner;
 
 @Component
@@ -54,7 +57,7 @@ public class ExcelExportWriter {
             "Website",
             "Email",
             "Phone Number",
-            "Founder Name"
+            "Founder / CEO"
     };
 
     private static final int COL_WEBSITE = 2;
@@ -103,15 +106,13 @@ public class ExcelExportWriter {
     ) throws IOException {
         Files.createDirectories(outputFile.getParent());
 
-        List<EnrichedCompany> withEmails = new ArrayList<>();
-        List<EnrichedCompany> withoutEmails = new ArrayList<>();
-        for (EnrichedCompany company : companies) {
-            if (CompanyEmailSupport.hasEmail(company.email())) {
-                withEmails.add(company);
-            } else {
-                withoutEmails.add(company);
-            }
-        }
+        List<String> jobCategories = job == null || job.categoryIds() == null
+                ? List.of()
+                : job.categoryIds().stream()
+                .filter(id -> id != null && !id.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
 
         try (SXSSFWorkbook workbook = new SXSSFWorkbook(STREAM_WINDOW_SIZE)) {
             workbook.setCompressTempFiles(true);
@@ -119,9 +120,22 @@ public class ExcelExportWriter {
 
             Styles styles = createStyles(workbook);
 
-            writeCompaniesSheet(workbook, styles, SHEET_ALL, companies);
-            writeCompaniesSheet(workbook, styles, SHEET_WITH_EMAILS, withEmails);
-            writeCompaniesSheet(workbook, styles, SHEET_WITHOUT_EMAILS, withoutEmails);
+            if (jobCategories.size() > 1) {
+                writeMultiCategoryPartitions(workbook, styles, companies, jobCategories);
+            } else {
+                List<EnrichedCompany> withEmails = new ArrayList<>();
+                List<EnrichedCompany> withoutEmails = new ArrayList<>();
+                for (EnrichedCompany company : companies) {
+                    if (CompanyEmailSupport.hasEmail(company.email())) {
+                        withEmails.add(company);
+                    } else {
+                        withoutEmails.add(company);
+                    }
+                }
+                writeCompaniesSheet(workbook, styles, SHEET_ALL, companies, null);
+                writeCompaniesSheet(workbook, styles, SHEET_WITH_EMAILS, withEmails, null);
+                writeCompaniesSheet(workbook, styles, SHEET_WITHOUT_EMAILS, withoutEmails, null);
+            }
 
             try (OutputStream out = Files.newOutputStream(outputFile)) {
                 workbook.write(out);
@@ -131,6 +145,98 @@ public class ExcelExportWriter {
             long fileSize = Files.size(outputFile);
             return new ExportWriteResult(companies.size(), fileSize);
         }
+    }
+
+    /**
+     * One sheet partition per selected category (label in sheet name + banner row).
+     * Companies are placed in the first matching category partition only.
+     */
+    private void writeMultiCategoryPartitions(
+            SXSSFWorkbook workbook,
+            Styles styles,
+            List<EnrichedCompany> companies,
+            List<String> jobCategories
+    ) {
+        Map<String, List<EnrichedCompany>> byCategory = new LinkedHashMap<>();
+        for (String categoryId : jobCategories) {
+            byCategory.put(categoryId, new ArrayList<>());
+        }
+        List<EnrichedCompany> unassigned = new ArrayList<>();
+
+        for (EnrichedCompany company : companies) {
+            String matched = firstMatchingCategory(company, jobCategories);
+            if (matched != null) {
+                byCategory.get(matched).add(company);
+            } else {
+                unassigned.add(company);
+            }
+        }
+
+        Set<String> usedSheetNames = new LinkedHashSet<>();
+        for (String categoryId : jobCategories) {
+            String label = categoryDisplayName(categoryId);
+            String sheetName = uniqueSheetName(label, usedSheetNames);
+            writeCompaniesSheet(workbook, styles, sheetName, byCategory.get(categoryId), label);
+        }
+        if (!unassigned.isEmpty()) {
+            String sheetName = uniqueSheetName("Other", usedSheetNames);
+            writeCompaniesSheet(workbook, styles, sheetName, unassigned, "Other / Unassigned");
+        }
+    }
+
+    private static String firstMatchingCategory(EnrichedCompany company, List<String> jobCategories) {
+        if (company.categoryIds() != null) {
+            for (String jobCategory : jobCategories) {
+                for (String companyCategory : company.categoryIds()) {
+                    if (companyCategory != null && companyCategory.equalsIgnoreCase(jobCategory)) {
+                        return jobCategory;
+                    }
+                }
+            }
+        }
+        String haystack = ((company.category() == null ? "" : company.category()) + " "
+                + (company.industry() == null ? "" : company.industry())).toLowerCase(Locale.ROOT);
+        for (String jobCategory : jobCategories) {
+            String label = categoryDisplayName(jobCategory).toLowerCase(Locale.ROOT).replace('-', ' ');
+            String id = jobCategory.toLowerCase(Locale.ROOT).replace('-', ' ');
+            if ((!label.isBlank() && haystack.contains(label)) || (!id.isBlank() && haystack.contains(id))) {
+                return jobCategory;
+            }
+        }
+        return null;
+    }
+
+    private static String categoryDisplayName(String categoryId) {
+        if (categoryId == null || categoryId.isBlank()) {
+            return "Category";
+        }
+        String key = categoryId.trim().toLowerCase(Locale.ROOT);
+        return CATEGORY_NAMES.getOrDefault(key, humanizeToken(categoryId));
+    }
+
+    private static String uniqueSheetName(String preferred, Set<String> used) {
+        String base = sanitizeSheetName(preferred);
+        String candidate = base;
+        int suffix = 2;
+        while (!used.add(candidate)) {
+            String truncated = base.length() > 28 ? base.substring(0, 28) : base;
+            candidate = truncated + "-" + suffix;
+            suffix++;
+        }
+        return candidate;
+    }
+
+    private static String sanitizeSheetName(String value) {
+        if (value == null || value.isBlank()) {
+            return "Sheet";
+        }
+        String cleaned = value.trim()
+                .replaceAll("[\\\\/?*\\[\\]:]+", "-")
+                .replaceAll("\\s+", " ");
+        if (cleaned.length() > 31) {
+            cleaned = cleaned.substring(0, 31);
+        }
+        return cleaned.isBlank() ? "Sheet" : cleaned;
     }
 
     public static String buildDownloadFileName(JobResponse job) {
@@ -233,14 +339,27 @@ public class ExcelExportWriter {
             SXSSFWorkbook workbook,
             Styles styles,
             String sheetName,
-            List<EnrichedCompany> companies
+            List<EnrichedCompany> companies,
+            String categoryBanner
     ) {
         ColumnWidthTracker widthTracker = new ColumnWidthTracker(COMPANY_HEADERS.length);
         SXSSFSheet sheet = workbook.createSheet(sheetName);
-        sheet.createFreezePane(0, 1);
+        int headerRowIndex = 0;
+
+        if (categoryBanner != null && !categoryBanner.isBlank()) {
+            Row bannerRow = sheet.createRow(0);
+            bannerRow.setHeightInPoints(HEADER_ROW_HEIGHT);
+            Cell bannerCell = bannerRow.createCell(0);
+            bannerCell.setCellValue("Category: " + categoryBanner);
+            bannerCell.setCellStyle(styles.header());
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, COMPANY_HEADERS.length - 1));
+            headerRowIndex = 1;
+        }
+
+        sheet.createFreezePane(0, headerRowIndex + 1);
         sheet.setDisplayGridlines(false);
 
-        Row headerRow = sheet.createRow(0);
+        Row headerRow = sheet.createRow(headerRowIndex);
         headerRow.setHeightInPoints(HEADER_ROW_HEIGHT);
         for (int col = 0; col < COMPANY_HEADERS.length; col++) {
             Cell cell = headerRow.createCell(col);
@@ -249,7 +368,7 @@ public class ExcelExportWriter {
             widthTracker.track(col, COMPANY_HEADERS[col], 0);
         }
 
-        int rowIndex = 1;
+        int rowIndex = headerRowIndex + 1;
         for (EnrichedCompany company : companies) {
             Row row = sheet.createRow(rowIndex);
             row.setHeightInPoints(DATA_ROW_HEIGHT);
@@ -258,8 +377,13 @@ public class ExcelExportWriter {
             rowIndex++;
         }
 
-        int lastDataRow = Math.max(rowIndex - 1, 0);
-        sheet.setAutoFilter(new CellRangeAddress(0, lastDataRow, 0, COMPANY_HEADERS.length - 1));
+        int lastDataRow = Math.max(rowIndex - 1, headerRowIndex);
+        sheet.setAutoFilter(new CellRangeAddress(
+                headerRowIndex,
+                lastDataRow,
+                0,
+                COMPANY_HEADERS.length - 1
+        ));
         applyCompanyColumnWidths(sheet, widthTracker);
     }
 

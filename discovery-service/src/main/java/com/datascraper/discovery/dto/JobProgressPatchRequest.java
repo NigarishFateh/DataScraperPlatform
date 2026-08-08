@@ -41,4 +41,20 @@ public record JobProgressPatchRequest(
                 null
         );
     }
+
+    /** Live running total while providers are still discovering. */
+    public static JobProgressPatchRequest discoveredProgress(int count) {
+        int progress = Math.min(24, 8 + Math.min(count, 80) / 5);
+        return new JobProgressPatchRequest(
+                JobStatus.RUNNING,
+                JobPhase.DISCOVERY,
+                count,
+                null,
+                null,
+                null,
+                progress,
+                "Discovered " + count + " companies so far",
+                null
+        );
+    }
 }

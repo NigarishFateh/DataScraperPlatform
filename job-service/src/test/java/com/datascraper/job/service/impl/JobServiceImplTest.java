@@ -52,6 +52,7 @@ class JobServiceImplTest {
                 List.of("city-1"),
                 List.of("google-maps"),
                 100,
+                null,
                 null
         );
     }

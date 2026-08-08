@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.IntConsumer;
 
 /**
  * Facade over B2B / business-search providers.
@@ -56,20 +57,43 @@ public class BusinessSearchDiscoveryClient {
     }
 
     public List<WebSearchHit> discover(ResolvedDiscoveryCriteria criteria) {
+        return discover(criteria, null);
+    }
+
+    public List<WebSearchHit> discover(ResolvedDiscoveryCriteria criteria, IntConsumer onProgress) {
         Map<String, WebSearchHit> unique = new LinkedHashMap<>();
 
         if (apolloDiscoveryClient.isConfigured()) {
-            for (WebSearchHit hit : safe(() -> apolloDiscoveryClient.discover(criteria), "apollo")) {
+            for (WebSearchHit hit : safe(
+                    () -> apolloDiscoveryClient.discover(criteria, count -> {
+                        if (onProgress != null) {
+                            onProgress.accept(Math.max(count, unique.size()));
+                        }
+                    }),
+                    "apollo"
+            )) {
                 unique.putIfAbsent(dedupeKey(hit), hit);
+                if (onProgress != null) {
+                    onProgress.accept(unique.size());
+                }
                 if (unique.size() >= criteria.maxResults()) {
                     return new ArrayList<>(unique.values());
                 }
             }
         }
 
+        // Named custom scrapes: Apollo org lookup only. Places/Maps keyword fallback
+        // pollutes results with unrelated local businesses; brand stubs cover misses.
+        if (criteria.hasCompanyNames()) {
+            return new ArrayList<>(unique.values());
+        }
+
         if (unique.size() < criteria.maxResults() && googlePlacesDiscoveryClient.isConfigured()) {
             for (WebSearchHit hit : safe(() -> googlePlacesDiscoveryClient.discover(criteria), "google-places")) {
                 unique.putIfAbsent(dedupeKey(hit), hit);
+                if (onProgress != null) {
+                    onProgress.accept(unique.size());
+                }
                 if (unique.size() >= criteria.maxResults()) {
                     return new ArrayList<>(unique.values());
                 }
@@ -79,6 +103,9 @@ public class BusinessSearchDiscoveryClient {
         if (unique.size() < criteria.maxResults() && serpApiMapsDiscoveryClient.isConfigured()) {
             for (WebSearchHit hit : safe(() -> serpApiMapsDiscoveryClient.discover(criteria), "serpapi-maps")) {
                 unique.putIfAbsent(dedupeKey(hit), hit);
+                if (onProgress != null) {
+                    onProgress.accept(unique.size());
+                }
                 if (unique.size() >= criteria.maxResults()) {
                     break;
                 }

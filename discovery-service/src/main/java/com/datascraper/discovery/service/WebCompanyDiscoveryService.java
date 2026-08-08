@@ -3,8 +3,11 @@ package com.datascraper.discovery.service;
 import com.datascraper.common.dto.discovery.DiscoveredCompany;
 import com.datascraper.common.dto.discovery.DiscoveryRequest;
 import com.datascraper.discovery.client.BusinessSearchDiscoveryClient;
+import com.datascraper.discovery.client.JobServiceClient;
+import com.datascraper.discovery.dto.JobProgressPatchRequest;
 import com.datascraper.discovery.dto.ResolvedDiscoveryCriteria;
 import com.datascraper.discovery.dto.WebSearchHit;
+import com.datascraper.discovery.support.NlRestaurantBrandSeed;
 import com.datascraper.discovery.support.WebsiteUrlSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.IntConsumer;
 
 @Service
 public class WebCompanyDiscoveryService {
@@ -25,28 +29,88 @@ public class WebCompanyDiscoveryService {
 
     private final DiscoveryCriteriaResolver criteriaResolver;
     private final BusinessSearchDiscoveryClient businessSearchDiscoveryClient;
+    private final JobServiceClient jobServiceClient;
+    private final NlRestaurantLeadershipService leadershipService;
 
     public WebCompanyDiscoveryService(
             DiscoveryCriteriaResolver criteriaResolver,
-            BusinessSearchDiscoveryClient businessSearchDiscoveryClient
+            BusinessSearchDiscoveryClient businessSearchDiscoveryClient,
+            JobServiceClient jobServiceClient,
+            NlRestaurantLeadershipService leadershipService
     ) {
         this.criteriaResolver = criteriaResolver;
         this.businessSearchDiscoveryClient = businessSearchDiscoveryClient;
+        this.jobServiceClient = jobServiceClient;
+        this.leadershipService = leadershipService;
     }
 
     public List<DiscoveredCompany> discover(DiscoveryRequest request, String providerName) {
+        List<String> categoryIds = request.categoryIds() == null ? List.of() : request.categoryIds();
+        boolean namedMode = request.companyNames() != null && !request.companyNames().isEmpty();
+
+        // Multi-category jobs discover each category separately so exports can partition cleanly.
+        if (!namedMode && categoryIds.size() > 1) {
+            Map<String, DiscoveredCompany> unique = new LinkedHashMap<>();
+            int remaining = request.maxResults() <= 0 ? 500 : request.maxResults();
+            for (String categoryId : categoryIds) {
+                if (categoryId == null || categoryId.isBlank() || remaining <= 0) {
+                    continue;
+                }
+                DiscoveryRequest singleCategory = new DiscoveryRequest(
+                        request.jobId(),
+                        request.correlationId(),
+                        request.countryCodes(),
+                        request.cityIds(),
+                        List.of(categoryId),
+                        remaining,
+                        request.companyNames()
+                );
+                for (DiscoveredCompany company : discoverSingleCategory(singleCategory, providerName)) {
+                    unique.putIfAbsent(dedupeKey(company), company);
+                    if (unique.size() >= request.maxResults()) {
+                        notifyLiveCount(request, unique.size());
+                        return new ArrayList<>(unique.values());
+                    }
+                }
+                notifyLiveCount(request, unique.size());
+                remaining = Math.max(0, request.maxResults() - unique.size());
+            }
+            log.info(
+                    "Multi-category web discovery produced {} unique companies across {} categories",
+                    unique.size(),
+                    categoryIds.size()
+            );
+            return new ArrayList<>(unique.values());
+        }
+
+        return discoverSingleCategory(request, providerName);
+    }
+
+    private List<DiscoveredCompany> discoverSingleCategory(DiscoveryRequest request, String providerName) {
         ResolvedDiscoveryCriteria criteria = criteriaResolver.resolve(request);
+        boolean namedMode = criteria.hasCompanyNames();
         boolean businessSearchReady = businessSearchDiscoveryClient.isConfigured();
 
         log.info(
-                "Web discovery start categories={} countries={} cities={} keywords={} businessSearch={} max={}",
+                "Web discovery start named={} companies={} categories={} countries={} cities={} (priority-first nationwide when empty) keywords={} businessSearch={} max={}",
+                namedMode,
+                criteria.companyNames(),
                 criteria.categoryNames(),
                 criteria.countryCodes(),
-                criteria.cityNames(),
+                criteria.cityNames().size(),
                 criteria.searchKeywords(),
                 businessSearchReady ? businessSearchDiscoveryClient.configuredProviders() : "disabled",
                 criteria.maxResults()
         );
+
+        // Named Custom scrape: always emit one company per requested name (brand seed + Apollo),
+        // independent of category keyword / industry filters.
+        if (namedMode) {
+            List<DiscoveredCompany> named = discoverNamedCompanies(request, criteria, providerName);
+            notifyLiveCount(request, named.size());
+            log.info("Named web discovery produced {} companies for provider {}", named.size(), providerName);
+            return named;
+        }
 
         if (!businessSearchReady) {
             log.warn(
@@ -56,9 +120,12 @@ public class WebCompanyDiscoveryService {
         }
 
         List<WebSearchHit> hits = new ArrayList<>();
-
         if (businessSearchReady) {
-            hits.addAll(safe(() -> businessSearchDiscoveryClient.discover(criteria), "business-search"));
+            IntConsumer onProgress = running -> notifyLiveCount(request, Math.min(running, criteria.maxResults()));
+            hits.addAll(safe(
+                    () -> businessSearchDiscoveryClient.discover(criteria, onProgress),
+                    "business-search"
+            ));
         }
 
         Map<String, DiscoveredCompany> unique = new LinkedHashMap<>();
@@ -80,6 +147,8 @@ public class WebCompanyDiscoveryService {
             }
         }
 
+        notifyLiveCount(request, unique.size());
+
         log.info(
                 "Web discovery produced {} unique companies for provider {} (rejected={} irrelevant)",
                 unique.size(),
@@ -87,6 +156,176 @@ public class WebCompanyDiscoveryService {
                 rejected
         );
         return new ArrayList<>(unique.values());
+    }
+
+    /**
+     * Custom scrape path: one row per requested company name.
+     * Prefer official brand websites, then Apollo org name search.
+     */
+    private List<DiscoveredCompany> discoverNamedCompanies(
+            DiscoveryRequest request,
+            ResolvedDiscoveryCriteria criteria,
+            String providerName
+    ) {
+        Map<String, DiscoveredCompany> unique = new LinkedHashMap<>();
+
+        for (WebSearchHit seed : seedNamedCompanyHits(criteria)) {
+            DiscoveredCompany company = toDiscoveredCompany(seed, criteria, providerName);
+            unique.putIfAbsent(dedupeKey(company), company);
+            notifyLiveCount(request, unique.size());
+        }
+
+        if (businessSearchDiscoveryClient.isConfigured()) {
+            IntConsumer onProgress = running -> notifyLiveCount(
+                    request,
+                    Math.max(unique.size(), Math.min(running, criteria.maxResults()))
+            );
+            for (WebSearchHit hit : safe(
+                    () -> businessSearchDiscoveryClient.discover(criteria, onProgress),
+                    "business-search"
+            )) {
+                DiscoveredCompany company = toDiscoveredCompany(hit, criteria, providerName);
+                unique.putIfAbsent(dedupeKey(company), company);
+                notifyLiveCount(request, unique.size());
+                if (unique.size() >= criteria.maxResults()) {
+                    break;
+                }
+            }
+        }
+
+        // Guarantee a stub for every requested name so custom scrape discovers the full list.
+        for (String rawName : criteria.companyNames()) {
+            if (unique.size() >= criteria.maxResults()) {
+                break;
+            }
+            String canonical = NlRestaurantBrandSeed.canonicalBrandName(rawName);
+            boolean already = unique.values().stream().anyMatch(c ->
+                    c.name() != null && c.name().equalsIgnoreCase(canonical));
+            if (already) {
+                continue;
+            }
+            String website = NlRestaurantBrandSeed.officialWebsite(canonical);
+            if (!WebsiteUrlSupport.isUsableCompanyWebsite(website)) {
+                log.warn(
+                        "Named company '{}' has no seeded website — emitting discovery stub for enrichment attempt",
+                        canonical
+                );
+                website = null;
+            }
+            String country = criteria.countryCodes().isEmpty() ? null : criteria.countryCodes().get(0);
+            WebSearchHit stub = new WebSearchHit(
+                    canonical,
+                    website,
+                    website,
+                    country,
+                    null,
+                    null,
+                    "brand-seed"
+            );
+            unique.putIfAbsent(dedupeKey(toDiscoveredCompany(stub, criteria, providerName)),
+                    toDiscoveredCompany(stub, criteria, providerName));
+        }
+
+        List<DiscoveredCompany> companies = new ArrayList<>(unique.values());
+        return attachLeadership(companies);
+    }
+
+    /**
+     * Enrich named discoveries with CEO / founder so job Excel "Founder Name" is filled.
+     */
+    private List<DiscoveredCompany> attachLeadership(List<DiscoveredCompany> companies) {
+        List<DiscoveredCompany> enriched = new ArrayList<>(companies.size());
+        for (DiscoveredCompany company : companies) {
+            enriched.add(withLeadershipMetadata(company));
+        }
+        return enriched;
+    }
+
+    private DiscoveredCompany withLeadershipMetadata(DiscoveredCompany company) {
+        if (company == null || company.name() == null || company.name().isBlank()) {
+            return company;
+        }
+        try {
+            var lead = leadershipService.lookupOne(company.name());
+            if (lead == null || !lead.found() || lead.leaderName() == null || lead.leaderName().isBlank()) {
+                return company;
+            }
+            Map<String, Object> metadata = new HashMap<>();
+            if (company.metadata() != null) {
+                metadata.putAll(company.metadata());
+            }
+            String title = lead.leadershipTitle() == null ? "" : lead.leadershipTitle().trim();
+            String display = title.isBlank()
+                    ? lead.leaderName().trim()
+                    : lead.leaderName().trim() + " (" + title + ")";
+            metadata.put("leadershipName", lead.leaderName().trim());
+            metadata.put("leadershipTitle", title.isBlank() ? null : title);
+            metadata.put("leadershipSource", lead.source());
+
+            String titleLower = title.toLowerCase(Locale.ROOT);
+            if (titleLower.contains("founder") || titleLower.contains("owner") || titleLower.contains("co-founder")) {
+                metadata.put("founder", display);
+            } else {
+                metadata.put("ceo", display);
+                // Excel prefers founder then ceo — keep both so Founder Name always fills.
+                metadata.putIfAbsent("founder", display);
+            }
+            log.info(
+                    "Named scrape leadership {} -> {} via {}",
+                    company.name(),
+                    display,
+                    lead.source()
+            );
+            return new DiscoveredCompany(
+                    company.externalId(),
+                    company.name(),
+                    company.website(),
+                    company.countryCode(),
+                    company.cityName(),
+                    company.cityId(),
+                    company.categoryIds(),
+                    company.sourceUrl(),
+                    company.providerName(),
+                    metadata
+            );
+        } catch (Exception ex) {
+            log.warn("Leadership attach failed for {}: {}", company.name(), ex.getMessage());
+            return company;
+        }
+    }
+
+    private void notifyLiveCount(DiscoveryRequest request, int count) {
+        if (count <= 0 || request.jobId() == null || request.jobId().isBlank()) {
+            return;
+        }
+        try {
+            UUID jobId = UUID.fromString(request.jobId());
+            jobServiceClient.patchProgress(jobId, JobProgressPatchRequest.discoveredProgress(count));
+        } catch (Exception ex) {
+            log.debug("Live discovered count patch skipped: {}", ex.getMessage());
+        }
+    }
+
+    private List<WebSearchHit> seedNamedCompanyHits(ResolvedDiscoveryCriteria criteria) {
+        List<WebSearchHit> seeded = new ArrayList<>();
+        String country = criteria.countryCodes().isEmpty() ? null : criteria.countryCodes().get(0);
+        for (String rawName : criteria.companyNames()) {
+            String canonical = NlRestaurantBrandSeed.canonicalBrandName(rawName);
+            String website = NlRestaurantBrandSeed.officialWebsite(canonical);
+            if (website == null || website.isBlank()) {
+                continue;
+            }
+            seeded.add(new WebSearchHit(
+                    canonical,
+                    website,
+                    website,
+                    country,
+                    null,
+                    null,
+                    "brand-seed"
+            ));
+        }
+        return seeded;
     }
 
     private List<WebSearchHit> safe(SourceCall call, String source) {
@@ -119,6 +358,12 @@ public class WebCompanyDiscoveryService {
                 (normalizeWebsite(hit.website()) + "|" + hit.name()).getBytes(java.nio.charset.StandardCharsets.UTF_8)
         );
 
+        // Named scrapes: stamp a single category so multi-sheet Excel doesn't collapse onto sheet 1.
+        List<String> categoryIds = criteria.categoryIds();
+        if (criteria.hasCompanyNames() && categoryIds.size() > 1) {
+            categoryIds = List.of(categoryIds.get(0));
+        }
+
         return new DiscoveredCompany(
                 externalId,
                 hit.name(),
@@ -126,7 +371,7 @@ public class WebCompanyDiscoveryService {
                 hit.countryCode(),
                 cityName,
                 cityId,
-                criteria.categoryIds(),
+                categoryIds,
                 hit.sourceUrl() == null || hit.sourceUrl().isBlank() ? hit.website() : hit.sourceUrl(),
                 providerName,
                 metadata

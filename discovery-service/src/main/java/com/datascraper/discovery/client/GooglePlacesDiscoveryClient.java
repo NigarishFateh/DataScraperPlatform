@@ -115,6 +115,10 @@ public class GooglePlacesDiscoveryClient {
             return List.of();
         }
 
+        if (criteria.hasCompanyNames()) {
+            return discoverByCompanyNames(criteria);
+        }
+
         List<WebSearchHit> hits = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
         List<String> keywords = limit(criteria.searchKeywords(), MAX_KEYWORDS);
@@ -141,6 +145,36 @@ public class GooglePlacesDiscoveryClient {
                 }
                 sleepQuietly(200);
             }
+        }
+        return hits;
+    }
+
+    /**
+     * Custom scrape: one Places text search per company name (no category includedType filter).
+     */
+    private List<WebSearchHit> discoverByCompanyNames(ResolvedDiscoveryCriteria criteria) {
+        List<WebSearchHit> hits = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        String country = criteria.countryNames().isEmpty() ? "" : criteria.countryNames().get(0);
+        String regionCode = criteria.countryCodes().isEmpty() ? null : criteria.countryCodes().get(0);
+        CityGeo location = new CityGeo(null, country.isBlank() ? "Global" : country);
+
+        for (String companyName : criteria.companyNames()) {
+            if (companyName == null || companyName.isBlank()) {
+                continue;
+            }
+            String textQuery = buildTextQuery(companyName.trim(), location.cityName(), country);
+            try {
+                List<WebSearchHit> batch = searchText(textQuery, null, regionCode, location, criteria, seen);
+                log.info("Google Places name '{}' -> {} places", textQuery, batch.size());
+                hits.addAll(batch);
+            } catch (Exception ex) {
+                log.warn("Google Places name search failed for '{}': {}", textQuery, ex.getMessage());
+            }
+            if (hits.size() >= criteria.maxResults()) {
+                return hits.subList(0, criteria.maxResults());
+            }
+            sleepQuietly(150);
         }
         return hits;
     }

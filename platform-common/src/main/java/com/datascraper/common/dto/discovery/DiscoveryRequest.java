@@ -13,7 +13,8 @@ public record DiscoveryRequest(
         List<String> countryCodes,
         List<String> cityIds,
         @NotEmpty List<String> categoryIds,
-        int maxResults
+        int maxResults,
+        List<String> companyNames
 ) {
     public DiscoveryRequest {
         if (countryCodes == null) {
@@ -21,6 +22,9 @@ public record DiscoveryRequest(
         }
         if (cityIds == null) {
             cityIds = List.of();
+        }
+        if (companyNames == null) {
+            companyNames = List.of();
         }
         if (maxResults <= 0) {
             maxResults = 500;

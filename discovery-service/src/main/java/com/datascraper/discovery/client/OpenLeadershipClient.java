@@ -51,7 +51,7 @@ public class OpenLeadershipClient {
     );
 
     private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(20))
+            .connectTimeout(Duration.ofSeconds(8))
             .build();
     private final ObjectMapper objectMapper;
 
@@ -347,7 +347,7 @@ public class OpenLeadershipClient {
         String url = "https://html.duckduckgo.com/html/?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
         Document doc = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                .timeout(25_000)
+                .timeout(8_000)
                 .followRedirects(true)
                 .get();
         List<Lead> leads = new ArrayList<>();
@@ -454,7 +454,7 @@ public class OpenLeadershipClient {
 
     private JsonNode getJson(String url) throws Exception {
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofSeconds(30))
+                .timeout(Duration.ofSeconds(10))
                 .header("Accept", "application/json")
                 .header("User-Agent", "DataScraperPlatform/0.1 (nl-restaurant-leadership)")
                 .GET()

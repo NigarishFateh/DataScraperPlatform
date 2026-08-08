@@ -73,7 +73,8 @@ public class IndustryListingDiscoveryProvider implements DiscoveryProvider {
                     request.countryCodes(),
                     request.cityIds(),
                     List.of(category.id()),
-                    remaining
+                    remaining,
+                    request.companyNames()
             );
             for (DiscoveredCompany company : catalogSearchSupport.paginateCatalog(categoryRequest, name())) {
                 String key = company.externalId() != null ? company.externalId() : company.name();

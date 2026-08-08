@@ -141,29 +141,17 @@ class ExcelExportWriterTest {
 
         try (InputStream in = Files.newInputStream(outputFile);
              XSSFWorkbook workbook = new XSSFWorkbook(in)) {
-            assertEquals(3, workbook.getNumberOfSheets());
-            assertEquals("Companies", workbook.getSheetAt(0).getSheetName());
-            assertEquals("With Emails", workbook.getSheetAt(1).getSheetName());
-            assertEquals("Without Emails", workbook.getSheetAt(2).getSheetName());
+            // Multi-category job → one sheet partition per category (plus none unassigned here)
+            assertEquals(2, workbook.getNumberOfSheets());
+            assertEquals("Cat-Software", workbook.getSheetAt(0).getSheetName());
+            assertEquals("Cat-Hardware", workbook.getSheetAt(1).getSheetName());
 
-            // All companies
-            assertEquals(3, workbook.getSheetAt(0).getPhysicalNumberOfRows());
-            assertEquals("Company Name", workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue());
-            assertEquals("Founder Name", workbook.getSheetAt(0).getRow(0).getCell(5).getStringCellValue());
-            assertEquals(6, workbook.getSheetAt(0).getRow(0).getLastCellNum());
-            assertEquals("Alpha Analytics GmbH", workbook.getSheetAt(0).getRow(1).getCell(0).getStringCellValue());
-            assertEquals("Berlin", workbook.getSheetAt(0).getRow(1).getCell(1).getStringCellValue());
-            assertEquals("Jane Founder", workbook.getSheetAt(0).getRow(1).getCell(5).getStringCellValue());
-            assertEquals("Beta Systems AG", workbook.getSheetAt(0).getRow(2).getCell(0).getStringCellValue());
+            assertEquals("Category: Cat-Software", workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue());
+            assertEquals("Company Name", workbook.getSheetAt(0).getRow(1).getCell(0).getStringCellValue());
+            assertEquals("Alpha Analytics GmbH", workbook.getSheetAt(0).getRow(2).getCell(0).getStringCellValue());
 
-            // With emails — only Alpha
-            assertEquals(2, workbook.getSheetAt(1).getPhysicalNumberOfRows());
-            assertEquals("Alpha Analytics GmbH", workbook.getSheetAt(1).getRow(1).getCell(0).getStringCellValue());
-            assertEquals("contact@alpha.example.com", workbook.getSheetAt(1).getRow(1).getCell(3).getStringCellValue());
-
-            // Without emails — only Beta
-            assertEquals(2, workbook.getSheetAt(2).getPhysicalNumberOfRows());
-            assertEquals("Beta Systems AG", workbook.getSheetAt(2).getRow(1).getCell(0).getStringCellValue());
+            assertEquals("Category: Cat-Hardware", workbook.getSheetAt(1).getRow(0).getCell(0).getStringCellValue());
+            assertEquals("Beta Systems AG", workbook.getSheetAt(1).getRow(2).getCell(0).getStringCellValue());
 
             assertEquals("Pakistan_Artificial-Intelligence.xlsx",
                     ExcelExportWriter.buildDownloadFileName(new JobResponse(
@@ -177,6 +165,55 @@ class ExcelExportWriterTest {
                             8, 8, 8, 0, 100, 0L, null, null, null,
                             generatedAt, generatedAt, generatedAt, generatedAt
                     )));
+        }
+    }
+
+    @Test
+    void writesClassicThreeSheetsForSingleCategory(@TempDir Path tempDir) throws Exception {
+        Instant generatedAt = Instant.parse("2026-08-01T09:00:00Z");
+        Instant scrapedAt = Instant.parse("2026-01-15T10:30:00Z");
+        EnrichedCompany company = new EnrichedCompany(
+                "alpha-1",
+                "Alpha Analytics GmbH",
+                "Software",
+                "Information Technology",
+                "DE",
+                "Germany",
+                "Berlin",
+                "Berlin",
+                "https://alpha.example.com",
+                "contact@alpha.example.com",
+                "+49 30 1234567",
+                "Jane Founder",
+                "John CEO",
+                null, null, null, List.of(), null, null, null, null, null, null,
+                null, null, null, null, "https://alpha.example.com",
+                scrapedAt, 0.9, "website-scraper", null,
+                List.of("software"),
+                null
+        );
+        JobResponse job = new JobResponse(
+                UUID.randomUUID(),
+                JobStatus.COMPLETED,
+                JobPhase.EXPORT,
+                "user-123",
+                List.of("software"),
+                List.of("DE"),
+                List.of(),
+                1, 1, 1, 0, 100, 0L, null, null, null,
+                generatedAt, generatedAt, generatedAt, generatedAt
+        );
+
+        Path outputFile = tempDir.resolve("single-category.xlsx");
+        writer.writeWorkbook(outputFile, List.of(company), job, "1.0.0", generatedAt);
+
+        try (InputStream in = Files.newInputStream(outputFile);
+             XSSFWorkbook workbook = new XSSFWorkbook(in)) {
+            assertEquals(3, workbook.getNumberOfSheets());
+            assertEquals("Companies", workbook.getSheetAt(0).getSheetName());
+            assertEquals("With Emails", workbook.getSheetAt(1).getSheetName());
+            assertEquals("Without Emails", workbook.getSheetAt(2).getSheetName());
+            assertEquals("Alpha Analytics GmbH", workbook.getSheetAt(0).getRow(1).getCell(0).getStringCellValue());
         }
     }
 }

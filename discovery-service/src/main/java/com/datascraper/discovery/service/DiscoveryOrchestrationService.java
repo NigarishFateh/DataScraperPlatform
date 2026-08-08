@@ -96,6 +96,11 @@ public class DiscoveryOrchestrationService {
                         found.isEmpty() ? ProviderExecutionStatus.SKIPPED : ProviderExecutionStatus.SUCCESS,
                         found.isEmpty() ? "No catalog matches for provider heuristics" : "Discovery succeeded"
                 ));
+
+                if (notifyJobService && !aggregated.isEmpty()) {
+                    int runningUnique = deduplicationService.deduplicate(aggregated).size();
+                    notifyDiscoveredProgress(jobId, runningUnique);
+                }
             } catch (Exception ex) {
                 log.error("Provider {} failed for job {}: {}", provider.name(), jobId, ex.getMessage(), ex);
                 executionRecords.add(new DiscoveryLogService.ProviderExecutionRecord(
@@ -170,6 +175,14 @@ public class DiscoveryOrchestrationService {
         }
     }
 
+    private void notifyDiscoveredProgress(UUID jobId, int count) {
+        try {
+            jobServiceClient.patchProgress(jobId, JobProgressPatchRequest.discoveredProgress(count));
+        } catch (Exception ex) {
+            log.warn("Unable to patch discovered count for job {}: {}", jobId, ex.getMessage());
+        }
+    }
+
     private DiscoveryRequest toDiscoveryRequest(DiscoveryQueueMessage message) {
         return new DiscoveryRequest(
                 message.jobId().toString(),
@@ -177,7 +190,8 @@ public class DiscoveryOrchestrationService {
                 message.countryCodes(),
                 message.cityIds(),
                 message.categoryIds(),
-                message.maxCompanies()
+                message.maxCompanies(),
+                message.companyNames()
         );
     }
 
@@ -203,8 +217,9 @@ public class DiscoveryOrchestrationService {
         return "No companies discovered for categories=[" + categories
                 + "] countries=[" + countries
                 + "] cities=[" + cities
-                + "]. Configure GOOGLE_PLACES_API_KEY or SERPAPI_API_KEY in .env for reliable "
-                + "category+city business search, pick a city, then retry.";
+                + "]. Apollo.org search needs lead credits (HTTP 422 when exhausted); "
+                + "SerpAPI Maps needs quota (HTTP 429 when exhausted); "
+                + "or set GOOGLE_PLACES_API_KEY. Also try larger cities / nationwide, then retry.";
     }
 
     private String join(List<String> values) {

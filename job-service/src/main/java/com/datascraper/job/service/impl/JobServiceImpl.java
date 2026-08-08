@@ -89,8 +89,15 @@ public class JobServiceImpl implements JobService {
         job.setMaxCompanies(request.maxCompanies());
         job.setCorrelationId(correlationId);
 
+        List<String> companyNames = mergeCompanyNames(request.companyNames(), request.options());
+        if (!companyNames.isEmpty()) {
+            job.setCheckpoint(writeCompanyNamesCheckpoint(companyNames));
+        }
+
         jobRepository.save(job);
-        writeAudit(job, "JOB_CREATED", "Job queued for discovery");
+        writeAudit(job, "JOB_CREATED", companyNames.isEmpty()
+                ? "Job queued for discovery"
+                : "Job queued for named companies: " + String.join(", ", companyNames));
 
         DiscoveryQueueMessage message = new DiscoveryQueueMessage(
                 jobId,
@@ -100,7 +107,8 @@ public class JobServiceImpl implements JobService {
                 request.cityIds(),
                 request.categoryIds(),
                 request.enabledProviders(),
-                request.maxCompanies()
+                request.maxCompanies(),
+                companyNames
         );
         queueService.publishDiscovery(message);
 
@@ -203,7 +211,8 @@ public class JobServiceImpl implements JobService {
                 retry.getCityIds(),
                 retry.getCategoryIds(),
                 retry.getEnabledProviders(),
-                retry.getMaxCompanies()
+                retry.getMaxCompanies(),
+                readCompanyNamesCheckpoint(source.getCheckpoint())
         );
         queueService.publishDiscovery(message);
 
@@ -229,7 +238,8 @@ public class JobServiceImpl implements JobService {
             job.setProgressPercent(Math.max(job.getProgressPercent(), update.progressPercent()));
         }
         if (update.checkpoint() != null) {
-            job.setCheckpoint(update.checkpoint());
+            // Merge so enrichment cursors never wipe companyNames used by retry/resume.
+            job.setCheckpoint(mergeCheckpoints(job.getCheckpoint(), update.checkpoint()));
         }
 
         if (job.getStartedAt() == null && job.getStatus() == JobStatus.RUNNING) {
@@ -320,9 +330,97 @@ public class JobServiceImpl implements JobService {
                 job.getCityIds(),
                 job.getCategoryIds(),
                 job.getEnabledProviders(),
-                job.getMaxCompanies()
+                job.getMaxCompanies(),
+                readCompanyNamesCheckpoint(job.getCheckpoint())
         );
         queueService.publishDiscovery(message);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> mergeCompanyNames(List<String> direct, Map<String, Object> options) {
+        java.util.LinkedHashSet<String> names = new java.util.LinkedHashSet<>();
+        if (direct != null) {
+            for (String name : direct) {
+                if (name != null && !name.isBlank()) {
+                    names.add(name.trim());
+                }
+            }
+        }
+        names.addAll(extractCompanyNames(options));
+        return List.copyOf(names);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> extractCompanyNames(Map<String, Object> options) {
+        if (options == null || options.isEmpty()) {
+            return List.of();
+        }
+        Object raw = options.get("companyNames");
+        if (raw instanceof List<?> list) {
+            return list.stream()
+                    .filter(item -> item != null && !item.toString().isBlank())
+                    .map(item -> item.toString().trim())
+                    .distinct()
+                    .toList();
+        }
+        if (raw instanceof String text && !text.isBlank()) {
+            return List.of(text.trim());
+        }
+        return List.of();
+    }
+
+    private String writeCompanyNamesCheckpoint(List<String> companyNames) {
+        try {
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("companyNames", companyNames);
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Unable to serialize companyNames checkpoint", ex);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private String mergeCheckpoints(String existing, String incoming) {
+        if (incoming == null || incoming.isBlank()) {
+            return existing;
+        }
+        if (existing == null || existing.isBlank()) {
+            return incoming;
+        }
+        try {
+            Map<String, Object> merged = new LinkedHashMap<>(
+                    objectMapper.readValue(existing, Map.class)
+            );
+            Map<String, Object> next = objectMapper.readValue(incoming, Map.class);
+            Object preservedNames = merged.get("companyNames");
+            merged.putAll(next);
+            if (!next.containsKey("companyNames") && preservedNames != null) {
+                merged.put("companyNames", preservedNames);
+            }
+            return objectMapper.writeValueAsString(merged);
+        } catch (Exception ex) {
+            return incoming;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> readCompanyNamesCheckpoint(String checkpoint) {
+        if (checkpoint == null || checkpoint.isBlank()) {
+            return List.of();
+        }
+        try {
+            Map<String, Object> payload = objectMapper.readValue(checkpoint, Map.class);
+            Object raw = payload.get("companyNames");
+            if (raw instanceof List<?> list) {
+                return list.stream()
+                        .filter(item -> item != null && !item.toString().isBlank())
+                        .map(item -> item.toString().trim())
+                        .toList();
+            }
+        } catch (Exception ignored) {
+            // Checkpoint may hold unrelated resume tokens.
+        }
+        return List.of();
     }
 
     private ScrapingJobEntity requireJob(UUID jobId) {

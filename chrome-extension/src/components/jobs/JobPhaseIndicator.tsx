@@ -153,10 +153,14 @@ export function JobPhaseIndicator({
 
                 <p
                   className={`font-medium tabular-nums ${
-                    isActive ? "animate-pulse text-sm text-mist-100" : "text-sm text-mist-300"
+                    isActive ? "animate-pulse text-lg text-signal" : "text-sm text-mist-300"
                   }`}
                 >
-                  {count > 0 ? step.countLabel(count) : isActive ? "—" : "0"}
+                  {count > 0
+                    ? step.countLabel(count)
+                    : isActive
+                      ? "Counting…"
+                      : "0"}
                 </p>
               </div>
 
