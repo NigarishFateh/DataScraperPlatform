@@ -54,6 +54,8 @@ app:
   google-places-api-key: ${GOOGLE_PLACES_API_KEY:}
   serpapi-api-key: ${SERPAPI_API_KEY:}
   apollo-api-key: ${APOLLO_API_KEY:}
+  # Financial Modeling Prep — key-executives for public tickers (https://site.financialmodelingprep.com/developer)
+  fmp-api-key: ${FMP_API_KEY:}
 
 discovery:
   providers:

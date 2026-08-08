@@ -23,6 +23,8 @@ public class AppProperties {
     private String googlePlacesApiKey = "";
     private String serpapiApiKey = "";
     private String apolloApiKey = "";
+    /** Financial Modeling Prep — Company Executives (public tickers). */
+    private String fmpApiKey = "";
 
     @Getter
     @Setter

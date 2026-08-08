@@ -1,6 +1,3 @@
-/**
- * Wires either a no-op or Redis cache bean based on config.
- */
 package com.datascraper.orchestrator.config;
 
 import com.datascraper.orchestrator.cache.NoOpScraperResultCache;
@@ -11,6 +8,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
+
+/** Wires either a no-op or Redis cache bean based on config. */
 
 @Configuration
 public class ScraperCacheConfig {
