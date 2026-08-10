@@ -31,9 +31,9 @@ class ScraperCacheKeyBuilderTest {
                 "job-1", "co-sap", "SAP", "https://www.sap.com", List.of(), "corr-1");
 
         String websiteKey = ScraperCacheKeyBuilder.build("intel:scraper", ScraperType.COMPANY_WEBSITE, context);
-        String techKey = ScraperCacheKeyBuilder.build("intel:scraper", ScraperType.TECHNOLOGY_STACK, context);
+        String contactKey = ScraperCacheKeyBuilder.build("intel:scraper", ScraperType.CONTACT, context);
 
-        assertThat(websiteKey).isNotEqualTo(techKey);
+        assertThat(websiteKey).isNotEqualTo(contactKey);
     }
 
     @Test

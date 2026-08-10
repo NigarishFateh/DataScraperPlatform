@@ -23,10 +23,9 @@ class ScraperFactoryImplTest {
     @BeforeEach
     void setUp() {
         Scraper website = mockScraper(ScraperType.COMPANY_WEBSITE, true);
-        Scraper tech = mockScraper(ScraperType.TECHNOLOGY_STACK, true);
-        Scraper news = mockScraper(ScraperType.NEWS, false);
+        Scraper contact = mockScraper(ScraperType.CONTACT, true);
 
-        scraperFactory = new ScraperFactoryImpl(new ScraperRegistry(List.of(website, tech, news)));
+        scraperFactory = new ScraperFactoryImpl(new ScraperRegistry(List.of(website, contact)));
     }
 
     @Test
@@ -38,7 +37,7 @@ class ScraperFactoryImplTest {
 
         assertThat(selected).hasSize(2);
         assertThat(selected).extracting(Scraper::type)
-                .containsExactlyInAnyOrder(ScraperType.COMPANY_WEBSITE, ScraperType.TECHNOLOGY_STACK);
+                .containsExactlyInAnyOrder(ScraperType.COMPANY_WEBSITE, ScraperType.CONTACT);
     }
 
     @Test
@@ -46,10 +45,10 @@ class ScraperFactoryImplTest {
         ScraperContext context = new ScraperContext(
                 "job-1", "co-1", "Acme", "https://acme.example", List.of(), "corr-1");
 
-        List<Scraper> selected = scraperFactory.resolve(context, List.of(ScraperType.TECHNOLOGY_STACK));
+        List<Scraper> selected = scraperFactory.resolve(context, List.of(ScraperType.CONTACT));
 
         assertThat(selected).hasSize(1);
-        assertThat(selected.get(0).type()).isEqualTo(ScraperType.TECHNOLOGY_STACK);
+        assertThat(selected.get(0).type()).isEqualTo(ScraperType.CONTACT);
     }
 
     private static Scraper mockScraper(ScraperType type, boolean supports) {

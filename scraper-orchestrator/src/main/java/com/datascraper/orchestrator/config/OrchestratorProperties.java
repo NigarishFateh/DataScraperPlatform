@@ -48,9 +48,9 @@ public class OrchestratorProperties {
 
     private static Map<String, ProviderToggle> defaultProviders() {
         Map<String, ProviderToggle> map = new HashMap<>();
-        for (String key : new String[] {"website", "contact", "github", "technology", "news", "social"}) {
+        for (String key : new String[] {"website", "contact"}) {
             ProviderToggle toggle = new ProviderToggle();
-            toggle.setEnabled("website".equals(key) || "contact".equals(key));
+            toggle.setEnabled(true);
             map.put(key, toggle);
         }
         return map;

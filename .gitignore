@@ -38,7 +38,11 @@ build/
 ### GeoNames download cache ###
 scripts/geonames/
 
-### Chrome extension (Lead Intelligence) ###
+### Local run logs ###
+*.log
+*.log.err
+
+### Chrome extension ###
 chrome-extension/node_modules/
 chrome-extension/dist/
 chrome-extension/.env

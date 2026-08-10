@@ -67,8 +67,7 @@ class IntelligenceOrchestratorServiceImplTest {
         int delayMs = 200;
         List<Scraper> scrapers = List.of(
                 delayedScraper(ScraperType.COMPANY_WEBSITE, delayMs),
-                delayedScraper(ScraperType.TECHNOLOGY_STACK, delayMs),
-                delayedScraper(ScraperType.NEWS, delayMs)
+                delayedScraper(ScraperType.CONTACT, delayMs)
         );
         when(scraperFactory.resolve(any(ScraperContext.class), eq(null))).thenReturn(scrapers);
 
@@ -80,7 +79,7 @@ class IntelligenceOrchestratorServiceImplTest {
         long elapsed = System.currentTimeMillis() - start;
 
         assertThat(response.status()).isEqualTo(IntelligenceJobStatus.COMPLETED);
-        assertThat(response.results()).hasSize(3);
+        assertThat(response.results()).hasSize(2);
         assertThat(response.results())
                 .extracting(ScraperResult::status)
                 .containsOnly(ScraperExecutionStatus.SUCCESS);
@@ -90,8 +89,8 @@ class IntelligenceOrchestratorServiceImplTest {
     @Test
     void returnsPartialWhenOneScraperFails() {
         Scraper ok = delayedScraper(ScraperType.COMPANY_WEBSITE, 10);
-        Scraper fail = scraper(ScraperType.TECHNOLOGY_STACK, () ->
-                ScraperResult.failed(ScraperType.TECHNOLOGY_STACK, "down"));
+        Scraper fail = scraper(ScraperType.CONTACT, () ->
+                ScraperResult.failed(ScraperType.CONTACT, "down"));
         when(scraperFactory.resolve(any(ScraperContext.class), eq(null))).thenReturn(List.of(ok, fail));
 
         IntelligenceJobRequest request = new IntelligenceJobRequest(

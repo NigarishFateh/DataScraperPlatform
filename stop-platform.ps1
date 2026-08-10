@@ -1,7 +1,7 @@
 # Stop Global Business Intelligence Platform services.
 # Usage: .\stop-platform.ps1
 
-$ports = @(8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8091, 8092, 8093, 8094, 8095, 8096)
+$ports = @(8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8091, 8095)
 
 Write-Host "Stopping platform Java services on ports: $($ports -join ', ')" -ForegroundColor Cyan
 

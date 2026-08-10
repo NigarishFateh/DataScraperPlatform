@@ -63,11 +63,7 @@ public class CompanyDataProviderFactory {
     private List<String> aliases(ProviderType type) {
         return switch (type) {
             case WEBSITE -> List.of("COMPANY_WEBSITE", "WEB");
-            case TECHNOLOGY -> List.of("TECHNOLOGY_STACK", "TECH", "TECH_STACK");
             case CONTACT -> List.of("CONTACT_INFO");
-            case GITHUB -> List.of("GITHUB_ORG");
-            case NEWS -> List.of("NEWS_HEADLINES");
-            case SOCIAL -> List.of("SOCIAL_MEDIA", "SOCIAL_PROFILES");
         };
     }
 }

@@ -22,7 +22,7 @@ class AggregationServiceTest {
     }
 
     @Test
-    void mergesWebsiteContactGithubAndTechResults() {
+    void mergesWebsiteAndContactResults() {
         DiscoveredCompany seed = new DiscoveredCompany(
                 "co-1",
                 "Acme",
@@ -61,30 +61,6 @@ class AggregationServiceTest {
                         )),
                         Map.of(),
                         0.75
-                ),
-                ProviderResult.success(
-                        ProviderType.GITHUB,
-                        "github-remote",
-                        "ok",
-                        List.of(Map.of(
-                                "section", "presence",
-                                "field", "github-organization",
-                                "profileUrl", "https://github.com/acme"
-                        )),
-                        Map.of(),
-                        0.85
-                ),
-                ProviderResult.success(
-                        ProviderType.TECHNOLOGY,
-                        "tech-remote",
-                        "ok",
-                        List.of(Map.of(
-                                "section", "technology",
-                                "field", "framework",
-                                "value", "Spring Boot"
-                        )),
-                        Map.of(),
-                        0.7
                 )
         );
 
@@ -95,8 +71,6 @@ class AggregationServiceTest {
         assertThat(draft.getDescription()).isEqualTo("Enterprise widgets");
         assertThat(draft.getEmail()).isEqualTo("sales@acme.example.com");
         assertThat(draft.getContactPage()).isEqualTo("https://acme.example.com/contact");
-        assertThat(draft.getGithub()).isEqualTo("https://github.com/acme");
-        assertThat(draft.getTechnologyStack()).contains("Spring Boot");
-        assertThat(draft.getSuccessfulProviderCount()).isEqualTo(4);
+        assertThat(draft.getSuccessfulProviderCount()).isEqualTo(2);
     }
 }

@@ -24,11 +24,5 @@ scraper:
   services:
     website:
       base-url: ${SCRAPER_WEBSITE_URL:https://scraper-website.example.com}
-    tech:
-      base-url: ${SCRAPER_TECH_URL:https://scraper-tech.example.com}
-    news:
-      base-url: ${SCRAPER_NEWS_URL:https://scraper-news.example.com}
-    github:
-      base-url: ${SCRAPER_GITHUB_URL:https://scraper-github.example.com}
     contact:
       base-url: ${SCRAPER_CONTACT_URL:https://scraper-contact.example.com}

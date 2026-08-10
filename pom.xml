@@ -34,11 +34,7 @@
         <module>scraper-orchestrator</module>
         <module>export-service</module>
         <module>scraper-website</module>
-        <module>scraper-tech</module>
-        <module>scraper-news</module>
-        <module>scraper-github</module>
         <module>scraper-contact</module>
-        <module>scraper-social</module>
     </modules>
 
     <properties>

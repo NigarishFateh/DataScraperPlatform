@@ -8,7 +8,6 @@ import com.datascraper.orchestrator.model.CompanyDraft;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -110,7 +109,6 @@ public class AggregationService {
 
     private void mergeItem(CompanyDraft draft, ProviderResult result, Map<String, Object> item) {
         String field = stringValue(item.get("field"));
-        String section = stringValue(item.get("section"));
         String value = firstNonBlank(
                 stringValue(item.get("value")),
                 stringValue(item.get("title")),
@@ -126,11 +124,6 @@ public class AggregationService {
         switch (result.providerType()) {
             case WEBSITE -> mergeWebsiteField(draft, field, value, item);
             case CONTACT -> mergeContactField(draft, field, value, item);
-            case GITHUB -> mergeGitHubField(draft, item);
-            case TECHNOLOGY -> mergeTechnologyField(draft, field, value);
-            case NEWS -> mergeNewsField(draft, item);
-            case SOCIAL -> mergeSocialField(draft, field, value, item);
-            default -> draft.getRawAttributes().put(field != null ? field : section, value);
         }
     }
 
@@ -183,46 +176,6 @@ public class AggregationService {
         }
     }
 
-    private void mergeGitHubField(CompanyDraft draft, Map<String, Object> item) {
-        String profileUrl = stringValue(item.get("profileUrl"));
-        if (profileUrl != null) {
-            prefer(draft::getGithub, draft::setGithub, profileUrl, 0.85);
-        }
-    }
-
-    private void mergeTechnologyField(CompanyDraft draft, String field, String value) {
-        String tech = value != null ? value : field;
-        if (tech != null && !tech.isBlank()) {
-            addUnique(draft.getTechnologyStack(), tech);
-        }
-    }
-
-    private void mergeNewsField(CompanyDraft draft, Map<String, Object> item) {
-        @SuppressWarnings("unchecked")
-        List<String> headlines = (List<String>) draft.getRawAttributes()
-                .computeIfAbsent("newsHeadlines", key -> new ArrayList<String>());
-        String title = stringValue(item.get("title"));
-        if (title != null) {
-            headlines.add(title);
-        }
-    }
-
-    private void mergeSocialField(CompanyDraft draft, String field, String value, Map<String, Object> item) {
-        String url = firstNonBlank(value, stringValue(item.get("url")), stringValue(item.get("profileUrl")));
-        if (field == null || url == null) {
-            return;
-        }
-        switch (field.toLowerCase(Locale.ROOT)) {
-            case "linkedin" -> prefer(draft::getLinkedIn, draft::setLinkedIn, url, 0.8);
-            case "github" -> prefer(draft::getGithub, draft::setGithub, url, 0.8);
-            case "twitter", "x" -> prefer(draft::getTwitter, draft::setTwitter, url, 0.8);
-            case "facebook" -> prefer(draft::getFacebook, draft::setFacebook, url, 0.8);
-            case "instagram" -> prefer(draft::getInstagram, draft::setInstagram, url, 0.8);
-            case "youtube" -> prefer(draft::getYoutube, draft::setYoutube, url, 0.8);
-            default -> draft.getRawAttributes().put(field, url);
-        }
-    }
-
     private interface Getter {
         String get();
     }
@@ -260,17 +213,6 @@ public class AggregationService {
         Set<String> parts = new LinkedHashSet<>(List.of(getter.get().split(",")));
         parts.add(value.trim());
         setter.set(parts.stream().filter(s -> !s.isBlank()).collect(Collectors.joining(", ")));
-    }
-
-    private void addUnique(List<String> target, String value) {
-        String normalized = value.trim();
-        if (normalized.isEmpty()) {
-            return;
-        }
-        boolean exists = target.stream().anyMatch(existing -> existing.equalsIgnoreCase(normalized));
-        if (!exists) {
-            target.add(normalized);
-        }
     }
 
     private String stringValue(Object value) {
