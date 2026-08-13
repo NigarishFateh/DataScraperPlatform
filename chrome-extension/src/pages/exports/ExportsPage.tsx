@@ -32,7 +32,7 @@ export function ExportsPage() {
         <h1 className="font-display text-xl font-semibold tracking-tight text-mist-100">
           Download center
         </h1>
-        <p className="text-sm text-mist-300">Exports from completed scraping jobs.</p>
+        <p className="text-sm text-mist-300">Exports from completed and partial (failed) scraping jobs.</p>
       </section>
 
       {query.isLoading ? (

@@ -53,14 +53,16 @@ public class ExcelExportWriter {
 
     private static final String[] COMPANY_HEADERS = {
             "Company Name",
+            "Branch ID",
             "City",
+            "Address",
             "Website",
             "Email",
             "Phone Number",
             "Founder / CEO"
     };
 
-    private static final int COL_WEBSITE = 2;
+    private static final int COL_WEBSITE = 4;
     private static final int SAMPLE_AUTO_SIZE_ROWS = 100;
     private static final int STREAM_WINDOW_SIZE = 100;
     private static final int MAX_COLUMN_WIDTH = 256 * 55;
@@ -68,7 +70,7 @@ public class ExcelExportWriter {
     private static final int DATA_ROW_HEIGHT = 18;
 
     /** Preferred column widths (Excel character units) for company sheets. */
-    private static final int[] COMPANY_COLUMN_WIDTH_CHARS = {32, 18, 36, 28, 16, 24};
+    private static final int[] COMPANY_COLUMN_WIDTH_CHARS = {28, 18, 16, 36, 32, 26, 16, 22};
 
     private static final Map<String, String> COUNTRY_NAMES = Map.ofEntries(
             Map.entry("PK", "Pakistan"),
@@ -409,7 +411,9 @@ public class ExcelExportWriter {
         String founder = firstNonBlank(company.founder(), company.ceo());
         String[] values = {
                 company.name(),
-                company.city(),
+                branchId(company),
+                displayCity(company),
+                company.address(),
                 company.website(),
                 company.email(),
                 company.phone(),
@@ -450,9 +454,98 @@ public class ExcelExportWriter {
 
     private static HorizontalAlignment horizontalAlignmentForColumn(int col) {
         return switch (col) {
-            case 4 -> HorizontalAlignment.CENTER;
+            case 6 -> HorizontalAlignment.CENTER; // Phone Number
             default -> HorizontalAlignment.LEFT;
         };
+    }
+
+    /**
+     * Google Places id when present; otherwise a stable BR-xxxxxxxx from name+city+address.
+     */
+    static String branchId(EnrichedCompany company) {
+        if (company == null) {
+            return "";
+        }
+        Object rawPlace = company.rawAttributes() == null ? null : company.rawAttributes().get("placeId");
+        if (rawPlace == null) {
+            rawPlace = company.rawAttributes() == null ? null : company.rawAttributes().get("branchId");
+        }
+        if (rawPlace != null && !rawPlace.toString().isBlank()) {
+            String id = rawPlace.toString().trim();
+            if (id.regionMatches(true, 0, "places/", 0, 7)) {
+                id = id.substring(7);
+            }
+            return id;
+        }
+        String basis = (company.name() == null ? "" : company.name().trim())
+                + "|" + (company.city() == null ? "" : company.city().trim())
+                + "|" + (company.address() == null ? "" : company.address().trim());
+        String uuid = java.util.UUID.nameUUIDFromBytes(
+                basis.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        ).toString().substring(0, 8).toUpperCase(Locale.ROOT);
+        return "BR-" + uuid;
+    }
+
+    /**
+     * City column must be a place name. URLs, country names, and postcodes look like
+     * black/grey bars or hyperlinks in Excel when the column is narrow.
+     */
+    private static String displayCity(EnrichedCompany company) {
+        String city = sanitizeCity(company.city(), company.countryName(), company.countryCode());
+        if (city != null) {
+            return city;
+        }
+        return sanitizeCity(cityFromAddress(company.address()), company.countryName(), company.countryCode());
+    }
+
+    private static String sanitizeCity(String raw, String countryName, String countryCode) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String value = raw.trim();
+        if (looksLikeUrl(value) || value.contains("://") || value.contains("/")) {
+            return null;
+        }
+        value = value.replaceFirst("(?i)^\\d{4}\\s*[A-Z]{2}\\s+", "");
+        value = value.replaceFirst("^\\d{5}\\s+", "");
+        if (value.isBlank() || isCountryLabel(value, countryName, countryCode) || value.length() > 40) {
+            return null;
+        }
+        return value;
+    }
+
+    private static String cityFromAddress(String address) {
+        if (address == null || address.isBlank()) {
+            return null;
+        }
+        String[] parts = address.split(",");
+        for (int i = parts.length - 1; i >= 0; i--) {
+            String part = parts[i].trim();
+            if (part.isBlank()) {
+                continue;
+            }
+            String cleaned = part.replaceFirst("(?i)^\\d{4}\\s*[A-Z]{2}\\s+", "").trim();
+            cleaned = cleaned.replaceFirst("^\\d{5}\\s+", "").trim();
+            if (cleaned.isBlank() || cleaned.matches("(?i)netherlands|nederland|germany|deutschland|belgium|belgie")) {
+                continue;
+            }
+            if (cleaned.matches("(?i)\\d{4}\\s*[A-Z]{2}") || cleaned.matches("\\d+")) {
+                continue;
+            }
+            return cleaned;
+        }
+        return null;
+    }
+
+    private static boolean isCountryLabel(String value, String countryName, String countryCode) {
+        String lower = value.trim().toLowerCase(Locale.ROOT);
+        if (countryName != null && lower.equals(countryName.trim().toLowerCase(Locale.ROOT))) {
+            return true;
+        }
+        if (countryCode != null && lower.equals(countryCode.trim().toLowerCase(Locale.ROOT))) {
+            return true;
+        }
+        return lower.equals("netherlands") || lower.equals("nederland") || lower.equals("holland");
     }
 
     private boolean isUrlColumn(int col) {

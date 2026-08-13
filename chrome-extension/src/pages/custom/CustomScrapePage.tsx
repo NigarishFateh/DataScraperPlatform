@@ -26,6 +26,7 @@ export function CustomScrapePage() {
   const [companyText, setCompanyText] = useState(NL_RESTAURANT_BRANDS.join("\n"));
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [countryCodes, setCountryCodes] = useState<string[]>(["NL"]);
+  const [expandBranches, setExpandBranches] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [leadershipRows, setLeadershipRows] = useState<LeadershipPerson[] | null>(null);
   const [leadershipMeta, setLeadershipMeta] = useState<string | null>(null);
@@ -69,9 +70,15 @@ export function CustomScrapePage() {
         categoryIds,
         countryCodes,
         cityIds: [],
-        maxCompanies: Math.max(companyNames.length, 1),
+        maxCompanies: expandBranches
+          ? Math.min(200, Math.max(companyNames.length * 25, companyNames.length))
+          : companyNames.length,
         companyNames,
-        options: { companyNames },
+        options: {
+          companyNames,
+          expandBranches,
+          maxBranchesPerBrand: expandBranches ? 25 : 1,
+        },
       }),
     onSuccess: (job) => {
       setError(null);
@@ -102,7 +109,8 @@ export function CustomScrapePage() {
         <p className="text-sm text-mist-300">
           Enter specific companies, pick category and country, then run a full scrape
           (includes CEO / founder) or fetch leadership only.
-          Independent from Dashboard filters.
+          Each location gets a Branch ID. If a scrape stalls, you still get an error
+          plus an Excel of whatever was saved. Independent from Dashboard filters.
         </p>
       </section>
 
@@ -140,7 +148,10 @@ export function CustomScrapePage() {
             >
               Clear
             </button>
-            <span className="text-[11px] text-mist-400">{companyNames.length} companies</span>
+            <span className="text-[11px] text-mist-400">
+              {companyNames.length} {companyNames.length === 1 ? "company" : "companies"}
+              {expandBranches ? ` · up to ~${Math.min(200, companyNames.length * 25)} locations` : ""}
+            </span>
           </div>
         </FilterSection>
 
@@ -151,6 +162,22 @@ export function CustomScrapePage() {
         <FilterSection step="3" title="Country" hint="Optional · scopes discovery / Apollo location">
           <CountryMultiSelect selectedCodes={countryCodes} onToggle={toggleCountry} />
         </FilterSection>
+
+        <label className="flex items-start gap-2 rounded-lg border border-white/10 bg-ink-950/40 px-3 py-2 text-[12px] text-mist-200">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={expandBranches}
+            disabled={busy}
+            onChange={(event) => setExpandBranches(event.target.checked)}
+          />
+          <span>
+            Find all branches
+            <span className="mt-0.5 block text-[11px] text-mist-400">
+              On (default): every Google Places location for each brand. Branch address/phone come from Places; the brand website is scraped once, not once per shop.
+            </span>
+          </span>
+        </label>
       </section>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

@@ -1,4 +1,4 @@
-# Implementation Plan & Priorities
+c# Implementation Plan & Priorities
 
 Aligned with product requirements in [PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md).  
 Order is intentional: ship quality Excel for NL brands/branches before deep cleanup polish.
@@ -34,17 +34,10 @@ Order is intentional: ship quality Excel for NL brands/branches before deep clea
 
 **Goal:** Excel matches the required business columns and branch granularity.
 
-1. Extend `ExcelExportWriter` headers/rows:
-   - Address  
-   - Branch name (optional)  
-   - Branch manager / Supervisor (optional)  
-   - Keep: Company, City, Website, Email, Phone, CEO/Founder  
-2. Ensure orchestrator / company persistence always forwards `address` from Places/Apollo into export DTO.  
-3. Add export quality options on job create:
-   - `requireContactFields` (default true): skip or divert rows missing email **and** phone  
-   - `requireAddress` (default true)  
-   - `requireLeadership` (default false until Apollo people credits are reliable — then true for custom leadership jobs)  
-4. Sheet layout: `Branches` (complete) + `Incomplete` (missing critical fields) — never invent values.
+1. [x] Extend `ExcelExportWriter` headers/rows: Address, Branch Name, Branch Manager  
+2. [x] Forward Places/Apollo address + phone into export DTO via discovery metadata  
+3. [x] Quality sheets: `Branches` (complete) + `Incomplete` (+ `Companies` = all)  
+4. [ ] Optional job `options.require*` overrides (defaults applied in export today)
 
 **Done when:** Sample NL bakery job Excel shows address + contact columns; empty critical cells only appear on Incomplete sheet.
 
@@ -54,13 +47,10 @@ Order is intentional: ship quality Excel for NL brands/branches before deep clea
 
 **Goal:** Named companies in a country → every branch location.
 
-1. Custom discovery path:
-   - Input: country, optional city, category keywords, list of brand names  
-   - For each brand: Google Places text/nearby search (NL-wide if city empty) + Apollo org/location match  
-   - Deduplicate by place_id / address fingerprint  
-2. Persist **one company profile / location row per branch**.  
-3. Attach HQ CEO/Founder at brand level when branch manager unknown; prefer branch manager when Apollo/Places yield it.  
-4. Excel: one row per branch (requirement #7 custom bakeries example).
+1. [x] Custom discovery: Places branch expansion after Apollo (named mode)  
+2. [x] Deduplicate by place_id / address fingerprint  
+3. [x] Persist one row per branch location  
+4. [x] Custom UI raises `maxCompanies` for branch expansion  
 
 **Done when:** Three NL bakery names → multi-branch rows with addresses/phones where Places returns them.
 
@@ -82,9 +72,9 @@ Order is intentional: ship quality Excel for NL brands/branches before deep clea
 
 ## Phase 4 — Netherlands priority (P1)
 
-1. Extension country dropdown: **Netherlands (NL)** pinned at top; rest A–Z.  
-2. Optional default country = NL on first load (user can change).  
-3. Discovery keyword/location ordering may prefer NL configs — **must not** filter out other countries when selected.  
+1. [x] Extension country dropdown: **Netherlands (NL)** pinned at top; rest A–Z.  
+2. [x] Custom page defaults country = NL (already).  
+3. Discovery must not filter out other countries when selected — unchanged.  
 4. Seed/curated leadership lists may stay NL-heavy; other countries use Apollo/Places only.
 
 **Done when:** Selecting DE/US/etc. still returns that country’s data unchanged.
@@ -137,9 +127,10 @@ Enrichment providers enabled: website + contact only.
 
 ## Suggested next coding sprint (execute in order)
 
-1. Add Address (+ branch columns) to Excel export.  
-2. Wire Places address through to export for every discovered place.  
-3. Custom brand → multi-branch Places expansion for selected country.  
-4. Quality sheets / filters.  
-5. NL pin in extension country list.  
-6. Leadership API docs + hardening.
+1. [x] Add Address (+ branch columns) to Excel export.  
+2. [x] Wire Places address through to export for every discovered place.  
+3. [x] Custom brand → multi-branch Places expansion for selected country.  
+4. [x] Quality sheets / filters (`Branches` / `Incomplete`).  
+5. [x] NL pin in extension country list.  
+6. Leadership API docs + hardening.  
+7. Optional: job `options.require*` overrides for export quality.

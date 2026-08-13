@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExcelExportWriterTest {
@@ -148,7 +149,10 @@ class ExcelExportWriterTest {
 
             assertEquals("Category: Cat-Software", workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue());
             assertEquals("Company Name", workbook.getSheetAt(0).getRow(1).getCell(0).getStringCellValue());
+            assertEquals("Branch ID", workbook.getSheetAt(0).getRow(1).getCell(1).getStringCellValue());
+            assertEquals("City", workbook.getSheetAt(0).getRow(1).getCell(2).getStringCellValue());
             assertEquals("Alpha Analytics GmbH", workbook.getSheetAt(0).getRow(2).getCell(0).getStringCellValue());
+            assertNotNull(workbook.getSheetAt(0).getCTWorksheet().getAutoFilter());
 
             assertEquals("Category: Cat-Hardware", workbook.getSheetAt(1).getRow(0).getCell(0).getStringCellValue());
             assertEquals("Beta Systems AG", workbook.getSheetAt(1).getRow(2).getCell(0).getStringCellValue());
@@ -187,7 +191,7 @@ class ExcelExportWriterTest {
                 "Jane Founder",
                 "John CEO",
                 null, null, null, List.of(), null, null, null, null, null, null,
-                null, null, null, null, "https://alpha.example.com",
+                null, null, "Friedrichstrasse 1, Berlin", null, "https://alpha.example.com",
                 scrapedAt, 0.9, "website-scraper", null,
                 List.of("software"),
                 null
@@ -213,7 +217,14 @@ class ExcelExportWriterTest {
             assertEquals("Companies", workbook.getSheetAt(0).getSheetName());
             assertEquals("With Emails", workbook.getSheetAt(1).getSheetName());
             assertEquals("Without Emails", workbook.getSheetAt(2).getSheetName());
+            assertEquals("Company Name", workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue());
             assertEquals("Alpha Analytics GmbH", workbook.getSheetAt(0).getRow(1).getCell(0).getStringCellValue());
+            assertEquals("Branch ID", workbook.getSheetAt(0).getRow(0).getCell(1).getStringCellValue());
+            assertEquals("City", workbook.getSheetAt(0).getRow(0).getCell(2).getStringCellValue());
+            assertEquals("Address", workbook.getSheetAt(0).getRow(0).getCell(3).getStringCellValue());
+            assertEquals("Friedrichstrasse 1, Berlin",
+                    workbook.getSheetAt(0).getRow(1).getCell(3).getStringCellValue());
+            assertNotNull(workbook.getSheetAt(0).getCTWorksheet().getAutoFilter());
         }
     }
 }

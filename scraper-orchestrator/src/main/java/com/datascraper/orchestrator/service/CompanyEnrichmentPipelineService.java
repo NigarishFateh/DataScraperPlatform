@@ -69,7 +69,8 @@ public class CompanyEnrichmentPipelineService {
         String checkpoint = buildCheckpoint(message.company());
         try {
             ProviderContext context = ProviderContextMapper.fromMessage(message);
-            List<ProviderResult> providerResults = enrichmentService.enrich(context, message.enabledProviders());
+            List<String> providers = requestedProviders(message);
+            List<ProviderResult> providerResults = enrichmentService.enrich(context, providers);
 
             CompanyDraft draft = aggregationService.aggregate(message.company(), providerResults);
             normalizationService.normalize(draft);
@@ -130,6 +131,18 @@ public class CompanyEnrichmentPipelineService {
                     ex.getMessage(),
                     ex);
 
+            int persistedCount = jobCompletionTracker.currentPersistedCount(jobId);
+            try {
+                CompanyDraft draft = aggregationService.aggregate(message.company(), List.of());
+                normalizationService.normalize(draft);
+                EnrichedCompany seedOnly = toEnrichedCompany(draft);
+                if (persistenceClient.persist(jobId, seedOnly)) {
+                    persistedCount = jobCompletionTracker.incrementPersisted(jobId);
+                }
+            } catch (Exception persistEx) {
+                log.warn("Seed persist after enrichment error failed for job {}: {}", jobId, persistEx.getMessage());
+            }
+
             int enrichedCount = jobCompletionTracker.incrementEnriched(jobId);
             int failedCount = jobCompletionTracker.incrementFailed(jobId);
             JobResponse currentJob = jobServiceClient.getJob(jobId);
@@ -137,7 +150,7 @@ public class CompanyEnrichmentPipelineService {
                     jobId,
                     currentJob,
                     enrichedCount,
-                    jobCompletionTracker.currentPersistedCount(jobId),
+                    persistedCount,
                     failedCount,
                     "Enrichment error: " + ex.getMessage(),
                     checkpoint
@@ -146,6 +159,34 @@ public class CompanyEnrichmentPipelineService {
 
             return skippedResult(message, "Enrichment error: " + ex.getMessage());
         }
+    }
+
+    private List<String> requestedProviders(CompanyEnrichmentMessage message) {
+        List<String> requested = message.enabledProviders();
+        if (!hasPlacesPhoneAndAddress(message.company())) {
+            return requested;
+        }
+        // Places already filled branch phone + address — skip the slow HTML contact crawl.
+        if (requested == null || requested.isEmpty()) {
+            return List.of("WEBSITE");
+        }
+        return requested.stream()
+                .filter(name -> name != null && !name.isBlank())
+                .filter(name -> {
+                    String upper = name.trim().toUpperCase();
+                    return !upper.contains("CONTACT");
+                })
+                .toList();
+    }
+
+    private static boolean hasPlacesPhoneAndAddress(DiscoveredCompany company) {
+        if (company == null || company.metadata() == null) {
+            return false;
+        }
+        Object address = company.metadata().get("address");
+        Object phone = company.metadata().get("phone");
+        return address != null && !address.toString().isBlank()
+                && phone != null && !phone.toString().isBlank();
     }
 
     private boolean shouldSkipPausedJob(UUID jobId) {

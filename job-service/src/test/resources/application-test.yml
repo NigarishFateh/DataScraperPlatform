@@ -17,3 +17,5 @@ app:
   orchestrator:
     base-url: http://localhost:8085
     resume-path: /api/intelligence/jobs/{jobId}/resume
+  export:
+    base-url: http://localhost:8088

@@ -222,10 +222,17 @@ public class SerpApiMapsDiscoveryClient {
         }
 
         String address = text(item, "address");
+        String phone = text(item, "phone");
         String resolvedCity = city.cityName();
         if (city.cityName() != null
+                && address != null
+                && !address.isBlank()
                 && address.toLowerCase(Locale.ROOT).contains(city.cityName().toLowerCase(Locale.ROOT))) {
             resolvedCity = city.cityName();
+        }
+
+        if (placeId.isBlank()) {
+            placeId = text(item, "data_id");
         }
 
         return new WebSearchHit(
@@ -235,7 +242,10 @@ public class SerpApiMapsDiscoveryClient {
                 criteria.countryCodes().isEmpty() ? null : criteria.countryCodes().get(0),
                 city.cityId(),
                 resolvedCity,
-                "serpapi-maps"
+                "serpapi-maps",
+                address == null || address.isBlank() ? null : address,
+                phone == null || phone.isBlank() ? null : phone,
+                placeId.isBlank() ? null : placeId
         );
     }
 

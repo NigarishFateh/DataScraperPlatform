@@ -71,4 +71,41 @@ public final class WebsiteUrlSupport {
         }
         return value;
     }
+
+    /**
+     * Collapse store-locator / branch paths to the brand origin so custom scrape
+     * does not fetch a unique URL (and robots.txt) per location.
+     */
+    public static String brandHomepageUrl(String url) {
+        String normalized = normalizeHttpUrl(url);
+        if (normalized.isBlank() || !isUsableCompanyWebsite(normalized)) {
+            return normalized;
+        }
+        try {
+            java.net.URI uri = java.net.URI.create(normalized);
+            String host = uri.getHost();
+            if (host == null || host.isBlank()) {
+                return normalized;
+            }
+            String path = uri.getPath() == null ? "" : uri.getPath().toLowerCase(Locale.ROOT);
+            boolean storePath = path.contains("/vestigingen")
+                    || path.contains("/locations")
+                    || path.contains("/location/")
+                    || path.contains("/stores")
+                    || path.contains("/store/")
+                    || path.contains("/filialen")
+                    || path.contains("/restaurants")
+                    || path.contains("/restaurant/")
+                    || path.contains("/finder")
+                    || path.contains("/winkel")
+                    || path.contains("/shops");
+            if (!storePath) {
+                return normalized;
+            }
+            String scheme = uri.getScheme() == null ? "https" : uri.getScheme();
+            return scheme + "://" + host;
+        } catch (Exception ex) {
+            return normalized;
+        }
+    }
 }

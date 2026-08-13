@@ -53,6 +53,10 @@ public class DiscoveryCriteriaResolver {
                     "nl-breda", "nl-nijmegen", "nl-haarlem", "nl-arnhem",
                     "nl-leiden", "nl-maastricht", "nl-delft", "nl-amersfoort"
             )),
+            Map.entry("DZ", List.of(
+                    "dz-algiers", "dz-oran", "dz-constantine", "dz-annaba",
+                    "dz-blida", "dz-setif", "dz-batna", "dz-tlemcen"
+            )),
             Map.entry("FR", List.of(
                     "fr-paris", "fr-lyon", "fr-marseille", "fr-toulouse",
                     "fr-bordeaux", "fr-lille", "fr-nantes", "fr-nice"
@@ -230,6 +234,12 @@ public class DiscoveryCriteriaResolver {
                     addCity(cityIds, cityNames, seenCityKeys, cityId, humanizeCityId(cityId));
                 }
             }
+        } else if (!countryCodes.isEmpty() && namedMode) {
+            // Custom scrape with no city: search major cities, not only Google's Amsterdam ranking.
+            for (String countryCode : countryCodes) {
+                addPriorityCities(countryCode, cityIds, cityNames, seenCityKeys, locationCatalogClient);
+            }
+            log.info("Named scrape city plan countries={} cities={}", countryCodes, cityNames);
         } else if (!countryCodes.isEmpty() && !namedMode) {
             // No city selected → nationwide: priority/major cities first, then remaining catalog cities.
             for (String countryCode : countryCodes) {
@@ -241,16 +251,7 @@ public class DiscoveryCriteriaResolver {
                     }
                 }
 
-                List<String> priority = PRIORITY_CITY_IDS.getOrDefault(countryCode, List.of());
-                for (String priorityId : priority) {
-                    CityDto city = byId.remove(priorityId.toLowerCase(Locale.ROOT));
-                    if (city == null || city.name() == null || city.name().isBlank()) {
-                        // Priority id may not be in catalog yet — still search by humanized name.
-                        addCity(cityIds, cityNames, seenCityKeys, priorityId, humanizeCityId(priorityId));
-                        continue;
-                    }
-                    addCity(cityIds, cityNames, seenCityKeys, city.id(), city.name());
-                }
+                addPriorityCitiesFromMap(cityIds, cityNames, seenCityKeys, byId, countryCode);
 
                 for (CityDto city : cities) {
                     if (city == null || city.id() == null || city.name() == null || city.name().isBlank()) {
@@ -275,6 +276,11 @@ public class DiscoveryCriteriaResolver {
         if (namedMode) {
             keywords.addAll(companyNames);
         } else {
+            for (String countryCode : countryCodes) {
+                for (String categoryId : requestedIds) {
+                    keywords.addAll(localizedKeywords(categoryId, countryCode));
+                }
+            }
             for (String categoryId : requestedIds) {
                 List<String> mapped = CATEGORY_KEYWORDS.get(categoryId == null ? "" : categoryId.toLowerCase(Locale.ROOT));
                 if (mapped != null) {
@@ -287,9 +293,17 @@ public class DiscoveryCriteriaResolver {
             }
         }
 
-        int maxResults = namedMode
-                ? Math.min(request.maxResults(), Math.max(companyNames.size(), 1))
-                : request.maxResults();
+        int maxResults;
+        if (namedMode) {
+            int requested = request.maxResults() <= 0 ? companyNames.size() : request.maxResults();
+            if (requested <= companyNames.size()) {
+                maxResults = companyNames.size();
+            } else {
+                maxResults = Math.min(requested, companyNames.size() * 25);
+            }
+        } else {
+            maxResults = request.maxResults();
+        }
 
         return new ResolvedDiscoveryCriteria(
                 requestedIds,
@@ -302,6 +316,111 @@ public class DiscoveryCriteriaResolver {
                 maxResults,
                 companyNames
         );
+    }
+
+    /**
+     * When a selected city returns nothing (small towns), retry major cities in the same country.
+     * Already-searched city IDs are skipped. If every major city was already tried, city lists
+     * are emptied so Places/Apollo query the country as a whole.
+     */
+    public ResolvedDiscoveryCriteria expandToMajorCities(ResolvedDiscoveryCriteria criteria) {
+        if (criteria == null || criteria.countryCodes().isEmpty()) {
+            return criteria;
+        }
+        Set<String> alreadyTried = new LinkedHashSet<>();
+        for (String cityId : criteria.cityIds()) {
+            if (cityId != null && !cityId.isBlank()) {
+                alreadyTried.add(cityId.toLowerCase(Locale.ROOT));
+            }
+        }
+
+        List<String> cityIds = new ArrayList<>();
+        List<String> cityNames = new ArrayList<>();
+        Set<String> seenCityKeys = new LinkedHashSet<>();
+        for (String countryCode : criteria.countryCodes()) {
+            addPriorityCities(countryCode, cityIds, cityNames, seenCityKeys, locationCatalogClient);
+        }
+
+        List<String> filteredIds = new ArrayList<>();
+        List<String> filteredNames = new ArrayList<>();
+        for (int i = 0; i < cityIds.size(); i++) {
+            if (alreadyTried.contains(cityIds.get(i).toLowerCase(Locale.ROOT))) {
+                continue;
+            }
+            filteredIds.add(cityIds.get(i));
+            filteredNames.add(cityNames.get(i));
+        }
+
+        log.info(
+                "Major-city fallback countries={} cities={} (skipped already-tried={})",
+                criteria.countryCodes(),
+                filteredNames,
+                alreadyTried
+        );
+        return new ResolvedDiscoveryCriteria(
+                criteria.categoryIds(),
+                criteria.categoryNames(),
+                criteria.countryCodes(),
+                criteria.countryNames(),
+                List.copyOf(filteredIds),
+                List.copyOf(filteredNames),
+                criteria.searchKeywords(),
+                criteria.maxResults(),
+                criteria.companyNames()
+        );
+    }
+
+    private static final Set<String> FRANCOPHONE_COUNTRIES = Set.of(
+            "DZ", "MA", "TN", "FR", "BE", "SN", "CI", "CM", "CD", "MG", "HT", "LU"
+    );
+
+    private static List<String> localizedKeywords(String categoryId, String countryCode) {
+        if (categoryId == null || countryCode == null || !FRANCOPHONE_COUNTRIES.contains(countryCode.toUpperCase(Locale.ROOT))) {
+            return List.of();
+        }
+        String key = categoryId.toLowerCase(Locale.ROOT);
+        return switch (key) {
+            case "ai", "ml", "deep-learning", "nlp", "computer-vision" ->
+                    List.of("informatique", "intelligence artificielle", "société de logiciels");
+            case "software", "software-dev", "it", "it-services", "it-consulting", "saas" ->
+                    List.of("informatique", "logiciel", "développement logiciel");
+            default -> List.of("entreprise", "société");
+        };
+    }
+
+    private static void addPriorityCities(
+            String countryCode,
+            List<String> cityIds,
+            List<String> cityNames,
+            Set<String> seenCityKeys,
+            LocationCatalogClient locationCatalogClient
+    ) {
+        List<CityDto> cities = locationCatalogClient.listCitiesByCountry(countryCode);
+        Map<String, CityDto> byId = new HashMap<>();
+        for (CityDto city : cities) {
+            if (city != null && city.id() != null) {
+                byId.put(city.id().toLowerCase(Locale.ROOT), city);
+            }
+        }
+        addPriorityCitiesFromMap(cityIds, cityNames, seenCityKeys, byId, countryCode);
+    }
+
+    private static void addPriorityCitiesFromMap(
+            List<String> cityIds,
+            List<String> cityNames,
+            Set<String> seenCityKeys,
+            Map<String, CityDto> byId,
+            String countryCode
+    ) {
+        List<String> priority = PRIORITY_CITY_IDS.getOrDefault(countryCode, List.of());
+        for (String priorityId : priority) {
+            CityDto city = byId.remove(priorityId.toLowerCase(Locale.ROOT));
+            if (city == null || city.name() == null || city.name().isBlank()) {
+                addCity(cityIds, cityNames, seenCityKeys, priorityId, humanizeCityId(priorityId));
+                continue;
+            }
+            addCity(cityIds, cityNames, seenCityKeys, city.id(), city.name());
+        }
     }
 
     private static List<String> normalizeCompanyNames(List<String> raw) {

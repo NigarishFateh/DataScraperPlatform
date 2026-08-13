@@ -33,7 +33,12 @@ class AggregationServiceTest {
                 List.of("cat-1"),
                 "https://source.example.com",
                 "catalog-seed",
-                Map.of()
+                Map.of(
+                        "address", "Friedrichstrasse 1, Berlin",
+                        "phone", "+49 30 999",
+                        "branchName", "Acme Berlin Mitte",
+                        "placeId", "places/abc"
+                )
         );
 
         List<ProviderResult> results = List.of(
@@ -71,6 +76,11 @@ class AggregationServiceTest {
         assertThat(draft.getDescription()).isEqualTo("Enterprise widgets");
         assertThat(draft.getEmail()).isEqualTo("sales@acme.example.com");
         assertThat(draft.getContactPage()).isEqualTo("https://acme.example.com/contact");
+        assertThat(draft.getAddress()).isEqualTo("Friedrichstrasse 1, Berlin");
+        assertThat(draft.getPhone()).isEqualTo("+49 30 999");
+        assertThat(draft.getRawAttributes().get("branchName")).isEqualTo("Acme Berlin Mitte");
+        assertThat(draft.getRawAttributes().get("placeId")).isEqualTo("places/abc");
+        assertThat(draft.getRawAttributes().get("branchId")).isEqualTo("abc");
         assertThat(draft.getSuccessfulProviderCount()).isEqualTo(2);
     }
 }

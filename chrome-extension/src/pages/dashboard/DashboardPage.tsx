@@ -40,7 +40,9 @@ export function DashboardPage() {
           New scrape
         </h1>
         <p className="text-sm text-mist-300">
-          Pick categories from the catalog, set volume, then choose country and city for local results.
+          Pick categories and a region (country / cities). Results include company name, branch ID,
+          city, address, website, email, phone, and founder/CEO. Excel has filters on Company Name and City.
+          If a scrape stalls, you still get an error and a download of whatever was saved.
         </p>
       </section>
 

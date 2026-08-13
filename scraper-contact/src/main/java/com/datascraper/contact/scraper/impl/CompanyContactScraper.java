@@ -123,6 +123,13 @@ public class CompanyContactScraper implements ContactScraper {
                     metadata
             );
         } catch (IOException ex) {
+            if (HtmlPageFetcher.isBlockedOrUnavailable(ex)) {
+                log.warn("Contact scrape skipped for {} (site blocked/unavailable): {}", url, ex.getMessage());
+                return ScraperResult.skipped(
+                        ScraperType.CONTACT,
+                        "Website blocked or unavailable for contact scrape: " + ex.getMessage()
+                );
+            }
             log.warn("Contact scrape failed for {}: {}", url, ex.getMessage());
             return ScraperResult.failed(ScraperType.CONTACT, ex.getMessage());
         }
@@ -181,7 +188,7 @@ public class CompanyContactScraper implements ContactScraper {
                 continue;
             }
             limited.add(candidate);
-            if (limited.size() >= 8) {
+            if (limited.size() >= 2) {
                 break;
             }
         }

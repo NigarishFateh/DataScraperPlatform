@@ -7,6 +7,7 @@ import com.datascraper.common.dto.ScraperContext;
 import com.datascraper.common.dto.ScraperResult;
 import com.datascraper.common.enums.ScraperExecutionStatus;
 import com.datascraper.orchestrator.cache.ScraperResultCache;
+import com.datascraper.orchestrator.cache.SharedWebsiteScrapeMemo;
 import com.datascraper.orchestrator.client.ScraperCommunicationException;
 import com.datascraper.orchestrator.client.ScraperServiceClient;
 import com.datascraper.orchestrator.config.IntelligenceScraperProperties;
@@ -24,6 +25,7 @@ public abstract class AbstractRemoteScraper implements Scraper {
     private final ScraperResultCache scraperResultCache;
     private final IntelligenceScraperProperties properties;
     private final String serviceKey;
+    private final SharedWebsiteScrapeMemo sharedWebsiteScrapeMemo;
 
     protected AbstractRemoteScraper(
             ScraperServiceClient scraperServiceClient,
@@ -31,10 +33,21 @@ public abstract class AbstractRemoteScraper implements Scraper {
             IntelligenceScraperProperties properties,
             String serviceKey
     ) {
+        this(scraperServiceClient, scraperResultCache, properties, serviceKey, null);
+    }
+
+    protected AbstractRemoteScraper(
+            ScraperServiceClient scraperServiceClient,
+            ScraperResultCache scraperResultCache,
+            IntelligenceScraperProperties properties,
+            String serviceKey,
+            SharedWebsiteScrapeMemo sharedWebsiteScrapeMemo
+    ) {
         this.scraperServiceClient = scraperServiceClient;
         this.scraperResultCache = scraperResultCache;
         this.properties = properties;
         this.serviceKey = serviceKey;
+        this.sharedWebsiteScrapeMemo = sharedWebsiteScrapeMemo;
     }
 
     @Override
@@ -52,7 +65,12 @@ public abstract class AbstractRemoteScraper implements Scraper {
             }
         }
 
-        ScraperResult result = scrapeRemote(context);
+        ScraperResult result;
+        if (sharedWebsiteScrapeMemo != null && context.websiteUrl() != null && !context.websiteUrl().isBlank()) {
+            result = sharedWebsiteScrapeMemo.getOrLoad(type(), context.websiteUrl(), () -> scrapeRemote(context));
+        } else {
+            result = scrapeRemote(context);
+        }
 
         if (properties.getCache().isEnabled() && result.status() == ScraperExecutionStatus.SUCCESS) {
             scraperResultCache.put(type(), context, result);

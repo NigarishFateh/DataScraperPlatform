@@ -4,26 +4,36 @@
 package com.datascraper.website.support;
 
 import com.datascraper.website.config.WebsiteScraperProperties;
-import org.jsoup.Jsoup;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Minimal robots.txt guard — skips scrape when path is disallowed for {@code *}.
- * Production systems often use a dedicated crawler library; this teaches the concept.
+ * Fetches with Java HttpClient (Jsoup connect timeouts often never fire) and caches per host.
  */
 @Component
 public class RobotsTxtGuard {
 
     private final WebsiteScraperProperties properties;
+    private final HttpClient httpClient;
+    private final ConcurrentHashMap<String, String> robotsByHost = new ConcurrentHashMap<>();
 
     public RobotsTxtGuard(WebsiteScraperProperties properties) {
         this.properties = properties;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
     }
 
     public void verifyAllowed(String targetUrl) throws IOException {
@@ -31,21 +41,34 @@ public class RobotsTxtGuard {
             return;
         }
         URI uri = URI.create(targetUrl.startsWith("http") ? targetUrl : "https://" + targetUrl);
-        String robotsUrl = uri.getScheme() + "://" + uri.getHost() + "/robots.txt";
-        String body;
-        try {
-            body = Jsoup.connect(robotsUrl)
-                    .userAgent(properties.getUserAgent())
-                    .timeout(properties.getTimeoutMs())
-                    .ignoreContentType(true)
-                    .execute()
-                    .body();
-        } catch (IOException ex) {
-            // No robots.txt or unreachable — proceed (common for small sites).
+        String host = uri.getHost();
+        if (host == null || host.isBlank()) {
+            return;
+        }
+        String body = robotsByHost.computeIfAbsent(host.toLowerCase(Locale.ROOT), ignored -> fetchRobots(uri));
+        if (body == null || body.isBlank()) {
             return;
         }
         if (isPathDisallowed(body, uri.getPath())) {
             throw new IOException("robots.txt disallows scraping path: " + uri.getPath());
+        }
+    }
+
+    private String fetchRobots(URI pageUri) {
+        try {
+            String robotsUrl = pageUri.getScheme() + "://" + pageUri.getHost() + "/robots.txt";
+            HttpRequest request = HttpRequest.newBuilder(URI.create(robotsUrl))
+                    .timeout(Duration.ofMillis(Math.max(3_000, properties.getTimeoutMs())))
+                    .header("User-Agent", properties.getUserAgent())
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 400) {
+                return "";
+            }
+            return response.body() == null ? "" : response.body();
+        } catch (Exception ex) {
+            return "";
         }
     }
 

@@ -15,6 +15,6 @@ app:
 
 scraper:
   resilience:
-    timeout-ms: 20000
-    max-retries: 2
-    retry-delay-ms: 500
+    timeout-ms: 12000
+    max-retries: 1
+    retry-delay-ms: 300

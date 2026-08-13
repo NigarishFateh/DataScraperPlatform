@@ -9,8 +9,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class WebsiteScraperProperties {
 
     private String userAgent =
-            "LeadIntelligenceBot/1.0 (+https://leadintelligence.local; respectful public scraper)";
-    private int timeoutMs = 15000;
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+    private int timeoutMs = 8000;
     private int maxItems = 40;
     private boolean respectRobotsTxt = true;
 

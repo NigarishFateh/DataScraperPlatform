@@ -42,8 +42,40 @@ public class AggregationService {
             mergeProviderResult(draft, result);
         }
         draft.setSuccessfulProviderCount(successCount);
+        applySeedLocationAndContact(draft, seed);
         applySeedLeadership(draft, seed);
         return draft;
+    }
+
+    /**
+     * Promote discovery metadata (Places/Apollo) into draft fields before export.
+     */
+    private void applySeedLocationAndContact(CompanyDraft draft, DiscoveredCompany seed) {
+        if (seed == null || seed.metadata() == null || seed.metadata().isEmpty()) {
+            return;
+        }
+        String address = stringMeta(seed.metadata(), "address");
+        if (isBlank(draft.getAddress()) && !isBlank(address)) {
+            draft.setAddress(address);
+        }
+        String phone = stringMeta(seed.metadata(), "phone");
+        if (isBlank(draft.getPhone()) && !isBlank(phone)) {
+            draft.setPhone(phone);
+        }
+        String branchName = stringMeta(seed.metadata(), "branchName");
+        if (!isBlank(branchName)) {
+            draft.getRawAttributes().putIfAbsent("branchName", branchName);
+        }
+        String placeId = stringMeta(seed.metadata(), "placeId");
+        if (!isBlank(placeId)) {
+            String normalized = placeId.startsWith("places/") ? placeId.substring("places/".length()) : placeId;
+            draft.getRawAttributes().putIfAbsent("placeId", placeId);
+            draft.getRawAttributes().putIfAbsent("branchId", normalized);
+        }
+        String branchManager = stringMeta(seed.metadata(), "branchManager");
+        if (!isBlank(branchManager)) {
+            draft.getRawAttributes().putIfAbsent("branchManager", branchManager);
+        }
     }
 
     /**

@@ -121,6 +121,10 @@ public class DiscoveryOrchestrationService {
         if (notifyJobService) {
             try {
                 if (unique.isEmpty()) {
+                    boolean named = request.companyNames() != null && !request.companyNames().isEmpty();
+                    if (named) {
+                        log.warn("Named scrape produced 0 companies for job {} — failing with partial-export message", jobId);
+                    }
                     jobServiceClient.failJob(jobId, buildEmptyDiscoveryMessage(request));
                 } else {
                     jobServiceClient.patchProgress(jobId, JobProgressPatchRequest.discoveredCount(unique.size()));
@@ -214,12 +218,33 @@ public class DiscoveryOrchestrationService {
         String categories = join(request.categoryIds());
         String countries = join(request.countryCodes());
         String cities = join(request.cityIds());
-        return "No companies discovered for categories=[" + categories
-                + "] countries=[" + countries
-                + "] cities=[" + cities
-                + "]. Apollo.org search needs lead credits (HTTP 422 when exhausted); "
-                + "SerpAPI Maps needs quota (HTTP 429 when exhausted); "
-                + "or set GOOGLE_PLACES_API_KEY. Also try larger cities / nationwide, then retry.";
+        boolean places = hasKey(appProperties.getGooglePlacesApiKey());
+        boolean apollo = hasKey(appProperties.getApolloApiKey());
+        boolean serp = hasKey(appProperties.getSerpapiApiKey());
+
+        StringBuilder message = new StringBuilder();
+        message.append("No companies found for categories=[").append(categories)
+                .append("] countries=[").append(countries)
+                .append("] cities=[").append(cities).append("].");
+        if (request.cityIds() != null && !request.cityIds().isEmpty()) {
+            message.append(" That city may be too small for this category — leave city empty to search the whole country, or pick a larger city.");
+        }
+        if (places) {
+            message.append(" Google Places ran but returned no matches.");
+        } else {
+            message.append(" Set GOOGLE_PLACES_API_KEY in .env.");
+        }
+        if (apollo) {
+            message.append(" Apollo may be out of lead credits (HTTP 422).");
+        }
+        if (serp) {
+            message.append(" SerpAPI may be out of quota (HTTP 429).");
+        }
+        return message.toString();
+    }
+
+    private static boolean hasKey(String value) {
+        return value != null && !value.isBlank();
     }
 
     private String join(List<String> values) {

@@ -9,6 +9,7 @@ import com.datascraper.job.entity.ScrapingJobEntity;
 import com.datascraper.job.exception.InvalidJobStateException;
 import com.datascraper.job.exception.JobNotFoundException;
 import com.datascraper.job.repository.ScrapingJobRepository;
+import com.datascraper.job.service.ExportNotifyClient;
 import com.datascraper.job.service.QueueService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,9 @@ class JobServiceImplTest {
 
     @MockBean
     private QueueService queueService;
+
+    @MockBean
+    private ExportNotifyClient exportNotifyClient;
 
     private CreateJobRequest sampleRequest;
 
@@ -192,6 +196,17 @@ class JobServiceImplTest {
         assertThat(failed.status()).isEqualTo(JobStatus.FAILED);
         assertThat(failed.errorMessage()).isEqualTo("provider error");
         assertThat(failed.completedAt()).isNotNull();
+    }
+
+    @Test
+    void completeJob_onFailedJob_attachesExportIdWithoutCompleting() {
+        JobResponse created = jobService.createJob(sampleRequest, "user-1");
+        jobService.failJob(created.id(), "provider error");
+
+        JobResponse attached = jobService.completeJob(created.id(), "export-partial");
+
+        assertThat(attached.status()).isEqualTo(JobStatus.FAILED);
+        assertThat(attached.exportId()).isEqualTo("export-partial");
     }
 
     @Test

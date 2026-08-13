@@ -43,15 +43,15 @@ app:
 
 scraper:
   resilience:
-    timeout-ms: 15000
-    max-retries: 3
-    retry-delay-ms: 1000
+    timeout-ms: 12000
+    max-retries: 1
+    retry-delay-ms: 400
   execution:
     # Sized for ~8 concurrent companies × website+contact providers + headroom.
     core-pool-size: 8
     max-pool-size: 24
     queue-capacity: 64
-    job-timeout-ms: 60000
+    job-timeout-ms: 20000
   cache:
     enabled: false
     ttl-seconds: 3600

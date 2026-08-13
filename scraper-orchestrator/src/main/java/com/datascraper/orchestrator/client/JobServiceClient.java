@@ -71,6 +71,40 @@ public class JobServiceClient {
         }
     }
 
+    public void failJob(UUID jobId, String errorMessage) {
+        try {
+            String url = normalizeBaseUrl(properties.getJobServiceUri()) + "/api/jobs/" + jobId + "/fail";
+            webClient.post()
+                    .uri(url)
+                    .bodyValue(java.util.Map.of(
+                            "errorMessage",
+                            errorMessage == null || errorMessage.isBlank() ? "Job failed" : errorMessage
+                    ))
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block();
+        } catch (Exception ex) {
+            log.warn("Unable to fail job {}: {}", jobId, ex.getMessage());
+        }
+    }
+
+    public java.util.List<JobResponse> listRunningJobs() {
+        try {
+            JobResponse[] body = webClient.get()
+                    .uri(normalizeBaseUrl(properties.getJobServiceUri()) + "/api/jobs/running")
+                    .retrieve()
+                    .bodyToMono(JobResponse[].class)
+                    .block();
+            if (body == null || body.length == 0) {
+                return java.util.List.of();
+            }
+            return java.util.List.of(body);
+        } catch (Exception ex) {
+            log.warn("Unable to list running jobs: {}", ex.getMessage());
+            return java.util.List.of();
+        }
+    }
+
     public JobProgressUpdate enrichmentProgress(
             UUID jobId,
             JobResponse current,

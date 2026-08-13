@@ -35,6 +35,11 @@ public class JobController {
         this.jobService = jobService;
     }
 
+    @GetMapping("/running")
+    public java.util.List<JobResponse> listRunningJobs() {
+        return jobService.listRunningJobs();
+    }
+
     @PostMapping
     public ResponseEntity<JobResponse> createJob(
             @Valid @RequestBody CreateJobRequest request,

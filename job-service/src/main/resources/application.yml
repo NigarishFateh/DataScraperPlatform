@@ -44,3 +44,5 @@ app:
   orchestrator:
     base-url: ${ORCHESTRATOR_URI:http://localhost:8085}
     resume-path: /api/orchestrator/jobs/{jobId}/resume
+  export:
+    base-url: ${EXPORT_SERVICE_URI:http://localhost:8088}

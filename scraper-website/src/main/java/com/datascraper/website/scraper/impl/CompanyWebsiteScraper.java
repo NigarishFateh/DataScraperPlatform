@@ -29,7 +29,7 @@ import java.util.Set;
 @Component
 public class CompanyWebsiteScraper implements WebsiteScraper {
 
-    private static final int MAX_EXTRA_PAGES = 3;
+    private static final int MAX_EXTRA_PAGES = 1;
 
     private final HtmlPageFetcher pageFetcher;
     private final CompanyWebsiteHtmlParser htmlParser;
@@ -71,9 +71,15 @@ public class CompanyWebsiteScraper implements WebsiteScraper {
             }
 
             if (items.isEmpty()) {
-                return ScraperResult.failed(
+                return ScraperResult.success(
                         ScraperType.COMPANY_WEBSITE,
-                        "No public website signals found at " + document.baseUri()
+                        "No public website signals found at " + document.baseUri(),
+                        List.of(),
+                        Map.of(
+                                "sourceUrl", document.baseUri(),
+                                "pageTitle", document.title(),
+                                "companyId", context.companyId()
+                        )
                 );
             }
 
@@ -88,6 +94,13 @@ public class CompanyWebsiteScraper implements WebsiteScraper {
                     )
             );
         } catch (IOException ex) {
+            if (HtmlPageFetcher.isBlockedOrUnavailable(ex)) {
+                log.warn("Website scrape skipped for {} (site blocked/unavailable): {}", url, ex.getMessage());
+                return ScraperResult.skipped(
+                        ScraperType.COMPANY_WEBSITE,
+                        "Website blocked or unavailable: " + ex.getMessage()
+                );
+            }
             log.warn("Website scrape failed for {}: {}", url, ex.getMessage());
             return ScraperResult.failed(ScraperType.COMPANY_WEBSITE, ex.getMessage());
         }

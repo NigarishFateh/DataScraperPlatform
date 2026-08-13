@@ -127,6 +127,7 @@ public class GooglePlacesDiscoveryClient {
         String regionCode = criteria.countryCodes().isEmpty() ? null : criteria.countryCodes().get(0);
 
         List<CityGeo> cities = buildCities(criteria, country);
+        int perCityKeep = perCityKeep(criteria.maxResults(), cities.size());
         for (CityGeo city : cities) {
             for (String keyword : keywords) {
                 if (keyword == null || keyword.isBlank()) {
@@ -134,9 +135,10 @@ public class GooglePlacesDiscoveryClient {
                 }
                 String textQuery = buildTextQuery(keyword, city.cityName(), country);
                 try {
-                    List<WebSearchHit> batch = searchText(textQuery, includedType, regionCode, city, criteria, seen);
-                    log.info("Google Places '{}' -> {} places", textQuery, batch.size());
-                    hits.addAll(batch);
+                    List<WebSearchHit> batch = searchText(
+                            textQuery, includedType, regionCode, city, criteria, seen, true, MAX_PAGES_PER_QUERY);
+                    int kept = takeUpTo(hits, batch, perCityKeep, criteria.maxResults());
+                    log.info("Google Places '{}' -> {} places (kept {})", textQuery, batch.size(), kept);
                 } catch (Exception ex) {
                     log.warn("Google Places search failed for '{}': {}", textQuery, ex.getMessage());
                 }
@@ -150,33 +152,44 @@ public class GooglePlacesDiscoveryClient {
     }
 
     /**
-     * Custom scrape: one Places text search per company name (no category includedType filter).
+     * Custom scrape / branch expansion: Places text search per company name (no category type filter).
+     * Allows maps-only branches that have an address even when website is missing.
      */
-    private List<WebSearchHit> discoverByCompanyNames(ResolvedDiscoveryCriteria criteria) {
+    public List<WebSearchHit> discoverByCompanyNames(ResolvedDiscoveryCriteria criteria) {
         List<WebSearchHit> hits = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
         String country = criteria.countryNames().isEmpty() ? "" : criteria.countryNames().get(0);
         String regionCode = criteria.countryCodes().isEmpty() ? null : criteria.countryCodes().get(0);
-        CityGeo location = new CityGeo(null, country.isBlank() ? "Global" : country);
+        List<CityGeo> locations = buildCities(criteria, country);
+        if (locations.isEmpty()) {
+            locations = List.of(new CityGeo(null, country == null || country.isBlank() ? "Global" : country));
+        }
+        int brandCap = Math.max(8, criteria.maxResults() / Math.max(1, criteria.companyNames().size()));
+        int perCityKeep = perCityKeep(brandCap, locations.size());
 
         for (String companyName : criteria.companyNames()) {
             if (companyName == null || companyName.isBlank()) {
                 continue;
             }
-            String textQuery = buildTextQuery(companyName.trim(), location.cityName(), country);
-            try {
-                List<WebSearchHit> batch = searchText(textQuery, null, regionCode, location, criteria, seen);
-                log.info("Google Places name '{}' -> {} places", textQuery, batch.size());
-                hits.addAll(batch);
-            } catch (Exception ex) {
-                log.warn("Google Places name search failed for '{}': {}", textQuery, ex.getMessage());
+            int brandStart = hits.size();
+            for (CityGeo location : locations) {
+                if (hits.size() - brandStart >= brandCap || hits.size() >= criteria.maxResults()) {
+                    break;
+                }
+                String textQuery = buildTextQuery(companyName.trim(), location.cityName(), country);
+                try {
+                    List<WebSearchHit> batch = searchText(
+                            textQuery, null, regionCode, location, criteria, seen, true, 1);
+                    int remainingBrand = brandCap - (hits.size() - brandStart);
+                    int kept = takeUpTo(hits, batch, Math.min(perCityKeep, remainingBrand), criteria.maxResults());
+                    log.info("Google Places name '{}' -> {} places (kept {})", textQuery, batch.size(), kept);
+                } catch (Exception ex) {
+                    log.warn("Google Places name search failed for '{}': {}", textQuery, ex.getMessage());
+                }
+                sleepQuietly(120);
             }
-            if (hits.size() >= criteria.maxResults()) {
-                return hits.subList(0, criteria.maxResults());
-            }
-            sleepQuietly(150);
         }
-        return hits;
+        return hits.size() > criteria.maxResults() ? hits.subList(0, criteria.maxResults()) : hits;
     }
 
     private List<WebSearchHit> searchText(
@@ -185,14 +198,17 @@ public class GooglePlacesDiscoveryClient {
             String regionCode,
             CityGeo city,
             ResolvedDiscoveryCriteria criteria,
-            Set<String> seen
+            Set<String> seen,
+            boolean allowWithoutWebsite,
+            int maxPages
     ) throws Exception {
         List<WebSearchHit> hits = new ArrayList<>();
         String pageToken = null;
-        for (int page = 0; page < MAX_PAGES_PER_QUERY; page++) {
+        int pages = Math.max(1, Math.min(maxPages, MAX_PAGES_PER_QUERY));
+        for (int page = 0; page < pages; page++) {
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("textQuery", textQuery);
-            body.put("languageCode", "en");
+            body.put("languageCode", languageCodeFor(regionCode));
             body.put("pageSize", 20);
             if (regionCode != null && !regionCode.isBlank()) {
                 body.put("regionCode", regionCode);
@@ -223,7 +239,7 @@ public class GooglePlacesDiscoveryClient {
             JsonNode places = root.path("places");
             if (places.isArray()) {
                 for (JsonNode place : places) {
-                    WebSearchHit hit = toHit(place, city, criteria, seen);
+                    WebSearchHit hit = toHit(place, city, criteria, seen, allowWithoutWebsite);
                     if (hit != null) {
                         hits.add(hit);
                     }
@@ -246,7 +262,8 @@ public class GooglePlacesDiscoveryClient {
             JsonNode place,
             CityGeo city,
             ResolvedDiscoveryCriteria criteria,
-            Set<String> seen
+            Set<String> seen,
+            boolean allowWithoutWebsite
     ) {
         String name = text(place.path("displayName"), "text");
         if (name.isBlank()) {
@@ -264,23 +281,33 @@ public class GooglePlacesDiscoveryClient {
             return null;
         }
 
+        String address = text(place, "formattedAddress");
+        String phone = firstNonBlank(
+                text(place, "internationalPhoneNumber"),
+                text(place, "nationalPhoneNumber")
+        );
+
         String website = WebsiteUrlSupport.normalizeHttpUrl(text(place, "websiteUri"));
         if (!WebsiteUrlSupport.isUsableCompanyWebsite(website) && !resourceName.isBlank()) {
             website = fetchWebsiteFromPlaceDetails(resourceName);
         }
         if (!WebsiteUrlSupport.isUsableCompanyWebsite(website)) {
-            log.debug("Skipping Google place '{}' — no company website (maps-only)", name);
-            return null;
+            if (!allowWithoutWebsite || address.isBlank()) {
+                log.debug("Skipping Google place '{}' — no company website (maps-only)", name);
+                return null;
+            }
+            website = null;
         }
 
         String mapsUri = text(place, "googleMapsUri");
-        String sourceUrl = WebsiteUrlSupport.isMapOrDirectoryUrl(mapsUri) ? website : mapsUri;
+        String sourceUrl = WebsiteUrlSupport.isUsableCompanyWebsite(website)
+                ? (WebsiteUrlSupport.isMapOrDirectoryUrl(mapsUri) ? website : firstNonBlank(mapsUri, website))
+                : firstNonBlank(mapsUri, address);
         if (sourceUrl == null || sourceUrl.isBlank()) {
             sourceUrl = website;
         }
 
-        String address = text(place, "formattedAddress");
-        String resolvedCity = extractCityFromAddress(address, city.cityName());
+        String resolvedCity = extractCityFromAddress(address, city.cityName(), firstCountryName(criteria));
 
         return new WebSearchHit(
                 name,
@@ -289,7 +316,10 @@ public class GooglePlacesDiscoveryClient {
                 firstCountry(criteria),
                 city.cityId(),
                 resolvedCity,
-                "google-places"
+                "google-places",
+                blankToNull(address),
+                blankToNull(phone),
+                blankToNull(placeId)
         );
     }
 
@@ -316,6 +346,29 @@ public class GooglePlacesDiscoveryClient {
             log.debug("Place details website lookup failed for {}: {}", resourceName, ex.getMessage());
             return "";
         }
+    }
+
+    private static int perCityKeep(int maxResults, int cityCount) {
+        int cities = Math.max(1, cityCount);
+        int cap = Math.max(1, maxResults);
+        return Math.max(2, Math.min(8, (cap + cities - 1) / cities));
+    }
+
+    private static int takeUpTo(
+            List<WebSearchHit> hits,
+            List<WebSearchHit> batch,
+            int perCityKeep,
+            int maxResults
+    ) {
+        int kept = 0;
+        for (WebSearchHit hit : batch) {
+            if (kept >= perCityKeep || hits.size() >= maxResults) {
+                break;
+            }
+            hits.add(hit);
+            kept++;
+        }
+        return kept;
     }
 
     private static String buildTextQuery(String keyword, String city, String country) {
@@ -362,24 +415,87 @@ public class GooglePlacesDiscoveryClient {
         return null;
     }
 
-    private static String extractCityFromAddress(String address, String fallbackCity) {
-        if (address == null || address.isBlank()) {
-            return fallbackCity;
+    private static String extractCityFromAddress(String address, String fallbackCity, String countryName) {
+        if (address != null && !address.isBlank()) {
+            if (isUsableCityName(fallbackCity, countryName)
+                    && address.toLowerCase(Locale.ROOT).contains(fallbackCity.toLowerCase(Locale.ROOT))) {
+                return fallbackCity;
+            }
+            String[] parts = address.split(",");
+            for (int i = parts.length - 1; i >= 0; i--) {
+                String candidate = stripPostalPrefix(parts[i].trim());
+                if (isUsableCityName(candidate, countryName)) {
+                    return candidate;
+                }
+            }
         }
-        // Prefer explicit fallback city if it appears in the address.
-        if (fallbackCity != null && !fallbackCity.isBlank()
-                && address.toLowerCase(Locale.ROOT).contains(fallbackCity.toLowerCase(Locale.ROOT))) {
-            return fallbackCity;
+        return isUsableCityName(fallbackCity, countryName) ? fallbackCity : null;
+    }
+
+    private static String stripPostalPrefix(String value) {
+        if (value == null) {
+            return null;
         }
-        String[] parts = address.split(",");
-        if (parts.length >= 2) {
-            return parts[parts.length - 2].trim();
+        String cleaned = value.replaceFirst("(?i)^\\d{4}\\s*[A-Z]{2}\\s+", "").trim();
+        cleaned = cleaned.replaceFirst("^\\d{5}\\s+", "").trim();
+        return cleaned;
+    }
+
+    private static boolean isUsableCityName(String value, String countryName) {
+        if (value == null || value.isBlank()) {
+            return false;
         }
-        return fallbackCity;
+        String lower = value.trim().toLowerCase(Locale.ROOT);
+        if (lower.contains("://") || lower.contains("/") || lower.startsWith("www.")) {
+            return false;
+        }
+        if (countryName != null && !countryName.isBlank() && lower.equals(countryName.trim().toLowerCase(Locale.ROOT))) {
+            return false;
+        }
+        if (lower.equals("netherlands") || lower.equals("nederland") || lower.equals("holland")
+                || lower.equals("algeria") || lower.equals("algérie") || lower.equals("algerie")
+                || lower.equals("global") || lower.equals("nl") || lower.equals("dz")) {
+            return false;
+        }
+        if (value.matches("(?i)\\d{4}\\s*[A-Z]{2}") || value.matches("\\d+")) {
+            return false;
+        }
+        return value.length() <= 40;
+    }
+
+    private static String languageCodeFor(String regionCode) {
+        if (regionCode == null || regionCode.isBlank()) {
+            return "en";
+        }
+        return switch (regionCode.toUpperCase(Locale.ROOT)) {
+            case "DZ", "MA", "TN", "FR", "BE", "SN", "CI", "CM", "CD", "MG", "HT", "LU" -> "fr";
+            case "NL" -> "nl";
+            case "DE", "AT", "CH" -> "de";
+            case "ES", "MX", "AR", "CL", "CO" -> "es";
+            case "IT" -> "it";
+            case "PT", "BR" -> "pt";
+            case "SA", "EG", "AE", "QA", "KW", "BH", "OM", "JO", "LB", "IQ" -> "ar";
+            default -> "en";
+        };
     }
 
     private static String firstCountry(ResolvedDiscoveryCriteria criteria) {
         return criteria.countryCodes().isEmpty() ? null : criteria.countryCodes().get(0);
+    }
+
+    private static String firstCountryName(ResolvedDiscoveryCriteria criteria) {
+        return criteria.countryNames().isEmpty() ? null : criteria.countryNames().get(0);
+    }
+
+    private static String firstNonBlank(String a, String b) {
+        if (a != null && !a.isBlank()) {
+            return a;
+        }
+        return b;
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     private static List<String> limit(List<String> values, int max) {

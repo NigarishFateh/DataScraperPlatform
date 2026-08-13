@@ -5,6 +5,7 @@ import com.datascraper.common.dto.job.CreateJobRequest;
 import com.datascraper.common.dto.job.JobProgressUpdate;
 import com.datascraper.common.dto.job.JobResponse;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface JobService {
@@ -28,4 +29,6 @@ public interface JobService {
     JobResponse completeJob(UUID jobId, String exportId);
 
     JobResponse failJob(UUID jobId, String errorMessage);
+
+    List<JobResponse> listRunningJobs();
 }

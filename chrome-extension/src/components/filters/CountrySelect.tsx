@@ -46,7 +46,12 @@ export function CountryMultiSelect({ selectedCodes, onToggle }: CountryMultiSele
       .filter((code) => !selectedLookup.has(code))
       .map((code) => ({ id: code, label: code, sublabel: code }));
 
-    return [...missingSelected, ...fromQuery];
+    const merged = [...missingSelected, ...fromQuery];
+    const nl = merged.filter((option) => option.id.toUpperCase() === "NL");
+    const rest = merged
+      .filter((option) => option.id.toUpperCase() !== "NL")
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
+    return [...nl, ...rest];
   }, [countries, selectedCodes, selectedLookup]);
 
   return (

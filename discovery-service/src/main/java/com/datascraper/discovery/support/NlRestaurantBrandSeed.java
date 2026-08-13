@@ -151,16 +151,42 @@ public final class NlRestaurantBrandSeed {
     }
 
     public static String canonicalBrandName(String brandName) {
+        if (brandName == null || brandName.isBlank()) {
+            return "";
+        }
         String key = normalizeKey(brandName);
-        if (key.equals("la palace")) {
+        if (key.isBlank()) {
+            return "";
+        }
+        if (key.equals("la palace") || key.startsWith("la palace ") || key.startsWith("la place ")) {
             return "La Place";
         }
+        // Exact match first.
         for (String brand : BRANDS) {
             if (normalizeKey(brand).equals(key)) {
                 return brand;
             }
         }
-        return brandName == null ? "" : brandName.trim();
+        // Branch / Places titles: "FEBO Almere - De Diagonaal" → "FEBO"
+        String best = null;
+        int bestLen = 0;
+        for (String brand : BRANDS) {
+            String brandKey = normalizeKey(brand);
+            if (brandKey.length() < 2) {
+                continue;
+            }
+            boolean prefix = key.startsWith(brandKey + " ")
+                    || key.startsWith(brandKey + "-")
+                    || key.startsWith(brandKey + " -");
+            boolean embedded = key.contains(" " + brandKey + " ")
+                    || key.contains(" " + brandKey + "-")
+                    || key.endsWith(" " + brandKey);
+            if ((prefix || embedded) && brandKey.length() > bestLen) {
+                best = brand;
+                bestLen = brandKey.length();
+            }
+        }
+        return best != null ? best : brandName.trim();
     }
 
     public static String domain(String brandName) {

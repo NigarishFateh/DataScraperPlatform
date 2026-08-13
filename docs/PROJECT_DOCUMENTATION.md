@@ -84,9 +84,9 @@ Job (:8086) → Discovery (:8087) → Orchestrator (:8085)
 
 ### Excel columns today
 
-`Company Name | City | Website | Email | Phone Number | Founder / CEO`
+`Company Name | City | Address | Website | Email | Phone Number | Founder / CEO`
 
-**Missing vs requirements:** Address, Branch name/id, Branch manager/supervisor, Country (optional).
+Sheets (single category): `Companies` (all) · `With Emails` · `Without Emails`.
 
 ---
 

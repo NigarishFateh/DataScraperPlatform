@@ -16,6 +16,7 @@ import com.datascraper.job.mapper.JobMapper;
 import com.datascraper.job.repository.AuditLogRepository;
 import com.datascraper.job.repository.ScrapingJobProgressRepository;
 import com.datascraper.job.repository.ScrapingJobRepository;
+import com.datascraper.job.service.ExportNotifyClient;
 import com.datascraper.job.service.JobService;
 import com.datascraper.job.service.OrchestratorClient;
 import com.datascraper.job.service.QueueService;
@@ -25,6 +26,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -51,6 +54,7 @@ public class JobServiceImpl implements JobService {
     private final AuditLogRepository auditLogRepository;
     private final QueueService queueService;
     private final OrchestratorClient orchestratorClient;
+    private final ExportNotifyClient exportNotifyClient;
     private final JobMapper jobMapper;
     private final ObjectMapper objectMapper;
 
@@ -60,6 +64,7 @@ public class JobServiceImpl implements JobService {
             AuditLogRepository auditLogRepository,
             QueueService queueService,
             OrchestratorClient orchestratorClient,
+            ExportNotifyClient exportNotifyClient,
             JobMapper jobMapper,
             ObjectMapper objectMapper
     ) {
@@ -68,6 +73,7 @@ public class JobServiceImpl implements JobService {
         this.auditLogRepository = auditLogRepository;
         this.queueService = queueService;
         this.orchestratorClient = orchestratorClient;
+        this.exportNotifyClient = exportNotifyClient;
         this.jobMapper = jobMapper;
         this.objectMapper = objectMapper;
     }
@@ -145,7 +151,9 @@ public class JobServiceImpl implements JobService {
         job.setStatus(JobStatus.CANCELLED);
         job.setCompletedAt(Instant.now());
         writeAudit(job, "JOB_CANCELLED", "Cancelled by user " + userId);
-        return jobMapper.toResponse(job);
+        JobResponse response = jobMapper.toResponse(job);
+        triggerPartialExportAfterCommit(job.getId(), job.getPersistedCount());
+        return response;
     }
 
     @Override
@@ -270,8 +278,17 @@ public class JobServiceImpl implements JobService {
     @Override
     public JobResponse completeJob(UUID jobId, String exportId) {
         ScrapingJobEntity job = requireJob(jobId);
-        if (job.getStatus() == JobStatus.CANCELLED || job.getStatus() == JobStatus.FAILED) {
-            throw new InvalidJobStateException("Job cannot be completed in status " + job.getStatus());
+        if (job.getStatus() == JobStatus.FAILED || job.getStatus() == JobStatus.CANCELLED) {
+            if (exportId != null && !exportId.isBlank()) {
+                job.setExportId(exportId);
+            }
+            return jobMapper.toResponse(job);
+        }
+        if (job.getStatus() == JobStatus.COMPLETED) {
+            if (exportId != null && !exportId.isBlank() && (job.getExportId() == null || job.getExportId().isBlank())) {
+                job.setExportId(exportId);
+            }
+            return jobMapper.toResponse(job);
         }
 
         job.setStatus(JobStatus.COMPLETED);
@@ -297,12 +314,41 @@ public class JobServiceImpl implements JobService {
             return jobMapper.toResponse(job);
         }
 
+        String message = errorMessage == null || errorMessage.isBlank() ? "Job failed" : errorMessage;
+        if (job.getPersistedCount() > 0 && !message.toLowerCase().contains("excel")) {
+            message = message + " A downloadable Excel of companies saved so far is being prepared.";
+        }
         job.setStatus(JobStatus.FAILED);
-        job.setErrorMessage(errorMessage);
+        job.setErrorMessage(message);
         job.setCompletedAt(Instant.now());
-        writeAudit(job, "JOB_FAILED", errorMessage);
-
+        writeAudit(job, "JOB_FAILED", message);
+        triggerPartialExportAfterCommit(job.getId(), job.getPersistedCount());
         return jobMapper.toResponse(job);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<JobResponse> listRunningJobs() {
+        return jobRepository.findByStatus(JobStatus.RUNNING).stream()
+                .map(jobMapper::toResponse)
+                .toList();
+    }
+
+    private void triggerPartialExportAfterCommit(UUID jobId, int persistedCount) {
+        if (persistedCount <= 0) {
+            return;
+        }
+        Runnable trigger = () -> exportNotifyClient.triggerPartialExport(jobId, persistedCount);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    trigger.run();
+                }
+            });
+        } else {
+            trigger.run();
+        }
     }
 
     Long estimateRemainingSeconds(ScrapingJobEntity job) {

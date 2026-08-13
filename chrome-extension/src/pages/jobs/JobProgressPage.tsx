@@ -51,8 +51,12 @@ export function JobProgressPage() {
   });
 
   const job = jobQuery.data;
-  const needsExportPoll =
-    Boolean(job?.status === "COMPLETED" && !job.exportId);
+  const needsExportPoll = Boolean(
+    job &&
+      !job.exportId &&
+      (job.status === "COMPLETED" ||
+        ((job.status === "FAILED" || job.status === "CANCELLED") && job.persistedCount > 0)),
+  );
 
   const exportsQuery = useQuery({
     queryKey: ["exports", id],
@@ -141,7 +145,9 @@ export function JobProgressPage() {
   const showCancel = !isTerminalJobStatus(job.status) && job.status !== "PAUSED";
   const showResume = job.status === "PAUSED";
   const showRetry = job.status === "FAILED";
-  const showDownload = job.status === "COMPLETED" && Boolean(readyExport);
+  const showDownload = Boolean(readyExport) &&
+    (job.status === "COMPLETED" || job.status === "FAILED" || job.status === "CANCELLED");
+  const partialDownload = showDownload && job.status !== "COMPLETED";
   const showPhaseAnimation = isDiscoveryOrEnrichmentActive(job.phase, job.status);
 
   return (
@@ -278,10 +284,16 @@ export function JobProgressPage() {
               disabled={downloading}
               onClick={() => void onDownload()}
             >
-              {downloading ? "Downloading…" : "Download export"}
+              {downloading
+                ? "Downloading…"
+                : partialDownload
+                  ? "Download partial Excel"
+                  : "Download export"}
             </button>
           ) : null}
-          {job.status === "COMPLETED" && !readyExport ? (
+          {(job.status === "COMPLETED" ||
+            ((job.status === "FAILED" || job.status === "CANCELLED") && job.persistedCount > 0)) &&
+          !readyExport ? (
             <span className="flex items-center gap-1.5 self-center text-[11px] text-mist-400">
               <Spinner size="sm" />
               Preparing export…

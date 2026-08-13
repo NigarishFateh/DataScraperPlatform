@@ -24,9 +24,11 @@ export type CreateJobRequest = {
   maxCompanies?: number;
   /** Preferred: named-company scrape list (Custom page). */
   companyNames?: string[];
-  /** Backward-compatible mirror of companyNames. */
+  /** Backward-compatible mirror of companyNames + branch-expansion flags. */
   options?: {
     companyNames?: string[];
+    expandBranches?: boolean;
+    maxBranchesPerBrand?: number;
   };
 };
 
