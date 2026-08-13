@@ -40,9 +40,11 @@ export function DashboardPage() {
           New scrape
         </h1>
         <p className="text-sm text-mist-300">
-          Pick categories and a region (country / cities). Results include company name, branch ID,
-          city, address, website, email, phone, and founder/CEO. Excel has filters on Company Name and City.
-          If a scrape stalls, you still get an error and a download of whatever was saved.
+          Pick categories and a region (country / cities). With a country and no cities,
+          the largest businesses nationwide are ranked first — not only the first city
+          (Amsterdam is not treated as the only priority). Results include company name,
+          branch ID, city, address, website, email, phone, founder/CEO, and branch manager
+          when published. Excel has filters on Company Name and City.
         </p>
       </section>
 
@@ -69,7 +71,7 @@ export function DashboardPage() {
         <FilterSection
           step="3"
           title="Cities"
-          hint="Optional · empty scrapes the whole country (major cities first, then the rest)"
+          hint="Optional · empty scrapes the whole country (largest companies nationwide, not first-city only)"
         >
           <CityMultiSelect
             selectedIds={filters.cityIds}

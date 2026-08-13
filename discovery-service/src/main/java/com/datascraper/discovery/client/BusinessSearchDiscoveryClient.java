@@ -63,15 +63,34 @@ public class BusinessSearchDiscoveryClient {
     public List<WebSearchHit> discover(ResolvedDiscoveryCriteria criteria, IntConsumer onProgress) {
         Map<String, WebSearchHit> unique = new LinkedHashMap<>();
 
-        if (apolloDiscoveryClient.isConfigured()) {
-            for (WebSearchHit hit : safe(
-                    () -> apolloDiscoveryClient.discover(criteria, count -> {
-                        if (onProgress != null) {
-                            onProgress.accept(Math.max(count, unique.size()));
-                        }
-                    }),
-                    "apollo"
-            )) {
+        // Named custom scrapes: Apollo org lookup only. Places/Maps keyword fallback
+        // pollutes results with unrelated local businesses; brand stubs cover misses.
+        if (criteria.hasCompanyNames()) {
+            if (apolloDiscoveryClient.isConfigured()) {
+                for (WebSearchHit hit : safe(
+                        () -> apolloDiscoveryClient.discover(criteria, count -> {
+                            if (onProgress != null) {
+                                onProgress.accept(Math.max(count, unique.size()));
+                            }
+                        }),
+                        "apollo"
+                )) {
+                    unique.putIfAbsent(dedupeKey(hit), hit);
+                    if (onProgress != null) {
+                        onProgress.accept(unique.size());
+                    }
+                    if (unique.size() >= criteria.maxResults()) {
+                        return new ArrayList<>(unique.values());
+                    }
+                }
+            }
+            return new ArrayList<>(unique.values());
+        }
+
+        // Category + country: Places first so the largest businesses nationwide
+        // (review volume) fill the list instead of Apollo's first-city bias.
+        if (googlePlacesDiscoveryClient.isConfigured()) {
+            for (WebSearchHit hit : safe(() -> googlePlacesDiscoveryClient.discover(criteria), "google-places")) {
                 unique.putIfAbsent(dedupeKey(hit), hit);
                 if (onProgress != null) {
                     onProgress.accept(unique.size());
@@ -82,14 +101,15 @@ public class BusinessSearchDiscoveryClient {
             }
         }
 
-        // Named custom scrapes: Apollo org lookup only. Places/Maps keyword fallback
-        // pollutes results with unrelated local businesses; brand stubs cover misses.
-        if (criteria.hasCompanyNames()) {
-            return new ArrayList<>(unique.values());
-        }
-
-        if (unique.size() < criteria.maxResults() && googlePlacesDiscoveryClient.isConfigured()) {
-            for (WebSearchHit hit : safe(() -> googlePlacesDiscoveryClient.discover(criteria), "google-places")) {
+        if (unique.size() < criteria.maxResults() && apolloDiscoveryClient.isConfigured()) {
+            for (WebSearchHit hit : safe(
+                    () -> apolloDiscoveryClient.discover(criteria, count -> {
+                        if (onProgress != null) {
+                            onProgress.accept(Math.max(count, unique.size()));
+                        }
+                    }),
+                    "apollo"
+            )) {
                 unique.putIfAbsent(dedupeKey(hit), hit);
                 if (onProgress != null) {
                     onProgress.accept(unique.size());

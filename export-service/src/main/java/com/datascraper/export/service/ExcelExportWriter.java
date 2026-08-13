@@ -59,7 +59,8 @@ public class ExcelExportWriter {
             "Website",
             "Email",
             "Phone Number",
-            "Founder / CEO"
+            "Founder / CEO",
+            "Branch Manager"
     };
 
     private static final int COL_WEBSITE = 4;
@@ -70,7 +71,7 @@ public class ExcelExportWriter {
     private static final int DATA_ROW_HEIGHT = 18;
 
     /** Preferred column widths (Excel character units) for company sheets. */
-    private static final int[] COMPANY_COLUMN_WIDTH_CHARS = {28, 18, 16, 36, 32, 26, 16, 22};
+    private static final int[] COMPANY_COLUMN_WIDTH_CHARS = {28, 18, 16, 36, 32, 26, 16, 22, 22};
 
     private static final Map<String, String> COUNTRY_NAMES = Map.ofEntries(
             Map.entry("PK", "Pakistan"),
@@ -417,7 +418,8 @@ public class ExcelExportWriter {
                 company.website(),
                 company.email(),
                 company.phone(),
-                founder
+                founder,
+                branchManager(company)
         };
 
         for (int col = 0; col < values.length; col++) {
@@ -484,6 +486,23 @@ public class ExcelExportWriter {
                 basis.getBytes(java.nio.charset.StandardCharsets.UTF_8)
         ).toString().substring(0, 8).toUpperCase(Locale.ROOT);
         return "BR-" + uuid;
+    }
+
+    /**
+     * Per-location manager when known. Never falls back to brand Founder / CEO.
+     */
+    static String branchManager(EnrichedCompany company) {
+        if (company == null || company.rawAttributes() == null) {
+            return "";
+        }
+        Object raw = company.rawAttributes().get("branchManager");
+        if (raw == null) {
+            raw = company.rawAttributes().get("storeManager");
+        }
+        if (raw == null || raw.toString().isBlank()) {
+            return "";
+        }
+        return raw.toString().trim();
     }
 
     /**

@@ -17,6 +17,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -42,11 +43,17 @@ public class GooglePlacesDiscoveryClient {
             "places.nationalPhoneNumber",
             "places.internationalPhoneNumber",
             "places.types",
+            "places.userRatingCount",
+            "places.rating",
             "nextPageToken"
     );
     private static final int MAX_CITIES = 500;
     private static final int MAX_KEYWORDS = 2;
     private static final int MAX_PAGES_PER_QUERY = 3;
+    private static final int MIN_CITIES_BEFORE_RANK_CUT = 12;
+    private static final int NAMED_PAGES_NATIONWIDE = 3;
+    private static final int NAMED_PAGES_PER_CITY = 1;
+    private static final int NAMED_MIN_BRANCHES_PER_BRAND = 60;
 
     /** Best-effort mapping from our category ids to Places includedType (Table A). */
     private static final Map<String, String> INCLUDED_TYPES = Map.ofEntries(
@@ -119,7 +126,7 @@ public class GooglePlacesDiscoveryClient {
             return discoverByCompanyNames(criteria);
         }
 
-        List<WebSearchHit> hits = new ArrayList<>();
+        List<RankedHit> ranked = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
         List<String> keywords = limit(criteria.searchKeywords(), MAX_KEYWORDS);
         String country = criteria.countryNames().isEmpty() ? "" : criteria.countryNames().get(0);
@@ -127,28 +134,32 @@ public class GooglePlacesDiscoveryClient {
         String regionCode = criteria.countryCodes().isEmpty() ? null : criteria.countryCodes().get(0);
 
         List<CityGeo> cities = buildCities(criteria, country);
-        int perCityKeep = perCityKeep(criteria.maxResults(), cities.size());
+        int overfetch = Math.max(criteria.maxResults() * 3, criteria.maxResults() + 40);
+        int minCities = Math.min(cities.size(), MIN_CITIES_BEFORE_RANK_CUT);
+        int citiesVisited = 0;
+
         for (CityGeo city : cities) {
+            citiesVisited++;
             for (String keyword : keywords) {
                 if (keyword == null || keyword.isBlank()) {
                     continue;
                 }
                 String textQuery = buildTextQuery(keyword, city.cityName(), country);
                 try {
-                    List<WebSearchHit> batch = searchText(
-                            textQuery, includedType, regionCode, city, criteria, seen, true, MAX_PAGES_PER_QUERY);
-                    int kept = takeUpTo(hits, batch, perCityKeep, criteria.maxResults());
-                    log.info("Google Places '{}' -> {} places (kept {})", textQuery, batch.size(), kept);
+                    List<RankedHit> batch = searchText(
+                            textQuery, includedType, regionCode, city, criteria, seen, true, 1, overfetch);
+                    ranked.addAll(batch);
+                    log.info("Google Places '{}' -> {} places (pool {})", textQuery, batch.size(), ranked.size());
                 } catch (Exception ex) {
                     log.warn("Google Places search failed for '{}': {}", textQuery, ex.getMessage());
                 }
-                if (hits.size() >= criteria.maxResults()) {
-                    return hits.subList(0, criteria.maxResults());
-                }
                 sleepQuietly(200);
             }
+            if (ranked.size() >= overfetch && citiesVisited >= minCities) {
+                break;
+            }
         }
-        return hits;
+        return takeLargestNationwide(ranked, criteria.maxResults());
     }
 
     /**
@@ -160,39 +171,77 @@ public class GooglePlacesDiscoveryClient {
         Set<String> seen = new LinkedHashSet<>();
         String country = criteria.countryNames().isEmpty() ? "" : criteria.countryNames().get(0);
         String regionCode = criteria.countryCodes().isEmpty() ? null : criteria.countryCodes().get(0);
-        List<CityGeo> locations = buildCities(criteria, country);
-        if (locations.isEmpty()) {
-            locations = List.of(new CityGeo(null, country == null || country.isBlank() ? "Global" : country));
+        List<CityGeo> cities = buildCities(criteria, country);
+        if (cities.isEmpty()) {
+            cities = List.of(new CityGeo(null, country == null || country.isBlank() ? "Global" : country));
         }
-        int brandCap = Math.max(8, criteria.maxResults() / Math.max(1, criteria.companyNames().size()));
-        int perCityKeep = perCityKeep(brandCap, locations.size());
+        int brandCount = Math.max(1, criteria.companyNames().size());
+        int brandCap = Math.max(
+                NAMED_MIN_BRANCHES_PER_BRAND,
+                criteria.maxResults() / brandCount
+        );
 
         for (String companyName : criteria.companyNames()) {
             if (companyName == null || companyName.isBlank()) {
                 continue;
             }
+            if (hits.size() >= criteria.maxResults()) {
+                break;
+            }
             int brandStart = hits.size();
-            for (CityGeo location : locations) {
+            List<CityGeo> locations = branchSearchLocations(cities, country, companyName);
+            for (int i = 0; i < locations.size(); i++) {
                 if (hits.size() - brandStart >= brandCap || hits.size() >= criteria.maxResults()) {
                     break;
                 }
-                String textQuery = buildTextQuery(companyName.trim(), location.cityName(), country);
-                try {
-                    List<WebSearchHit> batch = searchText(
-                            textQuery, null, regionCode, location, criteria, seen, true, 1);
-                    int remainingBrand = brandCap - (hits.size() - brandStart);
-                    int kept = takeUpTo(hits, batch, Math.min(perCityKeep, remainingBrand), criteria.maxResults());
-                    log.info("Google Places name '{}' -> {} places (kept {})", textQuery, batch.size(), kept);
-                } catch (Exception ex) {
-                    log.warn("Google Places name search failed for '{}': {}", textQuery, ex.getMessage());
+                CityGeo location = locations.get(i);
+                boolean nationwide = i == 0;
+                int pages = nationwide ? NAMED_PAGES_NATIONWIDE : NAMED_PAGES_PER_CITY;
+                int locationCap = nationwide ? Math.min(30, brandCap) : brandCap;
+                int keptHere = 0;
+                for (String textQuery : branchQueries(companyName.trim(), location, country, regionCode, nationwide)) {
+                    if (keptHere >= locationCap
+                            || hits.size() - brandStart >= brandCap
+                            || hits.size() >= criteria.maxResults()) {
+                        break;
+                    }
+                    int remaining = Math.min(
+                            locationCap - keptHere,
+                            Math.min(
+                                    brandCap - (hits.size() - brandStart),
+                                    criteria.maxResults() - hits.size()
+                            )
+                    );
+                    int collectCap = nationwide ? Math.min(60, Math.max(20, remaining)) : Math.min(20, remaining);
+                    try {
+                        List<RankedHit> batch = searchText(
+                                textQuery, null, regionCode, location, criteria, seen, true, pages, collectCap);
+                        int kept = 0;
+                        for (RankedHit ranked : batch) {
+                            if (keptHere >= locationCap
+                                    || hits.size() - brandStart >= brandCap
+                                    || hits.size() >= criteria.maxResults()) {
+                                break;
+                            }
+                            if (!nameLooksLikeBrand(ranked.hit().name(), companyName)) {
+                                continue;
+                            }
+                            hits.add(ranked.hit());
+                            keptHere++;
+                            kept++;
+                        }
+                        log.info("Google Places name '{}' -> {} places (kept {})", textQuery, batch.size(), kept);
+                    } catch (Exception ex) {
+                        log.warn("Google Places name search failed for '{}': {}", textQuery, ex.getMessage());
+                    }
+                    sleepQuietly(120);
                 }
-                sleepQuietly(120);
             }
         }
         return hits.size() > criteria.maxResults() ? hits.subList(0, criteria.maxResults()) : hits;
     }
 
-    private List<WebSearchHit> searchText(
+    private List<RankedHit> searchText(
             String textQuery,
             String includedType,
             String regionCode,
@@ -200,11 +249,13 @@ public class GooglePlacesDiscoveryClient {
             ResolvedDiscoveryCriteria criteria,
             Set<String> seen,
             boolean allowWithoutWebsite,
-            int maxPages
+            int maxPages,
+            int collectCap
     ) throws Exception {
-        List<WebSearchHit> hits = new ArrayList<>();
+        List<RankedHit> hits = new ArrayList<>();
         String pageToken = null;
         int pages = Math.max(1, Math.min(maxPages, MAX_PAGES_PER_QUERY));
+        int cap = Math.max(1, collectCap);
         for (int page = 0; page < pages; page++) {
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("textQuery", textQuery);
@@ -239,11 +290,11 @@ public class GooglePlacesDiscoveryClient {
             JsonNode places = root.path("places");
             if (places.isArray()) {
                 for (JsonNode place : places) {
-                    WebSearchHit hit = toHit(place, city, criteria, seen, allowWithoutWebsite);
+                    RankedHit hit = toRankedHit(place, city, criteria, seen, allowWithoutWebsite);
                     if (hit != null) {
                         hits.add(hit);
                     }
-                    if (hits.size() >= criteria.maxResults()) {
+                    if (hits.size() >= cap) {
                         return hits;
                     }
                 }
@@ -258,7 +309,7 @@ public class GooglePlacesDiscoveryClient {
         return hits;
     }
 
-    private WebSearchHit toHit(
+    private RankedHit toRankedHit(
             JsonNode place,
             CityGeo city,
             ResolvedDiscoveryCriteria criteria,
@@ -309,7 +360,7 @@ public class GooglePlacesDiscoveryClient {
 
         String resolvedCity = extractCityFromAddress(address, city.cityName(), firstCountryName(criteria));
 
-        return new WebSearchHit(
+        WebSearchHit hit = new WebSearchHit(
                 name,
                 website,
                 sourceUrl,
@@ -321,6 +372,9 @@ public class GooglePlacesDiscoveryClient {
                 blankToNull(phone),
                 blankToNull(placeId)
         );
+        int ratingCount = place.path("userRatingCount").asInt(0);
+        double rating = place.path("rating").asDouble(0);
+        return new RankedHit(hit, ratingCount, rating);
     }
 
     private String fetchWebsiteFromPlaceDetails(String resourceName) {
@@ -348,27 +402,80 @@ public class GooglePlacesDiscoveryClient {
         }
     }
 
-    private static int perCityKeep(int maxResults, int cityCount) {
-        int cities = Math.max(1, cityCount);
+    private static List<WebSearchHit> takeLargestNationwide(List<RankedHit> ranked, int maxResults) {
+        if (ranked.isEmpty()) {
+            return List.of();
+        }
         int cap = Math.max(1, maxResults);
-        return Math.max(2, Math.min(8, (cap + cities - 1) / cities));
+        return ranked.stream()
+                .sorted(Comparator
+                        .comparingInt(RankedHit::userRatingCount).reversed()
+                        .thenComparing(Comparator.comparingDouble(RankedHit::rating).reversed()))
+                .map(RankedHit::hit)
+                .limit(cap)
+                .toList();
     }
 
-    private static int takeUpTo(
-            List<WebSearchHit> hits,
-            List<WebSearchHit> batch,
-            int perCityKeep,
-            int maxResults
-    ) {
-        int kept = 0;
-        for (WebSearchHit hit : batch) {
-            if (kept >= perCityKeep || hits.size() >= maxResults) {
-                break;
+    /**
+     * Country-wide query first, then remaining cities rotated per brand so Amsterdam
+     * is not always searched first.
+     */
+    private static List<CityGeo> branchSearchLocations(List<CityGeo> cities, String country, String companyName) {
+        List<CityGeo> cityLoop = new ArrayList<>();
+        for (CityGeo city : cities) {
+            if (city.cityName() != null && country != null && city.cityName().equalsIgnoreCase(country)) {
+                continue;
             }
-            hits.add(hit);
-            kept++;
+            cityLoop.add(city);
         }
-        return kept;
+        if (!cityLoop.isEmpty()) {
+            int rotate = Math.floorMod(companyName.toLowerCase(Locale.ROOT).hashCode(), cityLoop.size());
+            if (rotate > 0) {
+                List<CityGeo> rotated = new ArrayList<>(cityLoop.size());
+                rotated.addAll(cityLoop.subList(rotate, cityLoop.size()));
+                rotated.addAll(cityLoop.subList(0, rotate));
+                cityLoop = rotated;
+            }
+        }
+        List<CityGeo> locations = new ArrayList<>();
+        locations.add(new CityGeo(null, country == null || country.isBlank() ? "Global" : country));
+        locations.addAll(cityLoop);
+        return locations;
+    }
+
+    private static List<String> branchQueries(
+            String companyName,
+            CityGeo location,
+            String country,
+            String regionCode,
+            boolean nationwide
+    ) {
+        List<String> queries = new ArrayList<>();
+        if (nationwide) {
+            queries.add(buildTextQuery(companyName, null, country));
+            if (regionCode != null && "NL".equalsIgnoreCase(regionCode)) {
+                queries.add(companyName + " vestigingen, " + country);
+            } else {
+                queries.add(companyName + " locations, " + country);
+            }
+        } else {
+            queries.add(buildTextQuery(companyName, location.cityName(), country));
+        }
+        return queries;
+    }
+
+    private static boolean nameLooksLikeBrand(String placeName, String brand) {
+        if (placeName == null || placeName.isBlank() || brand == null || brand.isBlank()) {
+            return false;
+        }
+        String hay = placeName.toLowerCase(Locale.ROOT);
+        String needle = brand.toLowerCase(Locale.ROOT).trim();
+        if (needle.length() >= 3 && hay.contains(needle)) {
+            return true;
+        }
+        String compact = needle.replace("'", "").replace("’", "").replace(" ", "");
+        String hayCompact = hay.replace("'", "").replace("’", "").replace(" ", "");
+        return compact.length() >= 4 && hayCompact.contains(compact);
     }
 
     private static String buildTextQuery(String keyword, String city, String country) {
@@ -529,5 +636,8 @@ public class GooglePlacesDiscoveryClient {
     }
 
     private record CityGeo(String cityId, String cityName) {
+    }
+
+    private record RankedHit(WebSearchHit hit, int userRatingCount, double rating) {
     }
 }

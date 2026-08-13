@@ -83,4 +83,43 @@ class AggregationServiceTest {
         assertThat(draft.getRawAttributes().get("branchId")).isEqualTo("abc");
         assertThat(draft.getSuccessfulProviderCount()).isEqualTo(2);
     }
+
+    @Test
+    void keepsSeedBranchManagerAndDoesNotCopyHomepageManagerOnNamedScrape() {
+        DiscoveredCompany seed = new DiscoveredCompany(
+                "co-2",
+                "FEBO Rotterdam",
+                "https://www.febo.nl",
+                "NL",
+                "Rotterdam",
+                "nl-rotterdam",
+                List.of("restaurant"),
+                "https://maps.example",
+                "google-places",
+                Map.of(
+                        "namedScrape", true,
+                        "placeId", "places/xyz",
+                        "branchManager", "Piet Jansen"
+                )
+        );
+
+        List<ProviderResult> results = List.of(
+                ProviderResult.success(
+                        ProviderType.WEBSITE,
+                        "website-remote",
+                        "ok",
+                        List.of(Map.of(
+                                "section", "people",
+                                "field", "branchManager",
+                                "title", "Homepage Manager"
+                        )),
+                        Map.of(),
+                        0.8
+                )
+        );
+
+        CompanyDraft draft = service.aggregate(seed, results);
+
+        assertThat(draft.getRawAttributes().get("branchManager")).isEqualTo("Piet Jansen");
+    }
 }

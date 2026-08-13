@@ -78,7 +78,10 @@ public class ApolloDiscoveryClient {
         String country = criteria.countryNames().isEmpty() ? "" : criteria.countryNames().get(0);
 
         List<CityGeo> cities = buildCities(criteria, country);
+        int perCityKeep = Math.max(2, Math.min(12,
+                (criteria.maxResults() + Math.max(cities.size(), 1) - 1) / Math.max(cities.size(), 1)));
         for (CityGeo city : cities) {
+            int cityStart = hits.size();
             String location = buildLocation(city.cityName(), country);
             for (String keyword : keywords) {
                 if (keyword == null || keyword.isBlank()) {
@@ -86,8 +89,15 @@ public class ApolloDiscoveryClient {
                 }
                 try {
                     List<WebSearchHit> batch = searchCityKeyword(location, keyword, city, criteria, seen);
-                    log.info("Apollo '{}' / '{}' -> {} orgs", location, keyword, batch.size());
-                    hits.addAll(batch);
+                    int kept = 0;
+                    for (WebSearchHit hit : batch) {
+                        if (hits.size() - cityStart >= perCityKeep || hits.size() >= criteria.maxResults()) {
+                            break;
+                        }
+                        hits.add(hit);
+                        kept++;
+                    }
+                    log.info("Apollo '{}' / '{}' -> {} orgs (kept {})", location, keyword, batch.size(), kept);
                     if (onProgress != null) {
                         onProgress.accept(hits.size());
                     }

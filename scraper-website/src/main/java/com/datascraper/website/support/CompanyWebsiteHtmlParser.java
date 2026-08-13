@@ -31,6 +31,7 @@ public class CompanyWebsiteHtmlParser {
 
         addMeta(items, seen, document, sourceUrl);
         addFounders(items, seen, document, sourceUrl);
+        addBranchManagers(items, seen, document, sourceUrl);
         addContactChannels(items, seen, document);
 
         return items.size() > maxItems ? items.subList(0, maxItems) : items;
@@ -57,7 +58,7 @@ public class CompanyWebsiteHtmlParser {
             if (person == null) {
                 continue;
             }
-            String field = role.contains("ceo") || role.contains("directeur") ? "ceo" : "founder";
+            String field = peopleFieldForRole(role);
             if (!seen.add(field + ":" + person.toLowerCase(Locale.ROOT))) {
                 continue;
             }
@@ -71,7 +72,7 @@ public class CompanyWebsiteHtmlParser {
             if (person == null) {
                 continue;
             }
-            String field = role.contains("ceo") || role.contains("directeur") ? "ceo" : "founder";
+            String field = peopleFieldForRole(role);
             if (!seen.add(field + ":" + person.toLowerCase(Locale.ROOT))) {
                 continue;
             }
@@ -105,8 +106,61 @@ public class CompanyWebsiteHtmlParser {
         return name;
     }
 
+    private void addBranchManagers(
+            List<Map<String, Object>> items,
+            Set<String> seen,
+            Document document,
+            String sourceUrl
+    ) {
+        Pattern labeled = Pattern.compile(
+                "(?i)\\b(vestigingsmanager|filiaalmanager|winkelmanager|filiaalhouder|"
+                        + "vestigingsdirecteur|store manager|branch manager|restaurant manager|"
+                        + "restaurantmanager)\\b\\s*[:\\-|–]?\\s*"
+                        + "([A-Z][a-zA-Z''\\-]+(?:\\s+(?:van|de|den|der|ten|ter)\\s+[A-Z][a-zA-Z''\\-]+)?"
+                        + "(?:\\s+[A-Z][a-zA-Z''\\-]+){0,3})"
+        );
+        Pattern namedThenRole = Pattern.compile(
+                "(?i)\\b([A-Z][a-zA-Z''\\-]+(?:\\s+(?:van|de|den|der|ten|ter)\\s+[A-Z][a-zA-Z''\\-]+)?"
+                        + "(?:\\s+[A-Z][a-zA-Z''\\-]+){0,3})\\s*[,\\-|–]\\s*"
+                        + "(vestigingsmanager|filiaalmanager|winkelmanager|filiaalhouder|"
+                        + "vestigingsdirecteur|store manager|branch manager|restaurant manager|"
+                        + "restaurantmanager)\\b"
+        );
+        String pageText = document.text();
+        Matcher labeledMatcher = labeled.matcher(pageText);
+        while (labeledMatcher.find()) {
+            String person = cleanPersonName(labeledMatcher.group(2));
+            if (person == null || !seen.add("branchManager:" + person.toLowerCase(Locale.ROOT))) {
+                continue;
+            }
+            items.add(item("people", "branchManager", person, labeledMatcher.group(1), sourceUrl, null));
+        }
+        Matcher namedMatcher = namedThenRole.matcher(pageText);
+        while (namedMatcher.find()) {
+            String person = cleanPersonName(namedMatcher.group(1));
+            if (person == null || !seen.add("branchManager:" + person.toLowerCase(Locale.ROOT))) {
+                continue;
+            }
+            items.add(item("people", "branchManager", person, namedMatcher.group(2), sourceUrl, null));
+        }
+    }
+
+    private static String peopleFieldForRole(String role) {
+        String lower = role == null ? "" : role.toLowerCase(Locale.ROOT);
+        if (lower.contains("vestiging") || lower.contains("filiaal") || lower.contains("store manager")
+                || lower.contains("branch manager") || lower.contains("winkelmanager")) {
+            return "branchManager";
+        }
+        if (lower.contains("ceo") || (lower.contains("directeur") && !lower.contains("vestiging"))) {
+            return "ceo";
+        }
+        return "founder";
+    }
+
     private static final Set<String> NON_NAME_TOKENS = Set.of(
-            "email", "call", "phone", "contact", "linkedin", "twitter", "facebook", "website", "us", "the"
+            "email", "call", "phone", "contact", "linkedin", "twitter", "facebook", "website", "us", "the",
+            "vestigingsmanager", "filiaalmanager", "winkelmanager", "filiaalhouder",
+            "vestigingsdirecteur", "manager", "branch", "store", "restaurant"
     );
 
     private void addMeta(List<Map<String, Object>> items, Set<String> seen, Document document, String sourceUrl) {

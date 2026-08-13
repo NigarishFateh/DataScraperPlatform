@@ -9,6 +9,7 @@ import com.datascraper.discovery.dto.JobProgressPatchRequest;
 import com.datascraper.discovery.dto.LeadershipPersonResponse;
 import com.datascraper.discovery.dto.ResolvedDiscoveryCriteria;
 import com.datascraper.discovery.dto.WebSearchHit;
+import com.datascraper.discovery.support.BranchPageManagerLookup;
 import com.datascraper.discovery.support.NlRestaurantBrandSeed;
 import com.datascraper.discovery.support.WebsiteUrlSupport;
 import org.slf4j.Logger;
@@ -29,24 +30,29 @@ public class WebCompanyDiscoveryService {
 
     private static final Logger log = LoggerFactory.getLogger(WebCompanyDiscoveryService.class);
 
+    private static final int MAX_BRANCH_MANAGER_LOOKUPS = 40;
+
     private final DiscoveryCriteriaResolver criteriaResolver;
     private final BusinessSearchDiscoveryClient businessSearchDiscoveryClient;
     private final GooglePlacesDiscoveryClient googlePlacesDiscoveryClient;
     private final JobServiceClient jobServiceClient;
     private final NlRestaurantLeadershipService leadershipService;
+    private final BranchPageManagerLookup branchPageManagerLookup;
 
     public WebCompanyDiscoveryService(
             DiscoveryCriteriaResolver criteriaResolver,
             BusinessSearchDiscoveryClient businessSearchDiscoveryClient,
             GooglePlacesDiscoveryClient googlePlacesDiscoveryClient,
             JobServiceClient jobServiceClient,
-            NlRestaurantLeadershipService leadershipService
+            NlRestaurantLeadershipService leadershipService,
+            BranchPageManagerLookup branchPageManagerLookup
     ) {
         this.criteriaResolver = criteriaResolver;
         this.businessSearchDiscoveryClient = businessSearchDiscoveryClient;
         this.googlePlacesDiscoveryClient = googlePlacesDiscoveryClient;
         this.jobServiceClient = jobServiceClient;
         this.leadershipService = leadershipService;
+        this.branchPageManagerLookup = branchPageManagerLookup;
     }
 
     public List<DiscoveredCompany> discover(DiscoveryRequest request, String providerName) {
@@ -97,7 +103,7 @@ public class WebCompanyDiscoveryService {
         boolean businessSearchReady = businessSearchDiscoveryClient.isConfigured();
 
         log.info(
-                "Web discovery start named={} companies={} categories={} countries={} cities={} (priority-first nationwide when empty) keywords={} businessSearch={} max={}",
+                "Web discovery start named={} companies={} categories={} countries={} cities={} (nationwide, not first-city) keywords={} businessSearch={} max={}",
                 namedMode,
                 criteria.companyNames(),
                 criteria.categoryNames(),
@@ -177,6 +183,8 @@ public class WebCompanyDiscoveryService {
     ) {
         Map<String, DiscoveredCompany> unique = new LinkedHashMap<>();
 
+        int[] managerLookups = {0};
+
         for (WebSearchHit seed : seedNamedCompanyHits(criteria)) {
             DiscoveredCompany company = toDiscoveredCompany(seed, criteria, providerName);
             unique.putIfAbsent(dedupeKey(company), company);
@@ -212,7 +220,10 @@ public class WebCompanyDiscoveryService {
                     log.debug("Skipping Places hit '{}' — not one of the requested brands", hit.name());
                     continue;
                 }
-                DiscoveredCompany company = toDiscoveredCompany(hit, criteria, providerName);
+                DiscoveredCompany company = withOptionalBranchManager(
+                        toDiscoveredCompany(hit, criteria, providerName),
+                        managerLookups
+                );
                 unique.putIfAbsent(dedupeKey(company), company);
                 notifyLiveCount(request, unique.size());
                 if (unique.size() >= criteria.maxResults()) {
@@ -506,6 +517,56 @@ public class WebCompanyDiscoveryService {
                 providerName,
                 metadata
         );
+    }
+
+    private DiscoveredCompany withOptionalBranchManager(DiscoveredCompany company, int[] lookups) {
+        if (company == null || company.metadata() == null) {
+            return company;
+        }
+        Object existing = company.metadata().get("branchManager");
+        if (existing != null && !existing.toString().isBlank()) {
+            return company;
+        }
+        if (lookups[0] >= MAX_BRANCH_MANAGER_LOOKUPS) {
+            return company;
+        }
+        Object storePage = company.metadata().get("storePage");
+        String pageUrl = storePage == null ? null : storePage.toString().trim();
+        if (!looksLikeStorePage(pageUrl)) {
+            return company;
+        }
+        lookups[0]++;
+        String manager = branchPageManagerLookup.lookup(pageUrl);
+        if (manager == null || manager.isBlank()) {
+            return company;
+        }
+        Map<String, Object> metadata = new HashMap<>(company.metadata());
+        metadata.put("branchManager", manager);
+        return new DiscoveredCompany(
+                company.externalId(),
+                company.name(),
+                company.website(),
+                company.countryCode(),
+                company.cityName(),
+                company.cityId(),
+                company.categoryIds(),
+                company.sourceUrl(),
+                company.providerName(),
+                metadata
+        );
+    }
+
+    private static boolean looksLikeStorePage(String url) {
+        if (url == null || url.isBlank() || WebsiteUrlSupport.isMapOrDirectoryUrl(url)) {
+            return false;
+        }
+        String lower = url.toLowerCase(Locale.ROOT);
+        return lower.contains("vestiging")
+                || lower.contains("location")
+                || lower.contains("filiaal")
+                || lower.contains("/store")
+                || lower.contains("winkel")
+                || lower.contains("branch");
     }
 
     private static String officialWebsiteForRequestedBrand(String placeName, List<String> brands) {

@@ -21,6 +21,16 @@ function parseCompanyNames(raw: string): string[] {
     .filter((name, index, all) => all.findIndex((other) => other.toLowerCase() === name.toLowerCase()) === index);
 }
 
+const MAX_BRANCHES_PER_BRAND = 80;
+const MAX_CUSTOM_LOCATIONS = 2000;
+
+function maxCustomLocations(companyCount: number, expandBranches: boolean): number {
+  if (!expandBranches) {
+    return companyCount;
+  }
+  return Math.min(MAX_CUSTOM_LOCATIONS, Math.max(companyCount * MAX_BRANCHES_PER_BRAND, companyCount));
+}
+
 export function CustomScrapePage() {
   const navigate = useNavigate();
   const [companyText, setCompanyText] = useState(NL_RESTAURANT_BRANDS.join("\n"));
@@ -70,14 +80,12 @@ export function CustomScrapePage() {
         categoryIds,
         countryCodes,
         cityIds: [],
-        maxCompanies: expandBranches
-          ? Math.min(200, Math.max(companyNames.length * 25, companyNames.length))
-          : companyNames.length,
+        maxCompanies: maxCustomLocations(companyNames.length, expandBranches),
         companyNames,
         options: {
           companyNames,
           expandBranches,
-          maxBranchesPerBrand: expandBranches ? 25 : 1,
+          maxBranchesPerBrand: expandBranches ? MAX_BRANCHES_PER_BRAND : 1,
         },
       }),
     onSuccess: (job) => {
@@ -107,10 +115,12 @@ export function CustomScrapePage() {
           Custom scrape
         </h1>
         <p className="text-sm text-mist-300">
-          Enter specific companies, pick category and country, then run a full scrape
-          (includes CEO / founder) or fetch leadership only.
-          Each location gets a Branch ID. If a scrape stalls, you still get an error
-          plus an Excel of whatever was saved. Independent from Dashboard filters.
+          Enter specific companies, pick category and country, then run a full scrape.
+          Find all branches collects every location in the selected country — each row
+          has its own Branch ID, city, address, phone, and Branch Manager when published.
+          Founder / CEO stays at brand level. Country-wide jobs rank the largest businesses
+          nationwide; Amsterdam is not treated as the only priority.
+          If a scrape stalls, you still get an error plus an Excel of whatever was saved.
         </p>
       </section>
 
@@ -150,7 +160,9 @@ export function CustomScrapePage() {
             </button>
             <span className="text-[11px] text-mist-400">
               {companyNames.length} {companyNames.length === 1 ? "company" : "companies"}
-              {expandBranches ? ` · up to ~${Math.min(200, companyNames.length * 25)} locations` : ""}
+              {expandBranches
+                ? ` · up to ~${maxCustomLocations(companyNames.length, true)} locations`
+                : ""}
             </span>
           </div>
         </FilterSection>
@@ -174,7 +186,9 @@ export function CustomScrapePage() {
           <span>
             Find all branches
             <span className="mt-0.5 block text-[11px] text-mist-400">
-              On (default): every Google Places location for each brand. Branch address/phone come from Places; the brand website is scraped once, not once per shop.
+              On (default): every Google Places location for each brand across the whole
+              country, not only the first city. Each shop is a separate Excel row with
+              its own address, phone, and manager when listed. Brand website is scraped once.
             </span>
           </span>
         </label>

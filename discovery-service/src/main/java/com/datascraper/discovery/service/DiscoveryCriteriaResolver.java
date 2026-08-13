@@ -48,10 +48,12 @@ public class DiscoveryCriteriaResolver {
                     "de-cologne", "de-stuttgart", "de-dusseldorf"
             )),
             Map.entry("NL", List.of(
-                    "nl-amsterdam", "nl-rotterdam", "nl-the-hague", "nl-utrecht",
-                    "nl-eindhoven", "nl-groningen", "nl-tilburg", "nl-almere",
+                    "nl-rotterdam", "nl-eindhoven", "nl-groningen", "nl-maastricht",
+                    "nl-utrecht", "nl-the-hague", "nl-tilburg", "nl-almere",
                     "nl-breda", "nl-nijmegen", "nl-haarlem", "nl-arnhem",
-                    "nl-leiden", "nl-maastricht", "nl-delft", "nl-amersfoort"
+                    "nl-leiden", "nl-delft", "nl-amersfoort", "nl-zwolle",
+                    "nl-apeldoorn", "nl-enschede", "nl-dordrecht", "nl-leeuwarden",
+                    "nl-alkmaar", "nl-venlo", "nl-deventer", "nl-amsterdam"
             )),
             Map.entry("DZ", List.of(
                     "dz-algiers", "dz-oran", "dz-constantine", "dz-annaba",
@@ -235,7 +237,7 @@ public class DiscoveryCriteriaResolver {
                 }
             }
         } else if (!countryCodes.isEmpty() && namedMode) {
-            // Custom scrape with no city: search major cities, not only Google's Amsterdam ranking.
+            // Custom scrape with no city: major cities nationwide, not Amsterdam-only.
             for (String countryCode : countryCodes) {
                 addPriorityCities(countryCode, cityIds, cityNames, seenCityKeys, locationCatalogClient);
             }
@@ -299,7 +301,7 @@ public class DiscoveryCriteriaResolver {
             if (requested <= companyNames.size()) {
                 maxResults = companyNames.size();
             } else {
-                maxResults = Math.min(requested, companyNames.size() * 25);
+                maxResults = Math.min(requested, companyNames.size() * 80);
             }
         } else {
             maxResults = request.maxResults();

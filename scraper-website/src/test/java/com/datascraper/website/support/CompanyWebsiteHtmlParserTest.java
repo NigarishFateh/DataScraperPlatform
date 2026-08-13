@@ -47,4 +47,29 @@ class CompanyWebsiteHtmlParserTest {
                 "people".equals(item.get("section")) && "Jane Founder".equals(item.get("title")));
         assertThat(items).noneMatch(item -> "presence".equals(item.get("section")));
     }
+
+    @Test
+    void parsesBranchManagerSeparatelyFromFounder() {
+        String html = """
+                <!doctype html>
+                <html>
+                <body>
+                  <p>Founder: Jane Founder</p>
+                  <p>Vestigingsmanager: Piet Jansen</p>
+                </body>
+                </html>
+                """;
+
+        Document document = Jsoup.parse(html, "https://febo.example/vestigingen/amsterdam");
+        List<Map<String, Object>> items = parser.parse(document, "https://febo.example/vestigingen/amsterdam", 20);
+
+        assertThat(items).anyMatch(item ->
+                "people".equals(item.get("section"))
+                        && "founder".equals(item.get("field"))
+                        && "Jane Founder".equals(item.get("title")));
+        assertThat(items).anyMatch(item ->
+                "people".equals(item.get("section"))
+                        && "branchManager".equals(item.get("field"))
+                        && "Piet Jansen".equals(item.get("title")));
+    }
 }

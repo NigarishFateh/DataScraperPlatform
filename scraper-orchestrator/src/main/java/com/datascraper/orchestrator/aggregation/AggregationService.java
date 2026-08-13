@@ -173,6 +173,12 @@ public class AggregationService {
                 prefer(draft::getCeo, draft::setCeo, value, 0.8);
                 prefer(draft::getFounder, draft::setFounder, value, 0.55);
             }
+            case "branchManager", "manager", "storeManager" -> {
+                // Named custom scrape: do not copy a homepage manager onto every branch.
+                if (!isNamedScrape(draft)) {
+                    draft.getRawAttributes().putIfAbsent("branchManager", value);
+                }
+            }
             case "linkedin" -> prefer(draft::getLinkedIn, draft::setLinkedIn, stringValue(item.get("url")), 0.7);
             case "github" -> prefer(draft::getGithub, draft::setGithub, stringValue(item.get("url")), 0.7);
             case "twitter" -> prefer(draft::getTwitter, draft::setTwitter, stringValue(item.get("url")), 0.7);
@@ -245,6 +251,11 @@ public class AggregationService {
         Set<String> parts = new LinkedHashSet<>(List.of(getter.get().split(",")));
         parts.add(value.trim());
         setter.set(parts.stream().filter(s -> !s.isBlank()).collect(Collectors.joining(", ")));
+    }
+
+    private static boolean isNamedScrape(CompanyDraft draft) {
+        Object named = draft.getRawAttributes().get("namedScrape");
+        return Boolean.TRUE.equals(named) || "true".equalsIgnoreCase(String.valueOf(named));
     }
 
     private String stringValue(Object value) {

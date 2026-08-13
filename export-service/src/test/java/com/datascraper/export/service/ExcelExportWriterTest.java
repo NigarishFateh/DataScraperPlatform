@@ -151,6 +151,8 @@ class ExcelExportWriterTest {
             assertEquals("Company Name", workbook.getSheetAt(0).getRow(1).getCell(0).getStringCellValue());
             assertEquals("Branch ID", workbook.getSheetAt(0).getRow(1).getCell(1).getStringCellValue());
             assertEquals("City", workbook.getSheetAt(0).getRow(1).getCell(2).getStringCellValue());
+            assertEquals("Founder / CEO", workbook.getSheetAt(0).getRow(1).getCell(7).getStringCellValue());
+            assertEquals("Branch Manager", workbook.getSheetAt(0).getRow(1).getCell(8).getStringCellValue());
             assertEquals("Alpha Analytics GmbH", workbook.getSheetAt(0).getRow(2).getCell(0).getStringCellValue());
             assertNotNull(workbook.getSheetAt(0).getCTWorksheet().getAutoFilter());
 
@@ -222,6 +224,8 @@ class ExcelExportWriterTest {
             assertEquals("Branch ID", workbook.getSheetAt(0).getRow(0).getCell(1).getStringCellValue());
             assertEquals("City", workbook.getSheetAt(0).getRow(0).getCell(2).getStringCellValue());
             assertEquals("Address", workbook.getSheetAt(0).getRow(0).getCell(3).getStringCellValue());
+            assertEquals("Founder / CEO", workbook.getSheetAt(0).getRow(0).getCell(7).getStringCellValue());
+            assertEquals("Branch Manager", workbook.getSheetAt(0).getRow(0).getCell(8).getStringCellValue());
             assertEquals("Friedrichstrasse 1, Berlin",
                     workbook.getSheetAt(0).getRow(1).getCell(3).getStringCellValue());
             assertNotNull(workbook.getSheetAt(0).getCTWorksheet().getAutoFilter());
