@@ -31,13 +31,13 @@ public record JobProgressPatchRequest(
     public static JobProgressPatchRequest discoveredCount(int count) {
         return new JobProgressPatchRequest(
                 JobStatus.RUNNING,
-                JobPhase.DISCOVERY,
+                JobPhase.ENRICHMENT,
                 count,
                 null,
                 null,
                 null,
                 25,
-                "Discovery completed",
+                count > 0 ? "Discovery completed — transitioning to enrichment phase" : "Discovery finished — advancing to next stage",
                 null
         );
     }

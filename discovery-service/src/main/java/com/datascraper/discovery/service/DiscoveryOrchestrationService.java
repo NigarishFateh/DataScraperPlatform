@@ -120,15 +120,7 @@ public class DiscoveryOrchestrationService {
 
         if (notifyJobService) {
             try {
-                if (unique.isEmpty()) {
-                    boolean named = request.companyNames() != null && !request.companyNames().isEmpty();
-                    if (named) {
-                        log.warn("Named scrape produced 0 companies for job {} — failing with partial-export message", jobId);
-                    }
-                    jobServiceClient.failJob(jobId, buildEmptyDiscoveryMessage(request));
-                } else {
-                    jobServiceClient.patchProgress(jobId, JobProgressPatchRequest.discoveredCount(unique.size()));
-                }
+                jobServiceClient.patchProgress(jobId, JobProgressPatchRequest.discoveredCount(unique.size()));
             } catch (Exception ex) {
                 log.warn("Unable to update job {} after discovery: {}", jobId, ex.getMessage());
             }

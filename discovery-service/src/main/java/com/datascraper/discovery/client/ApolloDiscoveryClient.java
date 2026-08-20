@@ -81,6 +81,9 @@ public class ApolloDiscoveryClient {
         int perCityKeep = Math.max(2, Math.min(12,
                 (criteria.maxResults() + Math.max(cities.size(), 1) - 1) / Math.max(cities.size(), 1)));
         for (CityGeo city : cities) {
+            if (skipFurtherCalls) {
+                break;
+            }
             int cityStart = hits.size();
             String location = buildLocation(city.cityName(), country);
             for (String keyword : keywords) {
@@ -123,6 +126,9 @@ public class ApolloDiscoveryClient {
         CityGeo locationHint = new CityGeo(null, country.isBlank() ? "Global" : country);
 
         for (String companyName : criteria.companyNames()) {
+            if (skipFurtherCalls) {
+                break;
+            }
             if (companyName == null || companyName.isBlank()) {
                 continue;
             }
@@ -371,8 +377,9 @@ public class ApolloDiscoveryClient {
     private void maybeDisableOnQuota(int statusCode, String body) {
         String lower = body == null ? "" : body.toLowerCase(Locale.ROOT);
         boolean credits = statusCode == 422 && (lower.contains("insufficient credits") || lower.contains("credit"));
+        boolean rateLimited = statusCode == 429 || lower.contains("maximum number of api calls") || lower.contains("200 times per hour");
         boolean denied = statusCode == 401 || statusCode == 403;
-        if (!credits && !denied) {
+        if (!credits && !denied && !rateLimited) {
             return;
         }
         skipFurtherCalls = true;
